@@ -30,6 +30,9 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { getDefaultData } from "@/lib/data"
 import { calculate } from "@/lib/calculator"
+import { itemImageUrl } from "@/lib/images"
+
+const PP_ICON = `${import.meta.env.BASE_URL}images/production_point.svg`
 
 const CHART_COLORS = [
   "#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24",
@@ -93,6 +96,12 @@ export default function CompanyProductionProfit() {
                   <div className="space-y-2">
                     {rawItems.map((item) => (
                       <div key={item} className="flex items-center gap-3">
+                        <img
+                          src={itemImageUrl(item)}
+                          alt={item}
+                          className="h-6 w-6 object-contain"
+                          onError={(e) => { e.currentTarget.style.display = "none" }}
+                        />
                         <span className="w-32 truncate text-sm" title={item}>
                           {item}
                         </span>
@@ -114,6 +123,12 @@ export default function CompanyProductionProfit() {
                   <div className="space-y-2">
                     {processedItems.map((item) => (
                       <div key={item} className="flex items-center gap-3">
+                        <img
+                          src={itemImageUrl(item)}
+                          alt={item}
+                          className="h-6 w-6 object-contain"
+                          onError={(e) => { e.currentTarget.style.display = "none" }}
+                        />
                         <span className="w-32 truncate text-sm" title={item}>
                           {item}
                         </span>
@@ -216,7 +231,17 @@ export default function CompanyProductionProfit() {
                             {r.type}
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-medium">{r.item}</TableCell>
+                        <TableCell className="font-medium">
+                          <span className="inline-flex items-center gap-2">
+                            <img
+                              src={itemImageUrl(r.item)}
+                              alt={r.item}
+                              className="h-5 w-5 object-contain"
+                              onError={(e) => { e.currentTarget.style.display = "none" }}
+                            />
+                            {r.item}
+                          </span>
+                        </TableCell>
                         <TableCell className="text-right tabular-nums">
                           ${r.sell.toFixed(2)}
                         </TableCell>
@@ -226,12 +251,18 @@ export default function CompanyProductionProfit() {
                           ${r.profit.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
-                          {r.pp}
+                          <span className="inline-flex items-center justify-end gap-1">
+                            {r.pp}
+                            <img src={PP_ICON} alt="PP" className="h-4 w-4" />
+                          </span>
                         </TableCell>
                         <TableCell
                           className={`text-right font-semibold tabular-nums ${r.profitPP >= 0 ? "text-emerald-400" : "text-red-400"}`}
                         >
-                          {r.profitPP.toFixed(4)}
+                          <span className="inline-flex items-center justify-end gap-1">
+                            {r.profitPP.toFixed(4)}
+                            <img src={PP_ICON} alt="PP" className="h-4 w-4" />
+                          </span>
                         </TableCell>
                       </TableRow>
                     ))}

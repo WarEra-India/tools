@@ -20,6 +20,11 @@ export default function HomePage() {
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
       <div className="container mx-auto max-w-4xl px-4 py-12">
         <div className="mb-10 text-center">
+          <img
+            src="https://warera.wiki/warera_logo.png"
+            alt="Warera"
+            className="mx-auto mb-4 h-20 w-20"
+          />
           <h1 className="mb-2 text-4xl font-bold tracking-tight">
             Warera Calculators
           </h1>
