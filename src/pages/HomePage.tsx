@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom"
-import { Calculator } from "lucide-react"
 import {
   Card,
   CardHeader,
@@ -9,6 +8,7 @@ import {
 
 const calculators = [
   {
+    icon: "company",
     name: "Company Production Profit",
     description: "Calculate the most profitable items to produce based on current market prices and production points.",
     path: "/company-production-profit",
@@ -39,7 +39,11 @@ export default function HomePage() {
               <Card className="h-full cursor-pointer transition-colors hover:border-zinc-600 hover:bg-zinc-900">
                 <CardHeader>
                   <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-800">
-                    <Calculator className="h-5 w-5 text-zinc-300" />
+                    <img
+                      src={`${import.meta.env.BASE_URL}images/${calc.icon}.svg`}
+                      alt={calc.name}
+                      className="h-5 w-5 text-zinc-300"
+                    />
                   </div>
                   <CardTitle>{calc.name}</CardTitle>
                   <CardDescription>{calc.description}</CardDescription>

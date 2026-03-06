@@ -12,6 +12,7 @@ export interface ProfitRow {
   profit: number;
   pp: number;
   profitPP: number;
+  inputs?: Record<string, number>;
 }
 
 export function calculate(data: GameData): ProfitRow[] {
@@ -56,6 +57,7 @@ export function calculate(data: GameData): ProfitRow[] {
       profit: profit,
       pp: totalPP,
       profitPP: profit / totalPP,
+      inputs: recipe.inputs,
     });
   }
 

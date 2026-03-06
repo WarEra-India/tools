@@ -33,6 +33,18 @@ import { calculate } from "@/lib/calculator"
 import { itemImageUrl } from "@/lib/images"
 
 const PP_ICON = `${import.meta.env.BASE_URL}images/production_point.svg`
+const COIN_ICON = `${import.meta.env.BASE_URL}images/game_coin.svg`
+
+function ChartIconTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: string } }) {
+  const item = payload?.value ?? ""
+  const url = itemImageUrl(item)
+  const size = 24
+  return (
+    <g transform={`translate(${(x ?? 0) - size / 2},${(y ?? 0) + 4})`}>
+      <image href={url} width={size} height={size} />
+    </g>
+  )
+}
 
 const CHART_COLORS = [
   "#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24",
@@ -82,7 +94,10 @@ export default function CompanyProductionProfit() {
           {/* Price Editor */}
           <Card>
             <CardHeader>
-              <CardTitle>Market Prices</CardTitle>
+              <CardTitle className="flex gap-2">
+                Market Prices
+                <img src={COIN_ICON} alt="PP" className="h-4 w-4" />
+              </CardTitle>
               <CardDescription>
                 Adjust prices to recalculate profits
               </CardDescription>
@@ -162,15 +177,14 @@ export default function CompanyProductionProfit() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={rows}
-                      margin={{ top: 5, right: 20, left: 0, bottom: 60 }}
+                      margin={{ top: 5, right: 20, left: 0, bottom: 10 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                       <XAxis
                         dataKey="item"
-                        tick={{ fill: "#a1a1aa", fontSize: 11 }}
-                        angle={-45}
-                        textAnchor="end"
+                        tick={<ChartIconTick />}
                         interval={0}
+                        height={36}
                       />
                       <YAxis tick={{ fill: "#a1a1aa", fontSize: 12 }} />
                       <Tooltip
@@ -213,7 +227,7 @@ export default function CompanyProductionProfit() {
                     <TableRow>
                       <TableHead>Type</TableHead>
                       <TableHead>Item</TableHead>
-                      <TableHead className="text-right">Sell</TableHead>
+                      <TableHead className="text-right">Sell Price</TableHead>
                       <TableHead className="text-right">Profit/Unit</TableHead>
                       <TableHead className="text-right">Total PP</TableHead>
                       <TableHead className="text-right">Profit/PP</TableHead>
@@ -225,7 +239,7 @@ export default function CompanyProductionProfit() {
                         <TableCell>
                           <Badge
                             variant={
-                              r.type === "Raw" ? "secondary" : "outline"
+                              "secondary" // r.type ===  "Raw" ? "secondary" : "outline"
                             }
                           >
                             {r.type}
@@ -239,16 +253,33 @@ export default function CompanyProductionProfit() {
                               className="h-5 w-5 object-contain"
                               onError={(e) => { e.currentTarget.style.display = "none" }}
                             />
-                            {r.item}
+                            <span>
+                              {r.item}
+                              {r.inputs && (
+                                <span className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
+                                  {Object.entries(r.inputs).map(([mat, qty]) => (
+                                    <span key={mat} className="inline-flex items-center gap-1 text-xs text-zinc-400">
+                                      <img
+                                        src={itemImageUrl(mat)}
+                                        alt={mat}
+                                        className="h-3.5 w-3.5 object-contain"
+                                        onError={(e) => { e.currentTarget.style.display = "none" }}
+                                      />
+                                      {qty}× {mat}
+                                    </span>
+                                  ))}
+                                </span>
+                              )}
+                            </span>
                           </span>
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
-                          ${r.sell.toFixed(2)}
+                          {r.sell.toFixed(2)}
                         </TableCell>
                         <TableCell
                           className={`text-right tabular-nums ${r.profit >= 0 ? "text-emerald-400" : "text-red-400"}`}
                         >
-                          ${r.profit.toFixed(2)}
+                          {r.profit.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           <span className="inline-flex items-center justify-end gap-1">
@@ -261,7 +292,7 @@ export default function CompanyProductionProfit() {
                         >
                           <span className="inline-flex items-center justify-end gap-1">
                             {r.profitPP.toFixed(4)}
-                            <img src={PP_ICON} alt="PP" className="h-4 w-4" />
+                            <img src={COIN_ICON} alt="PP" className="h-4 w-4" />
                           </span>
                         </TableCell>
                       </TableRow>
