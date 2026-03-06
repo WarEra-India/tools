@@ -10,6 +10,8 @@ import {
   ResponsiveContainer,
   CartesianGrid,
   Cell,
+  Label,
+  Legend,
 } from "recharts"
 import {
   Card,
@@ -69,6 +71,27 @@ export default function CompanyProductionProfit() {
 
   const rawItems = Object.keys(data.rawPP)
   const processedItems = Object.keys(data.recipes)
+
+  const processedRows = useMemo(() => rows.filter((r) => r.type === "Processed"), [rows])
+
+  const rawRowMap = useMemo(
+    () => Object.fromEntries(rows.filter((r) => r.type === "Raw").map((r) => [r.item, r])),
+    [rows]
+  )
+
+  const groupedData = useMemo(
+    () =>
+      processedRows.map((r) => {
+        const primaryInput = Object.keys(r.inputs ?? {})[0] ?? ""
+        return {
+          item: r.item,
+          rawInput: primaryInput,
+          rawProfitPP: rawRowMap[primaryInput]?.profitPP ?? 0,
+          processedProfitPP: r.profitPP,
+        }
+      }),
+    [processedRows, rawRowMap]
+  )
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
@@ -184,19 +207,40 @@ export default function CompanyProductionProfit() {
                         dataKey="item"
                         tick={<ChartIconTick />}
                         interval={0}
-                        height={36}
-                      />
-                      <YAxis tick={{ fill: "#a1a1aa", fontSize: 12 }} />
+                        height={52}
+                      >
+                        <Label
+                          value="Items"
+                          position="insideBottom"
+                          offset={0}
+                          fill="#71717a"
+                          fontSize={12}
+                        />
+                      </XAxis>
+                      <YAxis tick={{ fill: "#a1a1aa", fontSize: 12 }} width={60}>
+                        <Label
+                          value="Profit / PP"
+                          angle={-90}
+                          position="insideLeft"
+                          offset={10}
+                          fill="#71717a"
+                          fontSize={12}
+                          style={{ textAnchor: "middle" }}
+                        />
+                      </YAxis>
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: "#18181b",
-                          border: "1px solid #3f3f46",
+                          backgroundColor: "#ffffff",
+                          border: "none",
                           borderRadius: "8px",
-                          color: "#fafafa",
+                          color: "#18181b",
+                          boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
                         }}
+                        labelStyle={{ color: "#3f3f46", fontWeight: 600, marginBottom: 2 }}
+                        itemStyle={{ color: "#18181b" }}
                         formatter={(value) => [
                           typeof value === "number" ? value.toFixed(4) : value,
-                          "Profit/PP",
+                          "Profit / PP",
                         ]}
                       />
                       <Bar dataKey="profitPP" radius={[4, 4, 0, 0]}>
@@ -207,6 +251,155 @@ export default function CompanyProductionProfit() {
                           />
                         ))}
                       </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Stacked: Sell = Cost + Profit (processed only) */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Sell Price = Cost + Profit</CardTitle>
+                <CardDescription>
+                  Each bar shows how much of the sell price is input cost vs pure profit — sorted by sell price
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={[...processedRows].sort((a, b) => b.sell - a.sell)}
+                      margin={{ top: 5, right: 20, left: 0, bottom: 10 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                      <XAxis
+                        dataKey="item"
+                        tick={<ChartIconTick />}
+                        interval={0}
+                        height={52}
+                      >
+                        <Label
+                          value="Items"
+                          position="insideBottom"
+                          offset={0}
+                          fill="#71717a"
+                          fontSize={12}
+                        />
+                      </XAxis>
+                      <YAxis tick={{ fill: "#a1a1aa", fontSize: 12 }} width={60}>
+                        <Label
+                          value="Price (coins)"
+                          angle={-90}
+                          position="insideLeft"
+                          offset={10}
+                          fill="#71717a"
+                          fontSize={12}
+                          style={{ textAnchor: "middle" }}
+                        />
+                      </YAxis>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#ffffff",
+                          border: "none",
+                          borderRadius: "8px",
+                          color: "#18181b",
+                          boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
+                        }}
+                        labelStyle={{ color: "#3f3f46", fontWeight: 600, marginBottom: 2 }}
+                        itemStyle={{ color: "#18181b" }}
+                        formatter={(value, name) => [
+                          typeof value === "number" ? value.toFixed(4) : value,
+                          name === "cost" ? "Input Cost" : "Profit",
+                        ]}
+                      />
+                      <Legend
+                        formatter={(value) => value === "cost" ? "Input Cost" : "Profit"}
+                        wrapperStyle={{ color: "#a1a1aa", fontSize: 12, paddingTop: 4 }}
+                      />
+                      <Bar dataKey="cost" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="profit" stackId="a" fill="#34d399" radius={[4, 4, 0, 0]}>
+                        {[...processedRows]
+                          .sort((a, b) => b.sell - a.sell)
+                          .map((r, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={r.profit >= 0 ? "#34d399" : "#f87171"}
+                            />
+                          ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Grouped: Raw vs Processed Profit/PP */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Raw vs Processed — Profit / PP</CardTitle>
+                <CardDescription>
+                  Is it worth processing? Compare the raw material's Profit/PP against its processed product
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={groupedData}
+                      margin={{ top: 5, right: 20, left: 0, bottom: 10 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                      <XAxis
+                        dataKey="item"
+                        tick={<ChartIconTick />}
+                        interval={0}
+                        height={52}
+                      >
+                        <Label
+                          value="Processed Items"
+                          position="insideBottom"
+                          offset={0}
+                          fill="#71717a"
+                          fontSize={12}
+                        />
+                      </XAxis>
+                      <YAxis tick={{ fill: "#a1a1aa", fontSize: 12 }} width={60}>
+                        <Label
+                          value="Profit / PP"
+                          angle={-90}
+                          position="insideLeft"
+                          offset={10}
+                          fill="#71717a"
+                          fontSize={12}
+                          style={{ textAnchor: "middle" }}
+                        />
+                      </YAxis>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#ffffff",
+                          border: "none",
+                          borderRadius: "8px",
+                          color: "#18181b",
+                          boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
+                        }}
+                        labelStyle={{ color: "#3f3f46", fontWeight: 600, marginBottom: 2 }}
+                        itemStyle={{ color: "#18181b" }}
+                        formatter={(value, name, props) => [
+                          typeof value === "number" ? value.toFixed(4) : value,
+                          name === "rawProfitPP"
+                            ? `Raw (${(props.payload as { rawInput: string }).rawInput})`
+                            : "Processed",
+                        ]}
+                      />
+                      <Legend
+                        formatter={(value) =>
+                          value === "rawProfitPP" ? "Raw Material" : "Processed Product"
+                        }
+                        wrapperStyle={{ color: "#a1a1aa", fontSize: 12, paddingTop: 4 }}
+                      />
+                      <Bar dataKey="rawProfitPP" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="processedProfitPP" fill="#38bdf8" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -229,7 +422,7 @@ export default function CompanyProductionProfit() {
                       <TableHead>Item</TableHead>
                       <TableHead className="text-right">Sell Price</TableHead>
                       <TableHead className="text-right">Profit/Unit</TableHead>
-                      <TableHead className="text-right">Total PP</TableHead>
+                      <TableHead className="text-right">PP Required</TableHead>
                       <TableHead className="text-right">Profit/PP</TableHead>
                     </TableRow>
                   </TableHeader>
