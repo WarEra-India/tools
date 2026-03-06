@@ -1,16 +1,24 @@
+import { Suspense } from "react"
 import { HashRouter, Routes, Route } from "react-router-dom"
 import HomePage from "@/pages/HomePage"
-import CompanyProductionProfit from "@/pages/CompanyProductionProfit"
+import { calculators } from "@/calculators"
 
 function App() {
   return (
     <HashRouter>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route
-          path="/company-production-profit"
-          element={<CompanyProductionProfit />}
-        />
+        {calculators.map((calc) => (
+          <Route
+            key={calc.path}
+            path={calc.path}
+            element={
+              <Suspense fallback={<div className="min-h-screen bg-zinc-950" />}>
+                <calc.component />
+              </Suspense>
+            }
+          />
+        ))}
       </Routes>
     </HashRouter>
   )

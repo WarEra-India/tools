@@ -5,15 +5,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card"
-
-const calculators = [
-  {
-    icon: "company",
-    name: "Company Production Profit",
-    description: "Calculate the most profitable items to produce based on current market prices and production points.",
-    path: "/company-production-profit",
-  },
-]
+import { calculators } from "@/calculators"
 
 export default function HomePage() {
   return (

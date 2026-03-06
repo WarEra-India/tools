@@ -31,8 +31,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Drawer } from "@/components/ui/drawer"
-import { getDefaultData } from "@/lib/data"
-import { calculate } from "@/lib/calculator"
+import { getDefaultData } from "./data"
+import { calculate } from "./calculator"
 import { itemImageUrl } from "@/lib/images"
 
 const PP_ICON = `${import.meta.env.BASE_URL}images/production_point.svg`
@@ -167,7 +167,7 @@ export default function CompanyProductionProfit() {
             Back to Calculators
           </Link>
           <h1 className="text-3xl font-bold tracking-tight">
-            Company Production Profit
+            Company Production
           </h1>
           <p className="mt-1 text-zinc-400">
             Edit market prices to see which items are most profitable to produce.
@@ -190,7 +190,7 @@ export default function CompanyProductionProfit() {
           </div>
 
           {/* Results */}
-          <div className="space-y-6 flex flex-col">
+          <div className="flex flex-col gap-6">
             {/* Chart */}
             <Card className="order-1">
               <CardHeader>
@@ -348,7 +348,7 @@ export default function CompanyProductionProfit() {
             <Card className="order-4">
               <CardHeader>
                 <CardTitle className="flex gap-2">
-                  Raw vs Processed - 
+                  Raw vs Processed -
                   Profit
                   <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
                   /
@@ -447,11 +447,7 @@ export default function CompanyProductionProfit() {
                     {rows.map((r) => (
                       <TableRow key={r.item}>
                         <TableCell>
-                          <Badge
-                            variant={
-                              "secondary" // r.type ===  "Raw" ? "secondary" : "outline"
-                            }
-                          >
+                          <Badge variant="secondary">
                             {r.type}
                           </Badge>
                         </TableCell>
