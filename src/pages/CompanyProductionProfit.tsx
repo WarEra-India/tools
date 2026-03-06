@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Link } from "react-router-dom"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, SlidersHorizontal } from "lucide-react"
 import {
   BarChart,
   Bar,
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Drawer } from "@/components/ui/drawer"
 import { getDefaultData } from "@/lib/data"
 import { calculate } from "@/lib/calculator"
 import { itemImageUrl } from "@/lib/images"
@@ -57,6 +58,7 @@ const CHART_COLORS = [
 
 export default function CompanyProductionProfit() {
   const [data, setData] = useState(getDefaultData)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const rows = useMemo(() => calculate(data), [data])
 
@@ -93,6 +95,65 @@ export default function CompanyProductionProfit() {
     [processedRows, rawRowMap]
   )
 
+  const priceEditor = (
+    <div className="space-y-4">
+      <div>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          Raw Materials
+        </h3>
+        <div className="space-y-2">
+          {rawItems.map((item) => (
+            <div key={item} className="flex items-center gap-3">
+              <img
+                src={itemImageUrl(item)}
+                alt={item}
+                className="h-6 w-6 object-contain"
+                onError={(e) => { e.currentTarget.style.display = "none" }}
+              />
+              <span className="w-32 truncate text-sm" title={item}>
+                {item}
+              </span>
+              <Input
+                type="number"
+                step="0.01"
+                className="w-24"
+                value={data.prices[item]}
+                onChange={(e) => updatePrice(item, e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          Processed Items
+        </h3>
+        <div className="space-y-2">
+          {processedItems.map((item) => (
+            <div key={item} className="flex items-center gap-3">
+              <img
+                src={itemImageUrl(item)}
+                alt={item}
+                className="h-6 w-6 object-contain"
+                onError={(e) => { e.currentTarget.style.display = "none" }}
+              />
+              <span className="w-32 truncate text-sm" title={item}>
+                {item}
+              </span>
+              <Input
+                type="number"
+                step="0.01"
+                className="w-24"
+                value={data.prices[item]}
+                onChange={(e) => updatePrice(item, e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
       <div className="container mx-auto max-w-6xl px-4 py-8">
@@ -114,83 +175,32 @@ export default function CompanyProductionProfit() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
-          {/* Price Editor */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex gap-2">
-                Market Prices
-                <img src={COIN_ICON} alt="PP" className="h-4 w-4" />
-              </CardTitle>
-              <CardDescription>
-                Adjust prices to recalculate profits
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    Raw Materials
-                  </h3>
-                  <div className="space-y-2">
-                    {rawItems.map((item) => (
-                      <div key={item} className="flex items-center gap-3">
-                        <img
-                          src={itemImageUrl(item)}
-                          alt={item}
-                          className="h-6 w-6 object-contain"
-                          onError={(e) => { e.currentTarget.style.display = "none" }}
-                        />
-                        <span className="w-32 truncate text-sm" title={item}>
-                          {item}
-                        </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="w-24"
-                          value={data.prices[item]}
-                          onChange={(e) => updatePrice(item, e.target.value)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    Processed Items
-                  </h3>
-                  <div className="space-y-2">
-                    {processedItems.map((item) => (
-                      <div key={item} className="flex items-center gap-3">
-                        <img
-                          src={itemImageUrl(item)}
-                          alt={item}
-                          className="h-6 w-6 object-contain"
-                          onError={(e) => { e.currentTarget.style.display = "none" }}
-                        />
-                        <span className="w-32 truncate text-sm" title={item}>
-                          {item}
-                        </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="w-24"
-                          value={data.prices[item]}
-                          onChange={(e) => updatePrice(item, e.target.value)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Results */}
-          <div className="space-y-6">
-            {/* Chart */}
+          {/* Price Editor — sidebar on desktop, hidden on mobile (uses drawer) */}
+          <div className="hidden lg:block">
             <Card>
               <CardHeader>
-                <CardTitle>Profit per PP</CardTitle>
+                <CardTitle className="flex gap-2">
+                  Market Prices
+                  <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
+                </CardTitle>
+                <CardDescription>Adjust prices to recalculate profits</CardDescription>
+              </CardHeader>
+              <CardContent>{priceEditor}</CardContent>
+            </Card>
+          </div>
+
+          {/* Results */}
+          <div className="space-y-6 flex flex-col">
+            {/* Chart */}
+            <Card className="order-1">
+              <CardHeader>
+                <CardTitle className="flex gap-2">
+                  Profit
+                  <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
+                  /
+                  <img src={PP_ICON} alt="PP" className="h-4 w-4" />
+                  PP
+                </CardTitle>
                 <CardDescription>
                   Items ranked by profit efficiency (profit per production point)
                 </CardDescription>
@@ -258,7 +268,7 @@ export default function CompanyProductionProfit() {
             </Card>
 
             {/* Stacked: Sell = Cost + Profit (processed only) */}
-            <Card>
+            <Card className="order-3">
               <CardHeader>
                 <CardTitle>Sell Price = Cost + Profit</CardTitle>
                 <CardDescription>
@@ -335,9 +345,16 @@ export default function CompanyProductionProfit() {
             </Card>
 
             {/* Grouped: Raw vs Processed Profit/PP */}
-            <Card>
+            <Card className="order-4">
               <CardHeader>
-                <CardTitle>Raw vs Processed — Profit / PP</CardTitle>
+                <CardTitle className="flex gap-2">
+                  Raw vs Processed - 
+                  Profit
+                  <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
+                  /
+                  <img src={PP_ICON} alt="PP" className="h-4 w-4" />
+                  PP
+                </CardTitle>
                 <CardDescription>
                   Is it worth processing? Compare the raw material's Profit/PP against its processed product
                 </CardDescription>
@@ -407,7 +424,7 @@ export default function CompanyProductionProfit() {
             </Card>
 
             {/* Profit Table */}
-            <Card>
+            <Card className="order-2">
               <CardHeader>
                 <CardTitle>Profit Breakdown</CardTitle>
                 <CardDescription>
@@ -497,6 +514,30 @@ export default function CompanyProductionProfit() {
           </div>
         </div>
       </div>
+
+      {/* Mobile drawer */}
+      <Drawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={
+          <span className="flex items-center gap-2">
+            Market Prices
+            <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
+          </span>
+        }
+      >
+        {priceEditor}
+      </Drawer>
+
+      {/* Mobile FAB — only visible below lg */}
+      <button
+        onClick={() => setDrawerOpen(true)}
+        className="fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full bg-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-900 shadow-lg transition-transform active:scale-95 lg:hidden"
+        aria-label="Edit market prices"
+      >
+        <SlidersHorizontal className="h-4 w-4" />
+        Prices
+      </button>
     </div>
   )
 }
