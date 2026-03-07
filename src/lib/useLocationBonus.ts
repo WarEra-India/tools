@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
-const COUNTRIES_URL = "https://api4.warera.io/trpc/country.getAllCountries";
-const REGIONS_URL = "https://api4.warera.io/trpc/region.getRegionsObject";
+const COUNTRIES_URL = "https://api5.warera.io/trpc/country.getAllCountries";
+const REGIONS_URL = "https://api5.warera.io/trpc/region.getRegionsObject";
 
 export interface BestLocation {
   bonus: number;

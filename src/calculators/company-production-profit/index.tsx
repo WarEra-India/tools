@@ -12,6 +12,7 @@ import {
   Cell,
   Label,
   Legend,
+  ReferenceArea,
 } from "recharts"
 import {
   Card,
@@ -57,6 +58,11 @@ const CHART_COLORS = [
   "#38bdf8", "#c084fc", "#fb7185", "#2dd4bf", "#facc15",
   "#f97316", "#818cf8", "#d946ef",
 ]
+
+const RAW_BAR_COLOR = "#fbbf24"
+const PROCESSED_BAR_COLOR = "#60a5fa"
+const RAW_BG_COLOR = "rgba(251,191,36,0.08)"
+const PROCESSED_BG_COLOR = "rgba(96,165,250,0.08)"
 
 export default function CompanyProductionProfit() {
   const [data, setData] = useState(getDefaultData)
@@ -185,11 +191,11 @@ export default function CompanyProductionProfit() {
               className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 accent-emerald-500"
             />
             Use Best Location for Bonus
-            {useBestLocation && locationBonus && (
+            {/* {useBestLocation && locationBonus && ( */}
               <span className="text-xs text-zinc-500">
-                (best region deposit + country strategic bonus applied)
+                (applies best region deposit + country strategic bonus)
               </span>
-            )}
+            {/* )} */}
           </label>
           {/* {livePrices && (
             <p className="mt-1 text-xs text-zinc-500">
@@ -219,7 +225,7 @@ export default function CompanyProductionProfit() {
           {/* Results */}
           <div className="flex flex-col gap-6">
             {/* Chart */}
-            <Card className="order-1">
+            <Card className="order-1 ">
               <CardHeader>
                 <CardTitle className="flex gap-2">
                   Profit
@@ -240,6 +246,31 @@ export default function CompanyProductionProfit() {
                       margin={{ top: 5, right: 20, left: 0, bottom: 10 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                      {/* Background shading per contiguous type group */}
+                      {(() => {
+                        const areas: { type: string; start: string; end: string }[] = []
+                        let i = 0
+                        while (i < rows.length) {
+                          const t = rows[i].type
+                          const start = rows[i].item
+                          let end = start
+                          while (i < rows.length && rows[i].type === t) {
+                            end = rows[i].item
+                            i++
+                          }
+                          areas.push({ type: t, start, end })
+                        }
+                        return areas.map((a, idx) => (
+                          <ReferenceArea
+                            key={`area-${idx}`}
+                            x1={a.start}
+                            x2={a.end}
+                            fill={a.type === "Raw" ? RAW_BG_COLOR : PROCESSED_BG_COLOR}
+                            fillOpacity={1}
+                            stroke="none"
+                          />
+                        ))
+                      })()}
                       <XAxis
                         dataKey="item"
                         tick={<ChartIconTick />}
@@ -276,16 +307,30 @@ export default function CompanyProductionProfit() {
                         labelStyle={{ color: "#3f3f46", fontWeight: 600, marginBottom: 2 }}
                         labelFormatter={(label) => itemName(String(label))}
                         itemStyle={{ color: "#18181b" }}
-                        formatter={(value) => [
+                        formatter={(value, _name, props) => [
                           typeof value === "number" ? value.toFixed(4) : value,
-                          "Profit / PP",
+                          `${(props.payload as { type: string }).type} — Profit / PP`,
                         ]}
                       />
+                      <Legend
+                        content={() => (
+                          <div className="flex justify-center gap-4 pt-1 text-xs text-zinc-400">
+                            <span className="inline-flex items-center gap-1">
+                              <span className="inline-block h-3 w-3 rounded-sm" style={{ background: RAW_BAR_COLOR }} />
+                              Raw Material
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <span className="inline-block h-3 w-3 rounded-sm" style={{ background: PROCESSED_BAR_COLOR }} />
+                              Processed
+                            </span>
+                          </div>
+                        )}
+                      />
                       <Bar dataKey="profitPP" radius={[4, 4, 0, 0]}>
-                        {rows.map((_, index) => (
+                        {rows.map((r, index) => (
                           <Cell
                             key={`cell-${index}`}
-                            fill={CHART_COLORS[index % CHART_COLORS.length]}
+                            fill={r.type === "Raw" ? RAW_BAR_COLOR : PROCESSED_BAR_COLOR}
                           />
                         ))}
                       </Bar>
@@ -296,7 +341,7 @@ export default function CompanyProductionProfit() {
             </Card>
 
             {/* Stacked: Sell = Cost + Profit (processed only) */}
-            <Card className="order-3">
+            <Card className="order-3 hidden">
               <CardHeader>
                 <CardTitle>Sell Price = Cost + Profit</CardTitle>
                 <CardDescription>
@@ -374,7 +419,7 @@ export default function CompanyProductionProfit() {
             </Card>
 
             {/* Grouped: Raw vs Processed Profit/PP */}
-            <Card className="order-4">
+            <Card className="order-4 hidden">
               <CardHeader>
                 <CardTitle className="flex gap-2">
                   Raw vs Processed -
