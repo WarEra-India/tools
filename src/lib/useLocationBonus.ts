@@ -9,11 +9,20 @@ export interface BestLocation {
   countryName: string;
 }
 
+export interface RegionInfo {
+  name: string;
+  countryName: string;
+  depositType: string | null;
+  bonus: number;
+}
+
 export interface LocationBonus {
   /** deposit type (raw material) → best total bonus percent */
   bonusByType: Record<string, number>;
   /** deposit type → best region/country info */
   bestByType: Record<string, BestLocation>;
+  /** region ID → region info (for looking up a company's current region) */
+  regionById: Record<string, RegionInfo>;
 }
 
 interface CountryData {
@@ -77,15 +86,24 @@ export function useLocationBonus() {
           countryName[c._id] = c.name;
         }
 
-        // For each deposit type, find the best (region deposit bonus + occupying country strategic bonus)
+        // Build region lookup and find best per deposit type
         const bonusByType: Record<string, number> = {};
         const bestByType: Record<string, BestLocation> = {};
+        const regionById: Record<string, RegionInfo> = {};
         for (const r of Object.values(regionsObj)) {
-          if (!r.deposit) continue;
-          const depositType = r.deposit.type;
-          const regionBonus = r.deposit.bonusPercent ?? 0;
+          const depositType = r.deposit?.type ?? null;
+          const regionBonus = r.deposit?.bonusPercent ?? 0;
           const stratBonus = countryBonus[r.country] ?? 0;
           const total = regionBonus + stratBonus;
+
+          regionById[r._id] = {
+            name: r.name,
+            countryName: countryName[r.country] ?? "Unknown",
+            depositType,
+            bonus: total,
+          };
+
+          if (!depositType) continue;
           if (total > (bonusByType[depositType] ?? 0)) {
             bonusByType[depositType] = total;
             bestByType[depositType] = {
@@ -97,7 +115,7 @@ export function useLocationBonus() {
         }
 
         if (mountedRef.current) {
-          setData({ bonusByType, bestByType });
+          setData({ bonusByType, bestByType, regionById });
         }
       } catch (e) {
         console.error("Failed to fetch location bonus data:", e);

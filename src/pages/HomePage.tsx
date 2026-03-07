@@ -6,6 +6,7 @@ import {
   CardDescription,
 } from "@/components/ui/card"
 import { calculators } from "@/calculators"
+import ProfileWidget from "@/components/ProfileWidget"
 
 export default function HomePage() {
   return (
@@ -18,12 +19,14 @@ export default function HomePage() {
             className="mx-auto mb-4 h-20 w-20"
           />
           <h1 className="mb-2 text-4xl font-bold tracking-tight">
-            Warera Calculators
+            WarEra Calculators
           </h1>
           <p className="text-zinc-400">
-            Production & economy tools for Warera
+            Production & economy tools for WarEra
           </p>
         </div>
+
+        <ProfileWidget />
 
         <div className="grid gap-4 sm:grid-cols-2">
           {calculators.map((calc) => (

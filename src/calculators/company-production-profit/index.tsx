@@ -31,15 +31,147 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Drawer } from "@/components/ui/drawer"
-import { getDefaultData } from "./data"
+import { useGameConfig } from "./data"
 import { calculate } from "./calculator"
 import { itemImageUrl } from "@/lib/images"
 import { itemName } from "@/lib/items"
 import { useLivePrices } from "@/lib/useLivePrices"
 import { useLocationBonus } from "@/lib/useLocationBonus"
+import RecommendationsWidget from "@/components/RecommendationsWidget"
 
 const PP_ICON = `${import.meta.env.BASE_URL}images/production_point.svg`
 const COIN_ICON = `${import.meta.env.BASE_URL}images/game_coin.svg`
+
+/* ---- Skeleton helpers ---- */
+
+function SkeletonBar({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
+  return <div className={`animate-pulse rounded bg-zinc-800 ${className}`} style={style} />
+}
+
+function PricesSkeleton() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex gap-2">
+          Live Prices
+          <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
+        </CardTitle>
+        <CardDescription>Updates automatically every 30s</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div>
+            <SkeletonBar className="mb-2 h-3 w-24" />
+            <div className="space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-2">
+                  <SkeletonBar className="h-6 w-6 rounded" />
+                  <SkeletonBar className="h-4 flex-1" />
+                  <SkeletonBar className="h-4 w-12" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <SkeletonBar className="mb-2 h-3 w-28" />
+            <div className="space-y-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-2">
+                  <SkeletonBar className="h-6 w-6 rounded" />
+                  <SkeletonBar className="h-4 flex-1" />
+                  <SkeletonBar className="h-4 w-12" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ChartSkeleton() {
+  return (
+    <Card className="order-1">
+      <CardHeader>
+        <CardTitle className="flex gap-2">
+          Profit
+          <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
+          /
+          <img src={PP_ICON} alt="PP" className="h-4 w-4" />
+          PP
+        </CardTitle>
+        <CardDescription>
+          Items ranked by profit efficiency (profit per production point)
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex h-80 items-end gap-2 px-4 pb-8">
+          {Array.from({ length: 14 }).map((_, i) => (
+            <SkeletonBar
+              key={i}
+              className="flex-1"
+              style={{ height: `${20 + Math.random() * 60}%` } as React.CSSProperties}
+            />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function TableSkeleton() {
+  return (
+    <Card className="order-2">
+      <CardHeader>
+        <CardTitle>Profit Breakdown</CardTitle>
+        <CardDescription>
+          All items sorted by profit per production point (descending)
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {/* Header row */}
+          <div className="flex gap-4 px-2">
+            <SkeletonBar className="h-4 w-14" />
+            <SkeletonBar className="h-4 flex-1" />
+            <SkeletonBar className="h-4 w-16" />
+            <SkeletonBar className="h-4 w-16" />
+            <SkeletonBar className="h-4 w-16" />
+            <SkeletonBar className="h-4 w-16" />
+          </div>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-2">
+              <SkeletonBar className="h-5 w-14 rounded-full" />
+              <div className="flex flex-1 items-center gap-2">
+                <SkeletonBar className="h-5 w-5 rounded" />
+                <SkeletonBar className="h-4 w-24" />
+              </div>
+              <SkeletonBar className="h-4 w-16" />
+              <SkeletonBar className="h-4 w-16" />
+              <SkeletonBar className="h-4 w-16" />
+              <SkeletonBar className="h-4 w-16" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function RecommendationsSkeleton() {
+  return (
+    <Card className="mb-6">
+      <CardContent className="pt-5">
+        <div className="flex items-center gap-2 mb-3">
+          <SkeletonBar className="h-3.5 w-3.5 rounded" />
+          <SkeletonBar className="h-3 w-52" />
+        </div>
+        <SkeletonBar className="h-9 w-full rounded-md" />
+      </CardContent>
+    </Card>
+  )
+}
 
 function ChartIconTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: string } }) {
   const item = payload?.value ?? ""
@@ -52,46 +184,56 @@ function ChartIconTick({ x, y, payload }: { x?: number; y?: number; payload?: { 
   )
 }
 
-const CHART_COLORS = [
-  "#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24",
-  "#fb923c", "#60a5fa", "#e879f9", "#4ade80", "#f87171",
-  "#38bdf8", "#c084fc", "#fb7185", "#2dd4bf", "#facc15",
-  "#f97316", "#818cf8", "#d946ef",
-]
-
 const RAW_BAR_COLOR = "#fbbf24"
 const PROCESSED_BAR_COLOR = "#60a5fa"
 const RAW_BG_COLOR = "rgba(251,191,36,0.08)"
 const PROCESSED_BG_COLOR = "rgba(96,165,250,0.08)"
 
 export default function CompanyProductionProfit() {
-  const [data, setData] = useState(getDefaultData)
+  const { data: gameConfig, loading: configLoading } = useGameConfig()
+  const [data, setData] = useState(gameConfig)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [useBestLocation, setUseBestLocation] = useState(true)
   const { data: livePrices, loading: pricesLoading } = useLivePrices()
   const { data: locationBonus } = useLocationBonus()
 
+  const isLoading = configLoading || pricesLoading || !data
+
+  // Initialise data once game config loads
+  useEffect(() => {
+    if (!gameConfig) return
+    setData((prev) => {
+      if (prev) return prev
+      return gameConfig
+    })
+  }, [gameConfig])
+
   // Auto-update prices whenever live data arrives
   useEffect(() => {
-    if (!livePrices?.prices) return
-    setData((prev) => ({
-      ...prev,
-      prices: { ...prev.prices, ...livePrices.prices },
-    }))
+    if (!livePrices?.prices || !data) return
+    setData((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        prices: { ...prev.prices, ...livePrices.prices },
+      }
+    })
   }, [livePrices])
 
   const rows = useMemo(
     () =>
-      calculate({
-        ...data,
-        locationBonus:
-          useBestLocation && locationBonus ? locationBonus.bonusByType : undefined,
-      }),
+      data
+        ? calculate({
+            ...data,
+            locationBonus:
+              useBestLocation && locationBonus ? locationBonus.bonusByType : undefined,
+          })
+        : [],
     [data, useBestLocation, locationBonus]
   )
 
-  const rawItems = Object.keys(data.rawPP)
-  const processedItems = Object.keys(data.recipes)
+  const rawItems = data ? Object.keys(data.rawPP) : []
+  const processedItems = data ? Object.keys(data.recipes) : []
 
   const processedRows = useMemo(() => rows.filter((r) => r.type === "Processed"), [rows])
 
@@ -133,7 +275,7 @@ export default function CompanyProductionProfit() {
                 {itemName(item)}
               </span>
               <span className="tabular-nums text-sm text-zinc-300">
-                {(data.prices[item] ?? 0).toFixed(4)}
+                {(data?.prices[item] ?? 0).toFixed(4)}
               </span>
             </div>
           ))}
@@ -156,7 +298,7 @@ export default function CompanyProductionProfit() {
                 {itemName(item)}
               </span>
               <span className="tabular-nums text-sm text-zinc-300">
-                {(data.prices[item] ?? 0).toFixed(4)}
+                {(data?.prices[item] ?? 0).toFixed(4)}
               </span>
             </div>
           ))}
@@ -206,7 +348,21 @@ export default function CompanyProductionProfit() {
             <p className="mt-1 text-xs text-zinc-500 animate-pulse">Loading live prices…</p>
           )} */}
         </div>
+        
+        {/* {isLoading && <RecommendationsSkeleton />} */}
+        <RecommendationsWidget locationBonus={locationBonus} profitRows={rows} concretePrice={data?.prices.concrete ?? 0} />
 
+        {isLoading ? (
+          <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+            <div className="hidden lg:block">
+              <PricesSkeleton />
+            </div>
+            <div className="flex flex-col gap-6">
+              <ChartSkeleton />
+              <TableSkeleton />
+            </div>
+          </div>
+        ) : (
         <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
           {/* Live Prices — sidebar on desktop */}
           <div className="hidden lg:block">
@@ -602,6 +758,7 @@ export default function CompanyProductionProfit() {
             </Card>
           </div>
         </div>
+        )}
       </div>
 
       {/* Mobile drawer */}

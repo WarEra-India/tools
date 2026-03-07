@@ -2,9 +2,11 @@ import { Suspense } from "react"
 import { HashRouter, Routes, Route } from "react-router-dom"
 import HomePage from "@/pages/HomePage"
 import { calculators } from "@/calculators"
+import { ProfileProvider } from "@/lib/ProfileContext"
 
 function App() {
   return (
+    <ProfileProvider>
     <HashRouter>
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -21,6 +23,7 @@ function App() {
         ))}
       </Routes>
     </HashRouter>
+    </ProfileProvider>
   )
 }
 
