@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 const COUNTRIES_URL = "https://api5.warera.io/trpc/country.getAllCountries";
 const REGIONS_URL = "https://api5.warera.io/trpc/region.getRegionsObject";
-const PARTY_URL = "https://api4.warera.io/trpc/";
+const PARTY_URL = "https://api5.warera.io/trpc/";
 
 /** Maps raw-material deposit type → broad category for ethics bonus */
 const DEPOSIT_CATEGORY: Record<string, "agricultural" | "industrial"> = {

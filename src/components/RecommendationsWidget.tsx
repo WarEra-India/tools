@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { ArrowRight, Lightbulb, Plus, MoveRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowRight, ChevronDown, ChevronRight, Lightbulb, Plus, MoveRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProfile } from "@/lib/ProfileContext";
 import { type LocationBonus, getEthicsBonus, combineStratAndEthics } from "@/lib/useLocationBonus";
@@ -137,6 +137,7 @@ interface Props {
 
 export default function RecommendationsWidget({ locationBonus, profitRows, concretePrice }: Props) {
   const { profile } = useProfile();
+  const [open, setOpen] = useState(true);
 
   const actions = useMemo(
     () => (profile ? buildActions(profile, locationBonus, profitRows, concretePrice) : []),
@@ -163,7 +164,12 @@ export default function RecommendationsWidget({ locationBonus, profitRows, concr
   return (
     <Card className="mb-6">
       <CardContent className="pt-5">
-        <div className="flex items-center gap-2 mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        <button
+          className={'flex items-center gap-2 ' + (open ? 'mb-3' : '') + ' text-xs font-semibold uppercase tracking-wider text-zinc-500 w-full focus:outline-none'}
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+        >
+          {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <Lightbulb className="h-3.5 w-3.5" />
           Recommendations for
           <img
@@ -172,122 +178,124 @@ export default function RecommendationsWidget({ locationBonus, profitRows, concr
             className="h-5 w-5 rounded-full border border-zinc-700 object-cover"
           />
           <span className="text-zinc-300">{profile.user.username}</span>
-        </div>
+        </button>
 
-        <div className="space-y-3">
-          {actions.map((a, i) =>
-            a.kind === "move" ? (
-              <div
-                key={i}
-                className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4"
-              >
-                {/* Action header */}
-                <div className="flex items-center gap-2 mb-2">
-                  <MoveRight className="h-4 w-4 text-amber-400" />
-                  <span className="text-sm font-semibold text-amber-400">Move</span>
-                  <img src={itemImageUrl(a.itemCode)} alt="" className="h-4 w-4 object-contain" />
-                  <span className="text-sm text-zinc-200">{a.company.name}</span>
-                </div>
-                {/* Details grid */}
-                <div className="ml-6 space-y-1 text-xs">
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    <span className="text-zinc-500 w-16">Location</span>
-                    <span>{a.fromRegion}, {a.fromCountry}</span>
-                    <ArrowRight className="h-3 w-3 text-zinc-600" />
-                    <span className="text-emerald-400">{a.toRegion}, {a.toCountry}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    <span className="text-zinc-500 w-16">Bonus</span>
-                    <span>+{a.fromBonus}%</span>
-                    <ArrowRight className="h-3 w-3 text-zinc-600" />
-                    <span className="text-emerald-400">+{a.toBonus}%</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    <span className="text-zinc-500 w-16 shrink-0">Profit</span>
-                    <span className="inline-flex items-center gap-0.5">
-                      {a.profitPer100PP.toFixed(2)}
-                      <img src={COIN_ICON} alt="" className="h-3 w-3" />
-                    </span>
-                    <ArrowRight className="h-3 w-3 text-zinc-600" />
-                    <span className="inline-flex items-center gap-0.5 text-emerald-400">
-                      {a.newProfitPer100PP.toFixed(2)}
-                      <img src={COIN_ICON} alt="" className="h-3 w-3" />
-                    </span>
-                    <span className="text-zinc-600">per 100</span>
-                    <img src={PP_ICON} alt="PP" className="h-3 w-3" />
-                  </div>
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    <span className="text-zinc-500 w-16 shrink-0">Cost</span>
-                    <span className="inline-flex items-center gap-1">
-                      <img src={itemImageUrl("concrete")} alt="" className="h-3.5 w-3.5 object-contain" />
-                      {a.concreteQty} Concrete
-                    </span>
-                    <span className="text-zinc-500">=</span>
-                    <span className="inline-flex items-center gap-0.5 text-amber-300">
-                      {a.concreteCost.toFixed(2)}
-                      <img src={COIN_ICON} alt="" className="h-3 w-3" />
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div
-                key={i}
-                className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4"
-              >
-                {/* Action header */}
-                <div className="flex items-center gap-2 mb-2">
-                  <Plus className="h-4 w-4 text-emerald-400" />
-                  <span className="text-sm font-semibold text-emerald-400">Build</span>
-                  <span className="text-sm text-zinc-200">
-                    New Company
-                    <span className="text-zinc-500 text-xs ml-1">
-                      ({a.slotsAvailable} {a.slotsAvailable === 1 ? "slot" : "slots"} available)
-                    </span>
-                  </span>
-                </div>
-                {/* Details grid */}
-                <div className="ml-6 space-y-1 text-xs">
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    <span className="text-zinc-500 w-16">Item</span>
+        {open && (
+          <div className="space-y-3">
+            {actions.map((a, i) =>
+              a.kind === "move" ? (
+                <div
+                  key={i}
+                  className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4"
+                >
+                  {/* Action header */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <MoveRight className="h-4 w-4 text-amber-400" />
+                    <span className="text-sm font-semibold text-amber-400">Move</span>
                     <img src={itemImageUrl(a.itemCode)} alt="" className="h-4 w-4 object-contain" />
-                    <span className="text-zinc-200">{itemName(a.itemCode)}</span>
-                    <span className="text-zinc-600">(best profit/PP)</span>
+                    <span className="text-sm text-zinc-200">{a.company.name}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    <span className="text-zinc-500 w-16">Location</span>
-                    <span className="text-emerald-400">{a.region}{a.country ? `, ${a.country}` : ""}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    <span className="text-zinc-500 w-16">Bonus</span>
-                    <span className="text-emerald-400">+{a.bonus}%</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    <span className="text-zinc-500 w-16 shrink-0">Profit</span>
-                    <span className="inline-flex items-center gap-0.5 text-emerald-400">
-                      {a.profitPer100PP.toFixed(2)}
-                      <img src={COIN_ICON} alt="" className="h-3 w-3" />
-                    </span>
-                    <span className="text-zinc-600">per 100</span>
-                    <img src={PP_ICON} alt="PP" className="h-3 w-3" />
-                  </div>
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    <span className="text-zinc-500 w-16 shrink-0">Cost</span>
-                    <span className="inline-flex items-center gap-1">
-                      <img src={itemImageUrl("concrete")} alt="" className="h-3.5 w-3.5 object-contain" />
-                      {a.concreteQty} Concrete
-                    </span>
-                    <span className="text-zinc-500">=</span>
-                    <span className="inline-flex items-center gap-0.5 text-amber-300">
-                      {a.concreteCost.toFixed(2)}
-                      <img src={COIN_ICON} alt="" className="h-3 w-3" />
-                    </span>
+                  {/* Details grid */}
+                  <div className="ml-6 space-y-1 text-xs">
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <span className="text-zinc-500 w-16">Location</span>
+                      <span>{a.fromRegion}, {a.fromCountry}</span>
+                      <ArrowRight className="h-3 w-3 text-zinc-600" />
+                      <span className="text-emerald-400">{a.toRegion}, {a.toCountry}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <span className="text-zinc-500 w-16">Bonus</span>
+                      <span>+{a.fromBonus}%</span>
+                      <ArrowRight className="h-3 w-3 text-zinc-600" />
+                      <span className="text-emerald-400">+{a.toBonus}%</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <span className="text-zinc-500 w-16 shrink-0">Profit</span>
+                      <span className="inline-flex items-center gap-0.5">
+                        {a.profitPer100PP.toFixed(2)}
+                        <img src={COIN_ICON} alt="" className="h-3 w-3" />
+                      </span>
+                      <ArrowRight className="h-3 w-3 text-zinc-600" />
+                      <span className="inline-flex items-center gap-0.5 text-emerald-400">
+                        {a.newProfitPer100PP.toFixed(2)}
+                        <img src={COIN_ICON} alt="" className="h-3 w-3" />
+                      </span>
+                      <span className="text-zinc-600">per 100</span>
+                      <img src={PP_ICON} alt="PP" className="h-3 w-3" />
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <span className="text-zinc-500 w-16 shrink-0">Cost</span>
+                      <span className="inline-flex items-center gap-1">
+                        <img src={itemImageUrl("concrete")} alt="" className="h-3.5 w-3.5 object-contain" />
+                        {a.concreteQty} Concrete
+                      </span>
+                      <span className="text-zinc-500">=</span>
+                      <span className="inline-flex items-center gap-0.5 text-amber-300">
+                        {a.concreteCost.toFixed(2)}
+                        <img src={COIN_ICON} alt="" className="h-3 w-3" />
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ),
-          )}
-        </div>
+              ) : (
+                <div
+                  key={i}
+                  className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4"
+                >
+                  {/* Action header */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <Plus className="h-4 w-4 text-emerald-400" />
+                    <span className="text-sm font-semibold text-emerald-400">Build</span>
+                    <span className="text-sm text-zinc-200">
+                      New Company
+                      <span className="text-zinc-500 text-xs ml-1">
+                        ({a.slotsAvailable} {a.slotsAvailable === 1 ? "slot" : "slots"} available)
+                      </span>
+                    </span>
+                  </div>
+                  {/* Details grid */}
+                  <div className="ml-6 space-y-1 text-xs">
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <span className="text-zinc-500 w-16">Item</span>
+                      <img src={itemImageUrl(a.itemCode)} alt="" className="h-4 w-4 object-contain" />
+                      <span className="text-zinc-200">{itemName(a.itemCode)}</span>
+                      <span className="text-zinc-600">(best profit/PP)</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <span className="text-zinc-500 w-16">Location</span>
+                      <span className="text-emerald-400">{a.region}{a.country ? `, ${a.country}` : ""}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <span className="text-zinc-500 w-16">Bonus</span>
+                      <span className="text-emerald-400">+{a.bonus}%</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <span className="text-zinc-500 w-16 shrink-0">Profit</span>
+                      <span className="inline-flex items-center gap-0.5 text-emerald-400">
+                        {a.profitPer100PP.toFixed(2)}
+                        <img src={COIN_ICON} alt="" className="h-3 w-3" />
+                      </span>
+                      <span className="text-zinc-600">per 100</span>
+                      <img src={PP_ICON} alt="PP" className="h-3 w-3" />
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <span className="text-zinc-500 w-16 shrink-0">Cost</span>
+                      <span className="inline-flex items-center gap-1">
+                        <img src={itemImageUrl("concrete")} alt="" className="h-3.5 w-3.5 object-contain" />
+                        {a.concreteQty} Concrete
+                      </span>
+                      <span className="text-zinc-500">=</span>
+                      <span className="inline-flex items-center gap-0.5 text-amber-300">
+                        {a.concreteCost.toFixed(2)}
+                        <img src={COIN_ICON} alt="" className="h-3 w-3" />
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

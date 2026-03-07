@@ -350,9 +350,12 @@ export default function CompanyProductionProfit() {
           )} */}
         </div>
         
-        {/* {isLoading && <RecommendationsSkeleton />} */}
-        <RecommendationsWidget locationBonus={locationBonus} profitRows={rows} concretePrice={data?.prices.concrete ?? 0} />
-        <CompaniesWidget locationBonus={locationBonus} />
+        {!isLoading && (
+          <>
+            <RecommendationsWidget locationBonus={locationBonus} profitRows={rows} concretePrice={data?.prices.concrete ?? 0} />
+            <CompaniesWidget locationBonus={locationBonus} />
+          </>
+        )}
 
         {isLoading ? (
           <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
