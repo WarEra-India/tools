@@ -2,6 +2,8 @@ export interface GameData {
   prices: Record<string, number>;
   rawPP: Record<string, number>;
   recipes: Record<string, { pp: number; inputs: Record<string, number> }>;
+  /** deposit type → best bonus percent (e.g. 35 means +35% PP) */
+  locationBonus?: Record<string, number>;
 }
 
 export interface ProfitRow {
@@ -11,17 +13,22 @@ export interface ProfitRow {
   cost: number;
   profit: number;
   pp: number;
+  basePP: number;
+  bonusPct: number;
   profitPP: number;
   inputs?: Record<string, number>;
 }
 
 export function calculate(data: GameData): ProfitRow[] {
   const rows: ProfitRow[] = [];
+  const bonus = data.locationBonus ?? {};
 
   // RAW MATERIALS
   for (const r in data.rawPP) {
     const price = data.prices[r] ?? 0;
-    const pp = data.rawPP[r];
+    const basePP = data.rawPP[r];
+    const bonusPct = bonus[r] ?? 0;
+    const pp = basePP / (1 + bonusPct / 100);
 
     rows.push({
       item: r,
@@ -30,6 +37,8 @@ export function calculate(data: GameData): ProfitRow[] {
       cost: 0,
       profit: price,
       pp: pp,
+      basePP: basePP,
+      bonusPct: bonusPct,
       profitPP: price / pp,
     });
   }
@@ -38,12 +47,20 @@ export function calculate(data: GameData): ProfitRow[] {
   for (const item in data.recipes) {
     const recipe = data.recipes[item];
     let rawCost = 0;
-    let totalPP = recipe.pp;
+
+    // Determine the primary raw input to pick the location bonus
+    const primaryInput = Object.keys(recipe.inputs)[0] ?? "";
+    const bonusPct = bonus[primaryInput] ?? 0;
+    const bonusMul = 1 + bonusPct / 100;
+
+    let baseTotalPP = recipe.pp;
+    let totalPP = recipe.pp / bonusMul;
 
     for (const input in recipe.inputs) {
       const qty = recipe.inputs[input];
       rawCost += qty * (data.prices[input] ?? 0);
-      totalPP += qty * data.rawPP[input];
+      baseTotalPP += qty * data.rawPP[input];
+      totalPP += qty * (data.rawPP[input] / bonusMul);
     }
 
     const sell = data.prices[item] ?? 0;
@@ -56,6 +73,8 @@ export function calculate(data: GameData): ProfitRow[] {
       cost: rawCost,
       profit: profit,
       pp: totalPP,
+      basePP: baseTotalPP,
+      bonusPct: bonusPct,
       profitPP: profit / totalPP,
       inputs: recipe.inputs,
     });

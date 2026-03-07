@@ -35,6 +35,7 @@ import { calculate } from "./calculator"
 import { itemImageUrl } from "@/lib/images"
 import { itemName } from "@/lib/items"
 import { useLivePrices } from "@/lib/useLivePrices"
+import { useLocationBonus } from "@/lib/useLocationBonus"
 
 const PP_ICON = `${import.meta.env.BASE_URL}images/production_point.svg`
 const COIN_ICON = `${import.meta.env.BASE_URL}images/game_coin.svg`
@@ -60,7 +61,9 @@ const CHART_COLORS = [
 export default function CompanyProductionProfit() {
   const [data, setData] = useState(getDefaultData)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const { data: livePrices, loading: _pricesLoading } = useLivePrices()
+  const [useBestLocation, setUseBestLocation] = useState(true)
+  const { data: livePrices, loading: pricesLoading } = useLivePrices()
+  const { data: locationBonus } = useLocationBonus()
 
   // Auto-update prices whenever live data arrives
   useEffect(() => {
@@ -71,7 +74,15 @@ export default function CompanyProductionProfit() {
     }))
   }, [livePrices])
 
-  const rows = useMemo(() => calculate(data), [data])
+  const rows = useMemo(
+    () =>
+      calculate({
+        ...data,
+        locationBonus:
+          useBestLocation && locationBonus ? locationBonus.bonusByType : undefined,
+      }),
+    [data, useBestLocation, locationBonus]
+  )
 
   const rawItems = Object.keys(data.rawPP)
   const processedItems = Object.keys(data.recipes)
@@ -166,6 +177,20 @@ export default function CompanyProductionProfit() {
           <p className="mt-1 text-zinc-400">
             Live market prices to see which items are most profitable to produce.
           </p>
+          <label className="mt-3 inline-flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              checked={useBestLocation}
+              onChange={(e) => setUseBestLocation(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 accent-emerald-500"
+            />
+            Use Best Location for Bonus
+            {useBestLocation && locationBonus && (
+              <span className="text-xs text-zinc-500">
+                (best region deposit + country strategic bonus applied)
+              </span>
+            )}
+          </label>
           {/* {livePrices && (
             <p className="mt-1 text-xs text-zinc-500">
               Last updated: {new Date(livePrices.timestamp).toLocaleTimeString()}
@@ -493,9 +518,27 @@ export default function CompanyProductionProfit() {
                           {r.profit.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
-                          <span className="inline-flex items-center justify-end gap-1">
-                            {r.pp}
-                            <img src={PP_ICON} alt="PP" className="h-4 w-4" />
+                          <span className="inline-flex flex-col items-end gap-0.5">
+                            <span className="inline-flex items-center gap-1">
+                              {r.pp.toFixed(2)}
+                              <img src={PP_ICON} alt="PP" className="h-4 w-4" />
+                            </span>
+                            {r.bonusPct > 0 && (() => {
+                              const depositKey = r.type === "Raw" ? r.item : Object.keys(r.inputs ?? {})[0] ?? ""
+                              const best = useBestLocation && locationBonus?.bestByType[depositKey]
+                              return (
+                                <>
+                                  <span className="text-xs text-zinc-500">
+                                    {r.basePP} − {r.bonusPct}%
+                                  </span>
+                                  {best && (
+                                    <span className="text-[10px] leading-tight text-zinc-600">
+                                      {best.regionName}, {best.countryName}
+                                    </span>
+                                  )}
+                                </>
+                              )
+                            })()}
                           </span>
                         </TableCell>
                         <TableCell
