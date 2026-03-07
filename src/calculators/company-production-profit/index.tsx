@@ -60,7 +60,7 @@ const CHART_COLORS = [
 export default function CompanyProductionProfit() {
   const [data, setData] = useState(getDefaultData)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const { data: livePrices, loading: pricesLoading } = useLivePrices()
+  const { data: livePrices, loading: _pricesLoading } = useLivePrices()
 
   // Auto-update prices whenever live data arrives
   useEffect(() => {
