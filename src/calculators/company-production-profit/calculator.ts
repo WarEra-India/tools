@@ -20,7 +20,7 @@ export function calculate(data: GameData): ProfitRow[] {
 
   // RAW MATERIALS
   for (const r in data.rawPP) {
-    const price = data.prices[r];
+    const price = data.prices[r] ?? 0;
     const pp = data.rawPP[r];
 
     rows.push({
@@ -42,11 +42,11 @@ export function calculate(data: GameData): ProfitRow[] {
 
     for (const input in recipe.inputs) {
       const qty = recipe.inputs[input];
-      rawCost += qty * data.prices[input];
+      rawCost += qty * (data.prices[input] ?? 0);
       totalPP += qty * data.rawPP[input];
     }
 
-    const sell = data.prices[item];
+    const sell = data.prices[item] ?? 0;
     const profit = sell - rawCost;
 
     rows.push({

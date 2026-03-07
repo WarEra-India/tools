@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Link } from "react-router-dom"
-import { ArrowLeft, SlidersHorizontal } from "lucide-react"
+import { ArrowLeft, Coins } from "lucide-react"
 import {
   BarChart,
   Bar,
@@ -28,12 +28,13 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Drawer } from "@/components/ui/drawer"
 import { getDefaultData } from "./data"
 import { calculate } from "./calculator"
 import { itemImageUrl } from "@/lib/images"
+import { itemName } from "@/lib/items"
+import { useLivePrices } from "@/lib/useLivePrices"
 
 const PP_ICON = `${import.meta.env.BASE_URL}images/production_point.svg`
 const COIN_ICON = `${import.meta.env.BASE_URL}images/game_coin.svg`
@@ -59,17 +60,18 @@ const CHART_COLORS = [
 export default function CompanyProductionProfit() {
   const [data, setData] = useState(getDefaultData)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const { data: livePrices, loading: pricesLoading } = useLivePrices()
 
-  const rows = useMemo(() => calculate(data), [data])
-
-  function updatePrice(item: string, value: string) {
-    const val = parseFloat(value)
-    if (isNaN(val)) return
+  // Auto-update prices whenever live data arrives
+  useEffect(() => {
+    if (!livePrices?.prices) return
     setData((prev) => ({
       ...prev,
-      prices: { ...prev.prices, [item]: val },
+      prices: { ...prev.prices, ...livePrices.prices },
     }))
-  }
+  }, [livePrices])
+
+  const rows = useMemo(() => calculate(data), [data])
 
   const rawItems = Object.keys(data.rawPP)
   const processedItems = Object.keys(data.recipes)
@@ -95,31 +97,27 @@ export default function CompanyProductionProfit() {
     [processedRows, rawRowMap]
   )
 
-  const priceEditor = (
+  const priceList = (
     <div className="space-y-4">
       <div>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
           Raw Materials
         </h3>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {rawItems.map((item) => (
             <div key={item} className="flex items-center gap-3">
               <img
                 src={itemImageUrl(item)}
-                alt={item}
+                alt={itemName(item)}
                 className="h-6 w-6 object-contain"
                 onError={(e) => { e.currentTarget.style.display = "none" }}
               />
-              <span className="w-32 truncate text-sm" title={item}>
-                {item}
+              <span className="flex-1 truncate text-sm" title={itemName(item)}>
+                {itemName(item)}
               </span>
-              <Input
-                type="number"
-                step="0.01"
-                className="w-24"
-                value={data.prices[item]}
-                onChange={(e) => updatePrice(item, e.target.value)}
-              />
+              <span className="tabular-nums text-sm text-zinc-300">
+                {(data.prices[item] ?? 0).toFixed(4)}
+              </span>
             </div>
           ))}
         </div>
@@ -128,25 +126,21 @@ export default function CompanyProductionProfit() {
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
           Processed Items
         </h3>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {processedItems.map((item) => (
             <div key={item} className="flex items-center gap-3">
               <img
                 src={itemImageUrl(item)}
-                alt={item}
+                alt={itemName(item)}
                 className="h-6 w-6 object-contain"
                 onError={(e) => { e.currentTarget.style.display = "none" }}
               />
-              <span className="w-32 truncate text-sm" title={item}>
-                {item}
+              <span className="flex-1 truncate text-sm" title={itemName(item)}>
+                {itemName(item)}
               </span>
-              <Input
-                type="number"
-                step="0.01"
-                className="w-24"
-                value={data.prices[item]}
-                onChange={(e) => updatePrice(item, e.target.value)}
-              />
+              <span className="tabular-nums text-sm text-zinc-300">
+                {(data.prices[item] ?? 0).toFixed(4)}
+              </span>
             </div>
           ))}
         </div>
@@ -170,22 +164,30 @@ export default function CompanyProductionProfit() {
             Company Production
           </h1>
           <p className="mt-1 text-zinc-400">
-            Edit market prices to see which items are most profitable to produce.
+            Live market prices update automatically every 30 seconds.
           </p>
+          {livePrices && (
+            <p className="mt-1 text-xs text-zinc-500">
+              Last updated: {new Date(livePrices.timestamp).toLocaleTimeString()}
+            </p>
+          )}
+          {pricesLoading && !livePrices && (
+            <p className="mt-1 text-xs text-zinc-500 animate-pulse">Loading live prices…</p>
+          )}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
-          {/* Price Editor — sidebar on desktop, hidden on mobile (uses drawer) */}
+        <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+          {/* Live Prices — sidebar on desktop */}
           <div className="hidden lg:block">
             <Card>
               <CardHeader>
                 <CardTitle className="flex gap-2">
-                  Market Prices
+                  Live Prices
                   <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
                 </CardTitle>
-                <CardDescription>Adjust prices to recalculate profits</CardDescription>
+                <CardDescription>Updates automatically every 30s</CardDescription>
               </CardHeader>
-              <CardContent>{priceEditor}</CardContent>
+              <CardContent>{priceList}</CardContent>
             </Card>
           </div>
 
@@ -247,6 +249,7 @@ export default function CompanyProductionProfit() {
                           boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
                         }}
                         labelStyle={{ color: "#3f3f46", fontWeight: 600, marginBottom: 2 }}
+                        labelFormatter={(label) => itemName(String(label))}
                         itemStyle={{ color: "#18181b" }}
                         formatter={(value) => [
                           typeof value === "number" ? value.toFixed(4) : value,
@@ -317,6 +320,7 @@ export default function CompanyProductionProfit() {
                           boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
                         }}
                         labelStyle={{ color: "#3f3f46", fontWeight: 600, marginBottom: 2 }}
+                        labelFormatter={(label) => itemName(String(label))}
                         itemStyle={{ color: "#18181b" }}
                         formatter={(value, name) => [
                           typeof value === "number" ? value.toFixed(4) : value,
@@ -401,11 +405,12 @@ export default function CompanyProductionProfit() {
                           boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
                         }}
                         labelStyle={{ color: "#3f3f46", fontWeight: 600, marginBottom: 2 }}
+                        labelFormatter={(label) => itemName(String(label))}
                         itemStyle={{ color: "#18181b" }}
                         formatter={(value, name, props) => [
                           typeof value === "number" ? value.toFixed(4) : value,
                           name === "rawProfitPP"
-                            ? `Raw (${(props.payload as { rawInput: string }).rawInput})`
+                            ? `Raw (${itemName((props.payload as { rawInput: string }).rawInput)})`
                             : "Processed",
                         ]}
                       />
@@ -455,23 +460,23 @@ export default function CompanyProductionProfit() {
                           <span className="inline-flex items-center gap-2">
                             <img
                               src={itemImageUrl(r.item)}
-                              alt={r.item}
+                              alt={itemName(r.item)}
                               className="h-5 w-5 object-contain"
                               onError={(e) => { e.currentTarget.style.display = "none" }}
                             />
                             <span>
-                              {r.item}
+                              {itemName(r.item)}
                               {r.inputs && (
                                 <span className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
                                   {Object.entries(r.inputs).map(([mat, qty]) => (
                                     <span key={mat} className="inline-flex items-center gap-1 text-xs text-zinc-400">
                                       <img
                                         src={itemImageUrl(mat)}
-                                        alt={mat}
+                                        alt={itemName(mat)}
                                         className="h-3.5 w-3.5 object-contain"
                                         onError={(e) => { e.currentTarget.style.display = "none" }}
                                       />
-                                      {qty}× {mat}
+                                      {qty}× {itemName(mat)}
                                     </span>
                                   ))}
                                 </span>
@@ -517,21 +522,21 @@ export default function CompanyProductionProfit() {
         onClose={() => setDrawerOpen(false)}
         title={
           <span className="flex items-center gap-2">
-            Market Prices
+            Live Prices
             <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
           </span>
         }
       >
-        {priceEditor}
+        {priceList}
       </Drawer>
 
-      {/* Mobile FAB — only visible below lg */}
+      {/* Mobile FAB */}
       <button
         onClick={() => setDrawerOpen(true)}
         className="fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full bg-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-900 shadow-lg transition-transform active:scale-95 lg:hidden"
-        aria-label="Edit market prices"
+        aria-label="View live prices"
       >
-        <SlidersHorizontal className="h-4 w-4" />
+        <Coins className="h-4 w-4" />
         Prices
       </button>
     </div>
