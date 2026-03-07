@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import type { GameData } from "./calculator";
+import { API_BASE } from "../../lib/wareraApi";
 
-const GAME_CONFIG_URL = "https://api5.warera.io/trpc/gameConfig.getGameConfig";
+const GAME_CONFIG_URL = API_BASE + "/gameConfig.getGameConfig";
 
 export type StaticGameData = {
   rawPP: Record<string, number>;

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
+import { API_BASE } from "./wareraApi";
 
-const COUNTRIES_URL = "https://api5.warera.io/trpc/country.getAllCountries";
-const REGIONS_URL = "https://api5.warera.io/trpc/region.getRegionsObject";
-const PARTY_URL = "https://api5.warera.io/trpc/";
+const COUNTRIES_URL = API_BASE + "/country.getAllCountries";
+const REGIONS_URL = API_BASE + "/region.getRegionsObject";
+const PARTY_URL = API_BASE + "/";
 
 /** Maps raw-material deposit type → broad category for ethics bonus */
 const DEPOSIT_CATEGORY: Record<string, "agricultural" | "industrial"> = {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import { API_BASE } from "./wareraApi";
 
-const API_URL = "https://api5.warera.io/trpc/itemTrading.getPrices";
+const API_URL = API_BASE + "/itemTrading.getPrices";
 
 export interface LivePrices {
   prices: Record<string, number>;
