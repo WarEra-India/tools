@@ -119,6 +119,22 @@ export async function getCompanyById(companyId: string): Promise<CompanyInfo> {
   return post<CompanyInfo>("company.getById", { companyId });
 }
 
+async function getCompaniesBatch(companyIds: string[]): Promise<CompanyInfo[]> {
+  if (companyIds.length === 0) return [];
+  const url =
+    API_BASE + "/" + companyIds.map(() => "company.getById").join(",") + "?batch=1";
+  const body: Record<string, { companyId: string }> = {};
+  companyIds.forEach((id, i) => { body[i] = { companyId: id }; });
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "*/*" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  const json = await res.json();
+  return (json as { result: { data: CompanyInfo } }[]).map((r) => r.result.data);
+}
+
 /* ---------- aggregated fetch ---------- */
 
 export interface FullProfile {
@@ -135,7 +151,7 @@ export async function fetchFullProfile(username: string): Promise<FullProfile> {
     getCompanyIds(userId),
   ]);
 
-  const companies = await Promise.all(companyIds.map(getCompanyById));
+  const companies = await getCompaniesBatch(companyIds);
 
   return { user, companies };
 }

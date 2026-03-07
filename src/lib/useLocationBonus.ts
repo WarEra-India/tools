@@ -34,17 +34,18 @@ export function getEthicsBonus(
 }
 
 /**
- * Combines strategic and ethics bonuses, accounting for the game mechanic
- * where agricultural-leaning economies don't stack strat + ethics (takes the max).
+ * Calculate Bonus, getRecommendedRegionIds
  */
-export function combineStratAndEthics(
+export function calcBonus(
+  depositBonus: number,
   stratBonus: number,
   ethicsBonus: number,
   industrialism: number
 ): number {
-  return industrialism < 0
-    ? Math.max(stratBonus, ethicsBonus)
-    : stratBonus + ethicsBonus;
+  return  depositBonus + Math.max(stratBonus, ethicsBonus);
+  // return industrialism < 0
+  //   ? Math.max(stratBonus, ethicsBonus)
+  //   : stratBonus + ethicsBonus;
 }
 
 export interface BestLocation {
@@ -197,7 +198,7 @@ export function useLocationBonus() {
           for (const itemCode of Object.keys(DEPOSIT_CATEGORY)) {
             const deposit = depositType === itemCode ? regionBonus : 0;
             const ethicsBonus = getEthicsBonus(itemCode, industrialism);
-            const total = deposit + combineStratAndEthics(stratBonus, ethicsBonus, industrialism);
+            const total = calcBonus(deposit, stratBonus, ethicsBonus, industrialism);
             if (total > 0 && total > (bonusByType[itemCode] ?? 0)) {
               bonusByType[itemCode] = total;
               bestByType[itemCode] = {

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ArrowRight, ChevronDown, ChevronRight, Lightbulb, Plus, MoveRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProfile } from "@/lib/ProfileContext";
-import { type LocationBonus, getEthicsBonus, combineStratAndEthics } from "@/lib/useLocationBonus";
+import { type LocationBonus, getEthicsBonus, calcBonus } from "@/lib/useLocationBonus";
 import { itemName } from "@/lib/items";
 import { itemImageUrl } from "@/lib/images";
 import ProfileSearchBar from "@/components/ProfileSearchBar";
@@ -63,7 +63,7 @@ function buildActions(
       const industrialism = locationBonus.countryIndustrialism[current?.countryId ?? ""] ?? 0;
       const depositMatch = current?.depositType === code ? (current?.depositBonus ?? 0) : 0;
       const ethics = getEthicsBonus(code, industrialism);
-      const currentBonus = depositMatch + combineStratAndEthics(current?.stratBonus ?? 0, ethics, industrialism);
+      const currentBonus = calcBonus(depositMatch, current?.stratBonus ?? 0, ethics, industrialism);
 
       // Only recommend if the best region is actually better
       if (best.bonus <= currentBonus) continue;

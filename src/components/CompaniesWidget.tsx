@@ -2,7 +2,7 @@ import { Building2, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProfile } from "@/lib/ProfileContext";
-import { type LocationBonus, getEthicsBonus, combineStratAndEthics } from "@/lib/useLocationBonus";
+import { type LocationBonus, getEthicsBonus, calcBonus } from "@/lib/useLocationBonus";
 import { itemName } from "@/lib/items";
 import { itemImageUrl } from "@/lib/images";
 import type { CompanyInfo } from "@/lib/wareraApi";
@@ -13,7 +13,7 @@ function calcCompanyBonus(company: CompanyInfo, locationBonus: LocationBonus): n
   const industrialism = locationBonus.countryIndustrialism[region.countryId] ?? 0;
   const depositMatch = region.depositType === company.itemCode ? region.depositBonus : 0;
   const ethics = getEthicsBonus(company.itemCode, industrialism);
-  return depositMatch + combineStratAndEthics(region.stratBonus, ethics, industrialism);
+  return calcBonus(depositMatch, region.stratBonus, ethics, industrialism);
 }
 
 const WORKER_ICON = `${import.meta.env.BASE_URL}images/worker.svg`;
