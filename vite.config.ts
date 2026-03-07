@@ -3,10 +3,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-const PRICES_API_URL = "https://api2.warera.io/trpc/itemTrading.getPrices"
-
-let cached: { prices: Record<string, number>; timestamp: number } | null = null
-const CACHE_TTL = 30_000
+// const PRICES_API_URL = "https://api5.warera.io/trpc/itemTrading.getPrices"
+// let cached: { prices: Record<string, number>; timestamp: number } | null = null
+// const CACHE_TTL = 30_000
 
 export default defineConfig(() => {
   return {
