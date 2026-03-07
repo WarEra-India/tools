@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+::root {
+    --yellow-svg: #E1C997;
+    --purple-svg: #CBBAE5;
+}

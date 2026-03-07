@@ -104,8 +104,8 @@ export default function CompanyProductionProfit() {
           Raw Materials
         </h3>
         <div className="space-y-1.5">
-          {rawItems.map((item) => (
-            <div key={item} className="flex items-center gap-3">
+          {rawItems.map((item, index) => (
+            <div key={item} className={`flex items-center gap-3 ${index % 2 === 0 ? "" : "bg-zinc-800"} pt-1 px-2 rounded`}>
               <img
                 src={itemImageUrl(item)}
                 alt={itemName(item)}
@@ -127,8 +127,8 @@ export default function CompanyProductionProfit() {
           Processed Items
         </h3>
         <div className="space-y-1.5">
-          {processedItems.map((item) => (
-            <div key={item} className="flex items-center gap-3">
+          {processedItems.map((item, index) => (
+            <div key={item} className={`flex items-center gap-3 ${index % 2 === 0 ? "" : "bg-zinc-800"} pt-1 px-2 rounded`}>
               <img
                 src={itemImageUrl(item)}
                 alt={itemName(item)}
@@ -164,16 +164,16 @@ export default function CompanyProductionProfit() {
             Company Production
           </h1>
           <p className="mt-1 text-zinc-400">
-            Live market prices update automatically every 30 seconds.
+            Live market prices to see which items are most profitable to produce.
           </p>
-          {livePrices && (
+          {/* {livePrices && (
             <p className="mt-1 text-xs text-zinc-500">
               Last updated: {new Date(livePrices.timestamp).toLocaleTimeString()}
             </p>
           )}
           {pricesLoading && !livePrices && (
             <p className="mt-1 text-xs text-zinc-500 animate-pulse">Loading live prices…</p>
-          )}
+          )} */}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[300px_1fr]">

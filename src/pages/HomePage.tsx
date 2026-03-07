@@ -32,7 +32,7 @@ export default function HomePage() {
                 <CardHeader>
                   <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-800">
                     <img
-                      src={`${import.meta.env.BASE_URL}images/${calc.icon}.svg`}
+                      src={calc.icon ? `${import.meta.env.BASE_URL}images/${calc.icon}.svg` : calc.iconUrl}
                       alt={calc.name}
                       className="h-5 w-5 text-zinc-300"
                     />

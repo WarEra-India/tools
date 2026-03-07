@@ -6,8 +6,8 @@
     "petroleum": 1,
     "coca": 1,
     "iron": 1,
-    "fish": 40,
-    "livestock": 20
+    "livestock": 20,
+    "fish": 40
   },
   "recipes": {
     "bread": { "pp": 10, "inputs": { "grain": 10 } },
