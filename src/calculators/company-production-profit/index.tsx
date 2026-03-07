@@ -38,6 +38,7 @@ import { itemName } from "@/lib/items"
 import { useLivePrices } from "@/lib/useLivePrices"
 import { useLocationBonus } from "@/lib/useLocationBonus"
 import RecommendationsWidget from "@/components/RecommendationsWidget"
+import CompaniesWidget from "@/components/CompaniesWidget"
 
 const PP_ICON = `${import.meta.env.BASE_URL}images/production_point.svg`
 const COIN_ICON = `${import.meta.env.BASE_URL}images/game_coin.svg`
@@ -351,6 +352,7 @@ export default function CompanyProductionProfit() {
         
         {/* {isLoading && <RecommendationsSkeleton />} */}
         <RecommendationsWidget locationBonus={locationBonus} profitRows={rows} concretePrice={data?.prices.concrete ?? 0} />
+        <CompaniesWidget locationBonus={locationBonus} />
 
         {isLoading ? (
           <div className="grid gap-6 lg:grid-cols-[300px_1fr]">

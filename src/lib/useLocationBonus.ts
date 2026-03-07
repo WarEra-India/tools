@@ -2,6 +2,49 @@ import { useState, useEffect, useRef } from "react";
 
 const COUNTRIES_URL = "https://api5.warera.io/trpc/country.getAllCountries";
 const REGIONS_URL = "https://api5.warera.io/trpc/region.getRegionsObject";
+const PARTY_URL = "https://api4.warera.io/trpc/";
+
+/** Maps raw-material deposit type → broad category for ethics bonus */
+const DEPOSIT_CATEGORY: Record<string, "agricultural" | "industrial"> = {
+  grain: "agricultural",
+  livestock: "agricultural",
+  fish: "agricultural",
+  coca: "agricultural",
+
+  limestone: "industrial",
+  iron: "industrial",
+  lead: "industrial",
+  petroleum: "industrial",
+};
+
+/** Returns the ethics production bonus % for a given deposit type and industrialism value */
+export function getEthicsBonus(
+  itemCode: string | null,
+  industrialism: number
+): number {
+  if (!itemCode) return 0;
+  const category = DEPOSIT_CATEGORY[itemCode];
+  if (!category) return 0;
+  if (industrialism === -2 && category === "agricultural") return 30;
+  if (industrialism === -1 && category === "agricultural") return 10;
+  if (industrialism === 1 && category === "industrial") return 10;
+  if (industrialism === 2 && category === "industrial") return 30;
+  return 0;
+}
+
+/**
+ * Combines strategic and ethics bonuses, accounting for the game mechanic
+ * where agricultural-leaning economies don't stack strat + ethics (takes the max).
+ */
+export function combineStratAndEthics(
+  stratBonus: number,
+  ethicsBonus: number,
+  industrialism: number
+): number {
+  return industrialism < 0
+    ? Math.max(stratBonus, ethicsBonus)
+    : stratBonus + ethicsBonus;
+}
 
 export interface BestLocation {
   bonus: number;
@@ -12,7 +55,13 @@ export interface BestLocation {
 export interface RegionInfo {
   name: string;
   countryName: string;
+  countryId: string;
   depositType: string | null;
+  /** Raw deposit % bonus — only applies to companies whose itemCode matches depositType */
+  depositBonus: number;
+  /** Country strategic resource bonus — applies to all companies */
+  stratBonus: number;
+  /** depositBonus + stratBonus (no ethics — ethics is item-specific, computed by the consumer) */
   bonus: number;
 }
 
@@ -23,11 +72,14 @@ export interface LocationBonus {
   bestByType: Record<string, BestLocation>;
   /** region ID → region info (for looking up a company's current region) */
   regionById: Record<string, RegionInfo>;
+  /** country ID → ruling party industrialism value (for ethics bonus lookup) */
+  countryIndustrialism: Record<string, number>;
 }
 
 interface CountryData {
   _id: string;
   name: string;
+  rulingParty?: string | null;
   strategicResources?: {
     bonuses?: {
       productionPercent?: number;
@@ -77,13 +129,44 @@ export function useLocationBonus() {
         const regionsObj: Record<string, RegionData> =
           regionsJson?.result?.data ?? {};
 
-        // Build country ID → strategic production bonus & name
+        // Get parties data
+        const rulingParties: Record<string, any> = {};
+        let i = 0;
+        let customPartyUrl = PARTY_URL;
+        for (const c of countries) {
+          if (c.rulingParty) {
+            rulingParties[i++] = {
+              partyId: c.rulingParty
+            };
+            customPartyUrl += "party.getById,";
+          }
+        }
+        customPartyUrl += "?batch=1";
+        const partiesRes = await fetch(customPartyUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(rulingParties),
+        });
+        const partiesJson = await partiesRes.json();
+
+        // Build parties ID -> ethics
+        const partyById: Record<string, any> = {};
+        for (const p of partiesJson ?? []) {
+          partyById[p.result?.data._id] = p.result?.data?.ethics ?? {};
+        }
+
+        // Build country ID → strategic production bonus, name, and ruling party ethics
         const countryBonus: Record<string, number> = {};
         const countryName: Record<string, string> = {};
+        const countryIndustrialism: Record<string, number> = {};
         for (const c of countries) {
           countryBonus[c._id] =
             c.strategicResources?.bonuses?.productionPercent ?? 0;
           countryName[c._id] = c.name;
+          if (c.rulingParty && partyById[c.rulingParty]) {
+            countryIndustrialism[c._id] =
+              partyById[c.rulingParty].industrialism ?? 0;
+          }
         }
 
         // Build region lookup and find best per deposit type
@@ -94,28 +177,39 @@ export function useLocationBonus() {
           const depositType = r.deposit?.type ?? null;
           const regionBonus = r.deposit?.bonusPercent ?? 0;
           const stratBonus = countryBonus[r.country] ?? 0;
-          const total = regionBonus + stratBonus;
+          const industrialism = countryIndustrialism[r.country] ?? 0;
 
+          // regionById: no ethics — ethics depends on the company's item, not the region's deposit
           regionById[r._id] = {
             name: r.name,
             countryName: countryName[r.country] ?? "Unknown",
+            countryId: r.country,
             depositType,
-            bonus: total,
+            depositBonus: regionBonus,
+            stratBonus,
+            bonus: regionBonus + stratBonus,
           };
 
-          if (!depositType) continue;
-          if (total > (bonusByType[depositType] ?? 0)) {
-            bonusByType[depositType] = total;
-            bestByType[depositType] = {
-              bonus: total,
-              regionName: r.name,
-              countryName: countryName[r.country] ?? "Unknown",
-            };
+          // bestByType: check this region for every possible item type.
+          // A region contributes deposit bonus only when its deposit matches the item;
+          // ethics bonus applies based on the item's category regardless of the deposit.
+          for (const itemCode of Object.keys(DEPOSIT_CATEGORY)) {
+            const deposit = depositType === itemCode ? regionBonus : 0;
+            const ethicsBonus = getEthicsBonus(itemCode, industrialism);
+            const total = deposit + combineStratAndEthics(stratBonus, ethicsBonus, industrialism);
+            if (total > 0 && total > (bonusByType[itemCode] ?? 0)) {
+              bonusByType[itemCode] = total;
+              bestByType[itemCode] = {
+                bonus: total,
+                regionName: r.name,
+                countryName: countryName[r.country] ?? "Unknown",
+              };
+            }
           }
         }
 
         if (mountedRef.current) {
-          setData({ bonusByType, bestByType, regionById });
+          setData({ bonusByType, bestByType, regionById, countryIndustrialism });
         }
       } catch (e) {
         console.error("Failed to fetch location bonus data:", e);
