@@ -19,7 +19,7 @@ export default function HomePage() {
             className="mx-auto mb-4 h-20 w-20"
           />
           <h1 className="mb-2 text-4xl font-bold tracking-tight">
-            WarEra Calculators
+            WarEra Tool
           </h1>
           <p className="text-zinc-400">
             Production & economy tools for WarEra

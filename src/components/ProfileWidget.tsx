@@ -1,10 +1,20 @@
+import { useState, useEffect } from "react";
 import { X, User, Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProfile } from "@/lib/ProfileContext";
 import ProfileSearchBar from "@/components/ProfileSearchBar";
+import { CountryFlag } from "@/components/CountryFlag";
+import { getAllCountries, type Country } from "@/lib/api/warera";
 
 export default function ProfileWidget() {
   const { profile, clearProfile } = useProfile();
+  const [countries, setCountries] = useState<Record<string, Country>>({});
+
+  useEffect(() => {
+    getAllCountries().then(setCountries).catch(() => {});
+  }, []);
+
+  const userCountry = profile?.user?.country ? countries[profile.user.country] : null;
 
   return (
     <Card className="mb-6">
@@ -24,6 +34,9 @@ export default function ProfileWidget() {
                 <span className="font-semibold truncate">
                   {profile.user.username}
                 </span>
+                {userCountry && (
+                  <CountryFlag countryCode={userCountry.code} className="w-5 h-3.5" />
+                )}
                 <span className="text-xs text-zinc-500">
                   Lv.{profile.user.leveling.level}
                 </span>
@@ -31,6 +44,9 @@ export default function ProfileWidget() {
               <div className="flex items-center gap-2 text-xs text-zinc-400">
                 <Building2 className="h-3 w-3" />
                 {profile.companies.length}/{profile.user.skills.companies?.total ?? "?"} companies
+                {userCountry && (
+                  <span className="text-zinc-500">• {userCountry.name}</span>
+                )}
               </div>
             </div>
             <button
