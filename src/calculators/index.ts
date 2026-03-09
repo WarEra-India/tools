@@ -28,4 +28,13 @@ export const calculators: CalculatorMeta[] = [
     icon: "company",
     component: lazy(() => import("./company-production-profit/index")),
   },
+  {
+    id: "land-area",
+    name: "Land Area",
+    description:
+      "All countries ranked by total controlled land area, including occupied territories calculated from map data.",
+    path: "/land-area",
+    icon: "ground",
+    component: lazy(() => import("./land-area/index")),
+  },
 ]
