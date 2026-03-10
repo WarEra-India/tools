@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Loader2, Target, Coins, Globe, DollarSign, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { CountryFlag } from "@/components/CountryFlag";
 import { useProfile } from "@/lib/ProfileContext";
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis } from "recharts";
 
 const API_BASE = "https://warvault.shadoooow.workers.dev/api";
 const LIMIT = 250;
@@ -240,6 +241,79 @@ export default function NationalRecords() {
     }
   };
 
+  const CitizenDot = (props: any) => {
+    const { cx, cy, payload } = props;
+    if (!cx || !cy) return null;
+
+    // Scale level to a reasonable radius (e.g. Lvl 1->4px, Lvl 200->16px)
+    const userLevel = payload.level || 1;
+    const r = Math.max(4, Math.min(16, 4 + (userLevel / 16)));
+
+    if (payload.avatar_url) {
+      const size = r * 2;
+      return (
+        <svg x={cx - r} y={cy - r} width={size} height={size}>
+          <clipPath id={`clip-${payload.user_id}`}>
+            <circle cx={r} cy={r} r={r} />
+          </clipPath>
+          <image href={payload.avatar_url} width={size} height={size} clipPath={`url(#clip-${payload.user_id})`} preserveAspectRatio="xMidYMid slice" />
+        </svg>
+      );
+    }
+    return <circle cx={cx} cy={cy} r={r} fill="#3b82f6" opacity={0.6} />;
+  };
+
+  const CitizenTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-lg shadow-xl">
+          <p className="font-bold text-white mb-1">{data.username}</p>
+          <p className="text-sm text-zinc-400">Lvl {data.level} • {data.tier}</p>
+          <div className="mt-2 text-sm">
+            <p><span className="text-red-400">Weekly Dmg:</span> {formatNumber(data.weekly_damage)}</p>
+            <p><span className="text-yellow-400">Wealth:</span> {formatNumber(data.wealth)}</p>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const CountryDot = (props: any) => {
+    const { cx, cy, payload } = props;
+    if (!cx || !cy) return null;
+
+    const flagUrl = payload.code ? `https://hatscripts.github.io/circle-flags/flags/${payload.code.toLowerCase()}.svg` : null;
+
+    if (flagUrl) {
+      return <image x={cx - 8} y={cy - 8} href={flagUrl} width="16" height="16" opacity={0.85} />;
+    }
+    return <circle cx={cx} cy={cy} r={6} fill="#10b981" opacity={0.6} />;
+  };
+
+  const CountryTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-lg shadow-xl">
+          <p className="font-bold text-white mb-1">{data.name}</p>
+          <div className="mt-2 text-sm flex gap-4">
+            <div>
+              <p className="text-zinc-500 text-xs">Weekly Damage</p>
+              <p className="font-mono text-red-400">{formatNumber(data.weekly_damage)}</p>
+            </div>
+            <div>
+              <p className="text-zinc-500 text-xs">Wealth</p>
+              <p className="font-mono text-green-400">{formatNumber(data.money)}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (error) {
     return (
       <div className="p-6">
@@ -403,6 +477,31 @@ export default function NationalRecords() {
             </Card>
           </div>
 
+          {/* Whale vs Plankton Scatter Plot */}
+          {topUsers.length > 0 && (
+            <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50 mt-6 pt-2">
+              <CardHeader className="pb-0">
+                <CardTitle className="text-lg flex items-center gap-2">Whale vs. Plankton Analysis</CardTitle>
+                <CardDescription>Correlation between Weekly Damage and Wealth (Bubbles sized by Level)</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="h-[350px] w-full mt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                      <XAxis type="number" scale="log" dataKey="weekly_damage" name="Weekly Damage" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Weekly Damage (Log)', position: 'insideBottom', offset: -10, fill: '#71717a', fontSize: 12 }} />
+                      <YAxis type="number" scale="log" dataKey="wealth" name="Wealth" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Wealth (Log)', angle: -90, position: 'insideLeft', offset: 10, fill: '#71717a', fontSize: 12 }} />
+                      <ZAxis type="number" dataKey="level" range={[10, 200]} name="Level" />
+                      <Tooltip content={<CitizenTooltip />} cursor={{ strokeDasharray: '3 3', stroke: '#3f3f46' }} />
+                      {/* Log scales crash on 0 values, so we bind Math.max(1, value) inline */}
+                      <Scatter data={topUsers.map(u => ({ ...u, weekly_damage: Math.max(1, u.weekly_damage || 1), wealth: Math.max(1, u.wealth || 1) }))} shape={<CitizenDot />} />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Table Section */}
           <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50 mt-6 pt-2">
             <CardHeader className="pb-4">
@@ -507,6 +606,30 @@ export default function NationalRecords() {
         </>
       ) : (
         <>
+          {/* Countries Scatter Plot */}
+          {allCountriesStats.length > 0 && (
+            <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50 mt-6 pt-2">
+              <CardHeader className="pb-0">
+                <CardTitle className="text-lg flex items-center gap-2">Global Powers Overview</CardTitle>
+                <CardDescription>Comparing Weekly Damage vs Wealth across all nations</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="h-[350px] w-full mt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                      <XAxis type="number" scale="log" dataKey="weekly_damage" name="Weekly Damage" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Weekly Damage (Log)', position: 'insideBottom', offset: -10, fill: '#71717a', fontSize: 12 }} />
+                      <YAxis type="number" scale="log" dataKey="money" name="Wealth" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Wealth (Log)', angle: -90, position: 'insideLeft', offset: 10, fill: '#71717a', fontSize: 12 }} />
+                      <Tooltip content={<CountryTooltip />} cursor={{ strokeDasharray: '3 3', stroke: '#3f3f46' }} />
+                      {/* Log scales crash on 0 values, so we bind Math.max(1, value) inline */}
+                      <Scatter data={allCountriesStats.map(c => ({ ...c, weekly_damage: Math.max(1, c.weekly_damage || 1), money: Math.max(1, c.money || 1) }))} shape={<CountryDot />} />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Countries View Table Section */}
           <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50 mt-6 pt-2">
             <CardHeader className="pb-4">
