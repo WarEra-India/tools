@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Target, Coins, Globe, DollarSign, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, Target, Coins, Globe, DollarSign, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import { CountryFlag } from "@/components/CountryFlag";
 import { useProfile } from "@/lib/ProfileContext";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis } from "recharts";
@@ -57,6 +57,38 @@ export default function NationalRecords() {
 
   // Sorting State
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: "asc" | "desc" } | null>(null);
+
+  // Update state
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  const handleUpdate = async () => {
+    setUpdateLoading(true);
+    if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
+    try {
+      const res = await fetch(`${API_BASE}/collect`, { method: "POST" });
+      if (!res.ok) throw new Error("Update failed");
+      const data = await res.json();
+      const count = data?.updated ?? data?.count ?? data?.records ?? null;
+      const message = count !== null
+        ? `Updated ${Number(count).toLocaleString()} records successfully`
+        : "Records updated successfully";
+      setToast({ message, type: "success" });
+    } catch (err) {
+      console.error("Failed to update records:", err);
+      setToast({ message: "Failed to update records. Please try again.", type: "error" });
+    } finally {
+      setUpdateLoading(false);
+      toastTimerRef.current = setTimeout(() => setToast(null), 4000);
+    }
+  };
 
   // 1. Initial Load: Countries & Weeks
   useEffect(() => {
@@ -335,14 +367,27 @@ export default function NationalRecords() {
     <div className="space-y-6 max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-4 mb-2">
-          <Link to="/" className="p-2 -ml-2 hover:bg-zinc-800 rounded-full transition-colors">
-            <ArrowLeft className="w-6 h-6 text-zinc-400" />
-          </Link>
-          <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-            <Globe className="w-8 h-8 text-blue-500" />
-            National Records
-          </h1>
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <div className="flex items-center gap-4">
+            <Link to="/" className="p-2 -ml-2 hover:bg-zinc-800 rounded-full transition-colors">
+              <ArrowLeft className="w-6 h-6 text-zinc-400" />
+            </Link>
+            <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+              <Globe className="w-8 h-8 text-blue-500" />
+              National Records
+            </h1>
+          </div>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <button
+              onClick={handleUpdate}
+              disabled={updateLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 ${updateLoading ? "animate-spin" : ""}`} />
+              {updateLoading ? "Updating..." : "Update Now"}
+            </button>
+            <span className="text-xs text-zinc-500">Data may be up to 2h old</span>
+          </div>
         </div>
         <p className="text-zinc-400">
           Historical data, weekly damages, and top citizens leaderboards for every country.
@@ -703,6 +748,20 @@ export default function NationalRecords() {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border transition-all ${
+          toast.type === "success"
+            ? "bg-zinc-900 border-green-500/30 text-green-400"
+            : "bg-zinc-900 border-red-500/30 text-red-400"
+        }`}>
+          {toast.type === "success"
+            ? <CheckCircle2 className="w-4 h-4 shrink-0" />
+            : <AlertCircle className="w-4 h-4 shrink-0" />}
+          <span className="text-sm font-medium">{toast.message}</span>
+        </div>
       )}
     </div>
   );
