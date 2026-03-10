@@ -245,17 +245,22 @@ export default function NationalRecords() {
     const { cx, cy, payload } = props;
     if (!cx || !cy) return null;
 
+    // Scale level to a reasonable radius (e.g. Lvl 1->4px, Lvl 200->16px)
+    const userLevel = payload.level || 1;
+    const r = Math.max(4, Math.min(16, 4 + (userLevel / 16)));
+
     if (payload.avatar_url) {
+      const size = r * 2;
       return (
-        <svg x={cx - 6} y={cy - 6} width={12} height={12}>
+        <svg x={cx - r} y={cy - r} width={size} height={size}>
           <clipPath id={`clip-${payload.user_id}`}>
-            <circle cx="6" cy="6" r="6" />
+            <circle cx={r} cy={r} r={r} />
           </clipPath>
-          <image href={payload.avatar_url} width="12" height="12" clipPath={`url(#clip-${payload.user_id})`} preserveAspectRatio="xMidYMid slice" />
+          <image href={payload.avatar_url} width={size} height={size} clipPath={`url(#clip-${payload.user_id})`} preserveAspectRatio="xMidYMid slice" />
         </svg>
       );
     }
-    return <circle cx={cx} cy={cy} r={3} fill="#3b82f6" opacity={0.8} />;
+    return <circle cx={cx} cy={cy} r={r} fill="#3b82f6" opacity={0.6} />;
   };
 
   const CitizenTooltip = ({ active, payload }: any) => {
@@ -282,9 +287,9 @@ export default function NationalRecords() {
     const flagUrl = payload.code ? `https://hatscripts.github.io/circle-flags/flags/${payload.code.toLowerCase()}.svg` : null;
 
     if (flagUrl) {
-      return <image x={cx - 6} y={cy - 6} href={flagUrl} width="12" height="12" />;
+      return <image x={cx - 8} y={cy - 8} href={flagUrl} width="16" height="16" opacity={0.85} />;
     }
-    return <circle cx={cx} cy={cy} r={4} fill="#10b981" opacity={0.8} />;
+    return <circle cx={cx} cy={cy} r={6} fill="#10b981" opacity={0.6} />;
   };
 
   const CountryTooltip = ({ active, payload }: any) => {
@@ -484,11 +489,12 @@ export default function NationalRecords() {
                   <ResponsiveContainer width="100%" height="100%">
                     <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                      <XAxis type="number" dataKey="weekly_damage" name="Weekly Damage" tickFormatter={formatNumber} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Weekly Damage', position: 'insideBottom', offset: -10, fill: '#71717a', fontSize: 12 }} />
-                      <YAxis type="number" dataKey="wealth" name="Wealth" tickFormatter={formatNumber} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Wealth', angle: -90, position: 'insideLeft', offset: 10, fill: '#71717a', fontSize: 12 }} />
+                      <XAxis type="number" scale="log" dataKey="weekly_damage" name="Weekly Damage" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Weekly Damage (Log)', position: 'insideBottom', offset: -10, fill: '#71717a', fontSize: 12 }} />
+                      <YAxis type="number" scale="log" dataKey="wealth" name="Wealth" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Wealth (Log)', angle: -90, position: 'insideLeft', offset: 10, fill: '#71717a', fontSize: 12 }} />
                       <ZAxis type="number" dataKey="level" range={[10, 200]} name="Level" />
                       <Tooltip content={<CitizenTooltip />} cursor={{ strokeDasharray: '3 3', stroke: '#3f3f46' }} />
-                      <Scatter data={topUsers} shape={<CitizenDot />} />
+                      {/* Log scales crash on 0 values, so we bind Math.max(1, value) inline */}
+                      <Scatter data={topUsers.map(u => ({ ...u, weekly_damage: Math.max(1, u.weekly_damage || 1), wealth: Math.max(1, u.wealth || 1) }))} shape={<CitizenDot />} />
                     </ScatterChart>
                   </ResponsiveContainer>
                 </div>
@@ -612,10 +618,11 @@ export default function NationalRecords() {
                   <ResponsiveContainer width="100%" height="100%">
                     <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                      <XAxis type="number" dataKey="weekly_damage" name="Weekly Damage" tickFormatter={formatNumber} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['dataMin', 'dataMax']} label={{ value: 'Weekly Damage', position: 'insideBottom', offset: -10, fill: '#71717a', fontSize: 12 }} />
-                      <YAxis type="number" dataKey="money" name="Wealth" tickFormatter={formatNumber} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Wealth', angle: -90, position: 'insideLeft', offset: 10, fill: '#71717a', fontSize: 12 }} />
+                      <XAxis type="number" scale="log" dataKey="weekly_damage" name="Weekly Damage" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Weekly Damage (Log)', position: 'insideBottom', offset: -10, fill: '#71717a', fontSize: 12 }} />
+                      <YAxis type="number" scale="log" dataKey="money" name="Wealth" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Wealth (Log)', angle: -90, position: 'insideLeft', offset: 10, fill: '#71717a', fontSize: 12 }} />
                       <Tooltip content={<CountryTooltip />} cursor={{ strokeDasharray: '3 3', stroke: '#3f3f46' }} />
-                      <Scatter data={allCountriesStats} shape={<CountryDot />} />
+                      {/* Log scales crash on 0 values, so we bind Math.max(1, value) inline */}
+                      <Scatter data={allCountriesStats.map(c => ({ ...c, weekly_damage: Math.max(1, c.weekly_damage || 1), money: Math.max(1, c.money || 1) }))} shape={<CountryDot />} />
                     </ScatterChart>
                   </ResponsiveContainer>
                 </div>
