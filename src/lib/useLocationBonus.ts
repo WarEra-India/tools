@@ -42,10 +42,9 @@ export function calcBonus(
   ethicsBonus: number,
   industrialism: number
 ): number {
-  return  depositBonus + Math.max(stratBonus, ethicsBonus);
-  // return industrialism < 0
-  //   ? Math.max(stratBonus, ethicsBonus)
-  //   : stratBonus + ethicsBonus;
+  return stratBonus + (industrialism === -2 || industrialism === 2)
+    ? ethicsBonus
+    : depositBonus + ethicsBonus;
 }
 
 export interface BestLocation {
