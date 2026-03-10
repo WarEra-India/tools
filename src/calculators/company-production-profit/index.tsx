@@ -719,32 +719,21 @@ export default function CompanyProductionProfit() {
                           {r.sell.toFixed(2)}
                         </TableCell>
                         <TableCell
-                          className={`text-right tabular-nums ${r.profit >= 0 ? "text-emerald-400" : "text-red-400"}`}
+                          className={`text-right tabular-nums ${(r.profit + r.bonusAmount) >= 0 ? "text-emerald-400" : "text-red-400"}`}
                         >
-                          {r.profit.toFixed(2)}
+                          <span className="inline-flex flex-col items-end gap-0.5">
+                            <span>{(r.profit + r.bonusAmount).toFixed(2)}</span>
+                            {r.bonusAmount !== 0 && (
+                              <span className="text-xs text-zinc-500">
+                                {r.profit.toFixed(2)} + {r.bonusAmount.toFixed(2)}
+                              </span>
+                            )}
+                          </span>
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
-                          <span className="inline-flex flex-col items-end gap-0.5">
-                            <span className="inline-flex items-center gap-1">
-                              {r.pp.toFixed(2)}
-                              <img src={PP_ICON} alt="PP" className="h-4 w-4" />
-                            </span>
-                            {r.bonusPct > 0 && (() => {
-                              const depositKey = r.type === "Raw" ? r.item : Object.keys(r.inputs ?? {})[0] ?? ""
-                              const best = useBestLocation && locationBonus?.bestByType[depositKey]
-                              return (
-                                <>
-                                  <span className="text-xs text-zinc-500">
-                                    {r.basePP} − {r.bonusPct}%
-                                  </span>
-                                  {best && (
-                                    <span className="text-[10px] leading-tight text-zinc-600">
-                                      {best.regionName}, {best.countryName}
-                                    </span>
-                                  )}
-                                </>
-                              )
-                            })()}
+                          <span className="inline-flex items-center gap-1">
+                            {r.pp.toFixed(2)}
+                            <img src={PP_ICON} alt="PP" className="h-4 w-4" />
                           </span>
                         </TableCell>
                         <TableCell

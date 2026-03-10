@@ -12,6 +12,7 @@ export interface ProfitRow {
   sell: number;
   cost: number;
   profit: number;
+  bonusAmount: number;
   pp: number;
   basePP: number;
   bonusPct: number;
@@ -28,7 +29,7 @@ export function calculate(data: GameData): ProfitRow[] {
     const price = data.prices[r] ?? 0;
     const basePP = data.rawPP[r];
     const bonusPct = bonus[r] ?? 0;
-    const pp = basePP / (1 + bonusPct / 100);
+    const bonusAmount = price * bonusPct / 100;
 
     rows.push({
       item: r,
@@ -36,10 +37,11 @@ export function calculate(data: GameData): ProfitRow[] {
       sell: price,
       cost: 0,
       profit: price,
-      pp: pp,
+      bonusAmount: bonusAmount,
+      pp: basePP,
       basePP: basePP,
       bonusPct: bonusPct,
-      profitPP: price / pp,
+      profitPP: (price + bonusAmount) / basePP,
     });
   }
 
@@ -51,20 +53,18 @@ export function calculate(data: GameData): ProfitRow[] {
     // Determine the primary raw input to pick the location bonus
     const primaryInput = Object.keys(recipe.inputs)[0] ?? "";
     const bonusPct = bonus[primaryInput] ?? 0;
-    const bonusMul = 1 + bonusPct / 100;
 
     let baseTotalPP = recipe.pp;
-    let totalPP = recipe.pp / bonusMul;
 
     for (const input in recipe.inputs) {
       const qty = recipe.inputs[input];
       rawCost += qty * (data.prices[input] ?? 0);
       baseTotalPP += qty * data.rawPP[input];
-      totalPP += qty * (data.rawPP[input] / bonusMul);
     }
 
     const sell = data.prices[item] ?? 0;
     const profit = sell - rawCost;
+    const bonusAmount = profit * bonusPct / 100;
 
     rows.push({
       item: item,
@@ -72,10 +72,11 @@ export function calculate(data: GameData): ProfitRow[] {
       sell: sell,
       cost: rawCost,
       profit: profit,
-      pp: totalPP,
+      bonusAmount: bonusAmount,
+      pp: baseTotalPP,
       basePP: baseTotalPP,
       bonusPct: bonusPct,
-      profitPP: profit / totalPP,
+      profitPP: (profit + bonusAmount) / baseTotalPP,
       inputs: recipe.inputs,
     });
   }
