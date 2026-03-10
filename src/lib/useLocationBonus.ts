@@ -42,9 +42,10 @@ export function calcBonus(
   ethicsBonus: number,
   industrialism: number
 ): number {
-  return stratBonus + (industrialism === -2 || industrialism === 2)
+  return stratBonus + ((industrialism === -2 || industrialism === 2)
     ? ethicsBonus
-    : depositBonus + ethicsBonus;
+    : depositBonus + ethicsBonus
+  );
 }
 
 export interface BestLocation {
