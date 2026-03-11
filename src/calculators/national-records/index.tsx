@@ -292,6 +292,9 @@ export default function NationalRecords() {
     const { cx, cy, payload } = props;
     if (!cx || !cy) return null;
 
+    // Scale multiplier based on filter density
+    const scale = chartFilterTop <= 10 ? 2.5 : chartFilterTop <= 50 ? 1.5 : chartFilterTop <= 100 ? 1.25 : 1;
+
     // Scale level to a reasonable radius (e.g. Lvl 1->4px, Lvl 200->16px)
     const userLevel = payload.level || 1;
     // Scale multiplier based on filter density
