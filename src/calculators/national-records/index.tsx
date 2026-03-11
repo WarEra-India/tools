@@ -378,14 +378,16 @@ export default function NationalRecords() {
             </h1>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
-            <button
-              onClick={handleUpdate}
-              disabled={updateLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition-colors"
-            >
-              <RefreshCw className={`w-4 h-4 ${updateLoading ? "animate-spin" : ""}`} />
-              {updateLoading ? "Updating..." : "Update Now"}
-            </button>
+            {profile?.user?._id === "6999b242abdf5405edb36d57" && (
+              <button
+                onClick={handleUpdate}
+                disabled={updateLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition-colors"
+              >
+                <RefreshCw className={`w-4 h-4 ${updateLoading ? "animate-spin" : ""}`} />
+                {updateLoading ? "Updating..." : "Update Now"}
+              </button>
+            )}
             <span className="text-xs text-zinc-500">Data may be up to 2h old</span>
           </div>
         </div>
