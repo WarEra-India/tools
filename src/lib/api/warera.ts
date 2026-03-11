@@ -67,11 +67,16 @@ export async function getAllCountries(): Promise<Record<string, Country>> {
 }
 
 export async function getBunkerLevel(regionId: string): Promise<number> {
-  const data = await post<{ level: number }>("upgrade.getUpgradeByTypeAndEntity", {
-    upgradeType: "bunker",
-    regionId,
-  });
-  return data?.level || 0;
+  try {
+    const data = await post<{ level: number }>("upgrade.getUpgradeByTypeAndEntity", {
+      upgradeType: "bunker",
+      regionId,
+    });
+    return data?.level || 0;
+  } catch (err) {
+    console.warn(`Could not get bunker level for region ${regionId}, assuming 0:`, err);
+    return 0;
+  }
 }
 
 export interface Battle {
