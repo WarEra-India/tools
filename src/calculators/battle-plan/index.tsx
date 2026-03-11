@@ -3,10 +3,10 @@ import { Link } from "react-router-dom"
 import { Swords, Target, Radio, TrendingUp, ArrowLeft } from "lucide-react"
 
 // Lazy load the actual sub-components
-import BattleAnalyzer from "@/calculators/battle-analyzer/index"
-import AttackAnalyzer from "@/calculators/attack-analyzer/index"
-import LiveBattle from "@/calculators/live-battle/index"
-import MarketTracker from "@/calculators/market-tracker/index"
+import BattleAnalyzer from "./battle-analyzer/index"
+import AttackAnalyzer from "./attack-analyzer/index"
+import LiveBattle from "./live-battle/index"
+import MarketTracker from "./market-tracker/index"
 
 const tabs = [
   { id: "intelligence", label: "Intelligence", icon: Swords, component: BattleAnalyzer },
