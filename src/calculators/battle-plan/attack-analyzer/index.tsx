@@ -143,7 +143,10 @@ export default function AttackAnalyzer() {
       const region = regions.find(r => r._id === regionId)
       const bunkerLevel = await getBunkerLevel(regionId)
       
-      const defenseBonus = region?.defenseBonus || 1
+      // Defense Bonus from region is usually a raw percentage like 20 for 20%
+      // So if it's not present we assume 0
+      const rawDefenseBonus = region?.defenseBonus || 0
+      const defenseBonus = 1 + (rawDefenseBonus / 100)
 
       const attackPower = (damageScores[attackerId] || 1) * Math.max(1, (activityScores[attackerId] || 1))
       
@@ -282,11 +285,11 @@ export default function AttackAnalyzer() {
                 </div>
                 <div className="text-center">
                     <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Attacker Score</p>
-                    <p className="text-sm font-semibold text-zinc-400">{(result.attackPower / 1e12).toFixed(2)}T</p>
+                    <p className="text-sm font-semibold text-zinc-400" title={result.attackPower.toString()}>{Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(result.attackPower)}</p>
                 </div>
                 <div className="text-center">
                     <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Defender Score</p>
-                    <p className="text-sm font-semibold text-zinc-400">{(result.defPower / 1e12).toFixed(2)}T</p>
+                    <p className="text-sm font-semibold text-zinc-400" title={result.defPower.toString()}>{Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(result.defPower)}</p>
                 </div>
             </div>
           </CardContent>
