@@ -58,6 +58,10 @@ export default function NationalRecords() {
   // Sorting State
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: "asc" | "desc" } | null>(null);
 
+  // Chart Filtering State for Citizens
+  const [chartFilterTop, setChartFilterTop] = useState<number>(250);
+  const [chartFilterSort, setChartFilterSort] = useState<"weekly_damage" | "wealth">("weekly_damage");
+
   // 1. Initial Load: Countries & Weeks
   useEffect(() => {
     async function init() {
@@ -191,6 +195,17 @@ export default function NationalRecords() {
     return sortable;
   }, [topUsers, sortConfig]);
 
+  // Derived filtered users just for the scatter chart
+  const chartUsers = useMemo(() => {
+    let sortable = [...topUsers];
+    sortable.sort((a, b) => {
+      const aVal = a[chartFilterSort] || 0;
+      const bVal = b[chartFilterSort] || 0;
+      return bVal - aVal;
+    });
+    return sortable.slice(0, chartFilterTop);
+  }, [topUsers, chartFilterTop, chartFilterSort]);
+
   // Derived global rank for total damage of the selected country
   const rankTotalDamage = useMemo(() => {
     if (!selectedCountry || allCountriesStats.length === 0) return null;
@@ -245,9 +260,13 @@ export default function NationalRecords() {
     const { cx, cy, payload } = props;
     if (!cx || !cy) return null;
 
+    // Scale multiplier based on filter density
+    const scale = chartFilterTop <= 10 ? 2.5 : chartFilterTop <= 50 ? 1.5 : chartFilterTop <= 100 ? 1.25 : 1;
+
     // Scale level to a reasonable radius (e.g. Lvl 1->4px, Lvl 200->16px)
     const userLevel = payload.level || 1;
-    const r = Math.max(4, Math.min(16, 4 + (userLevel / 16)));
+    const baseR = Math.max(4, Math.min(16, 4 + (userLevel / 16)));
+    const r = baseR * scale;
 
     if (payload.avatar_url) {
       const size = r * 2;
@@ -481,8 +500,34 @@ export default function NationalRecords() {
           {topUsers.length > 0 && (
             <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50 mt-6 pt-2">
               <CardHeader className="pb-0">
-                <CardTitle className="text-lg flex items-center gap-2">Whale vs. Plankton Analysis</CardTitle>
-                <CardDescription>Correlation between Weekly Damage and Wealth (Bubbles sized by Level)</CardDescription>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">Whale vs. Plankton Analysis</CardTitle>
+                    <CardDescription>Correlation between Weekly Damage and Wealth (Bubbles sized by Level)</CardDescription>
+                  </div>
+                  <div className="flex gap-2 relative z-10 mt-2 sm:mt-0">
+                    <select
+                      value={chartFilterSort}
+                      onChange={(e) => setChartFilterSort(e.target.value as "weekly_damage" | "wealth")}
+                      className="bg-zinc-950 border border-zinc-700 text-zinc-300 text-xs rounded-md px-2 py-1.5 outline-none cursor-pointer hover:border-zinc-500 transition-colors"
+                    >
+                      <option value="weekly_damage">Top by Damage</option>
+                      <option value="wealth">Top by Wealth</option>
+                    </select>
+                    <select
+                      value={chartFilterTop}
+                      onChange={(e) => setChartFilterTop(Number(e.target.value))}
+                      className="bg-zinc-950 border border-zinc-700 text-zinc-300 text-xs rounded-md px-2 py-1.5 outline-none cursor-pointer hover:border-zinc-500 transition-colors"
+                    >
+                      <option value={10}>Top 10</option>
+                      <option value={50}>Top 50</option>
+                      <option value={100}>Top 100</option>
+                      <option value={150}>Top 150</option>
+                      <option value={200}>Top 200</option>
+                      <option value={250}>Top 250 (All)</option>
+                    </select>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="pt-6">
                 <div className="h-[350px] w-full mt-2">
@@ -494,7 +539,7 @@ export default function NationalRecords() {
                       <ZAxis type="number" dataKey="level" range={[10, 200]} name="Level" />
                       <Tooltip content={<CitizenTooltip />} cursor={{ strokeDasharray: '3 3', stroke: '#3f3f46' }} />
                       {/* Log scales crash on 0 values, so we bind Math.max(1, value) inline */}
-                      <Scatter data={topUsers.map(u => ({ ...u, weekly_damage: Math.max(1, u.weekly_damage || 1), wealth: Math.max(1, u.wealth || 1) }))} shape={<CitizenDot />} />
+                      <Scatter data={chartUsers.map(u => ({ ...u, weekly_damage: Math.max(1, u.weekly_damage || 1), wealth: Math.max(1, u.wealth || 1) }))} shape={<CitizenDot />} />
                     </ScatterChart>
                   </ResponsiveContainer>
                 </div>
