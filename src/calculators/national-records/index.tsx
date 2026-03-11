@@ -77,13 +77,23 @@ export default function NationalRecords() {
     setUpdateLoading(true);
     if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
     try {
-      const res = await fetch(`${API_BASE}/collect`, { method: "POST" });
+      const res = await fetch(`${API_BASE}/collect`, { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
       if (!res.ok) throw new Error("Update failed");
+      
       const data = await res.json();
-      const count = data?.updated ?? data?.count ?? data?.records ?? null;
-      const message = count !== null
-        ? `Updated ${Number(count).toLocaleString()} records successfully`
+      const parts = [];
+      if (data.usersUpserted) parts.push(`${data.usersUpserted} users`);
+      if (data.userDamageRows) parts.push(`${data.userDamageRows} dmg records`);
+      if (data.countriesUpserted) parts.push(`${data.countriesUpserted} countries`);
+      if (data.countryStatsRows) parts.push(`${data.countryStatsRows} country stats`);
+      
+      const message = parts.length > 0
+        ? `Updated: ${parts.join(', ')}`
         : "Records updated successfully";
+        
       setToast({ message, type: "success" });
     } catch (err) {
       console.error("Failed to update records:", err);
@@ -297,8 +307,6 @@ export default function NationalRecords() {
 
     // Scale level to a reasonable radius (e.g. Lvl 1->4px, Lvl 200->16px)
     const userLevel = payload.level || 1;
-    // Scale multiplier based on filter density
-    const scale = chartFilterTop <= 10 ? 2.5 : chartFilterTop <= 50 ? 1.5 : chartFilterTop <= 100 ? 1.25 : 1;
     const baseR = Math.max(4, Math.min(16, 4 + (userLevel / 16)));
     const r = baseR * scale;
 
@@ -569,7 +577,9 @@ export default function NationalRecords() {
                       className="bg-zinc-950 border border-zinc-700 text-zinc-300 text-xs rounded-md px-2 py-1.5 outline-none cursor-pointer hover:border-zinc-500 transition-colors"
                     >
                       <option value={10}>Top 10</option>
+                      <option value={25}>Top 25</option>
                       <option value={50}>Top 50</option>
+                      <option value={75}>Top 75</option>
                       <option value={100}>Top 100</option>
                       <option value={150}>Top 150</option>
                       <option value={200}>Top 200</option>
@@ -801,11 +811,10 @@ export default function NationalRecords() {
 
       {/* Toast notification */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border transition-all ${
-          toast.type === "success"
-            ? "bg-zinc-900 border-green-500/30 text-green-400"
-            : "bg-zinc-900 border-red-500/30 text-red-400"
-        }`}>
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border transition-all ${toast.type === "success"
+          ? "bg-zinc-900 border-green-500/30 text-green-400"
+          : "bg-zinc-900 border-red-500/30 text-red-400"
+          }`}>
           {toast.type === "success"
             ? <CheckCircle2 className="w-4 h-4 shrink-0" />
             : <AlertCircle className="w-4 h-4 shrink-0" />}
