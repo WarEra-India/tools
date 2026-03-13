@@ -719,16 +719,9 @@ export default function CompanyProductionProfit() {
                           {r.sell.toFixed(2)}
                         </TableCell>
                         <TableCell
-                          className={`text-right tabular-nums ${(r.profit + r.bonusAmount) >= 0 ? "text-emerald-400" : "text-red-400"}`}
+                          className={`text-right tabular-nums ${r.profit >= 0 ? "text-emerald-400" : "text-red-400"}`}
                         >
-                          <span className="inline-flex flex-col items-end gap-0.5">
-                            <span>{(r.profit + r.bonusAmount).toFixed(2)}</span>
-                            {r.bonusAmount !== 0 && (
-                              <span className="text-xs text-zinc-500">
-                                {r.profit.toFixed(2)} + {r.bonusAmount.toFixed(2)}
-                              </span>
-                            )}
-                          </span>
+                          {r.profit.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           <span className="inline-flex items-center gap-1">
@@ -739,9 +732,18 @@ export default function CompanyProductionProfit() {
                         <TableCell
                           className={`text-right font-semibold tabular-nums ${r.profitPP >= 0 ? "text-emerald-400" : "text-red-400"}`}
                         >
-                          <span className="inline-flex items-center justify-end gap-1">
-                            {r.profitPP.toFixed(4)}
-                            <img src={COIN_ICON} alt="PP" className="h-4 w-4" />
+                          <span className="inline-flex flex-col items-end gap-0.5">
+                            <span className="inline-flex items-center justify-end gap-1">
+                              {r.profitPP.toFixed(4)}
+                              <img src={COIN_ICON} alt="PP" className="h-4 w-4" />
+                            </span>
+                            {r.bonusAmount !== 0 && (
+                              <span className="text-[10px] text-zinc-500" title="Base Profit/PP + Location Bonus/PP">
+                                {(r.profit / r.pp).toFixed(4)} 
+                                <span className="text-emerald-500/80"> + {(r.bonusAmount / r.pp).toFixed(4)}</span>
+                                <span className="ml-1 text-[9px] text-emerald-600/90 font-bold">(+{r.bonusPct}%)</span>
+                              </span>
+                            )}
                           </span>
                         </TableCell>
                       </TableRow>
