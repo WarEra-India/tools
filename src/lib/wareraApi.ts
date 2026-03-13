@@ -142,10 +142,7 @@ export interface FullProfile {
   companies: CompanyInfo[];
 }
 
-export async function fetchFullProfile(username: string): Promise<FullProfile> {
-  const userId = await searchUser(username);
-  if (!userId) throw new Error("User not found");
-
+export async function fetchFullProfileById(userId: string): Promise<FullProfile> {
   const [user, companyIds] = await Promise.all([
     getUserProfile(userId),
     getCompanyIds(userId),

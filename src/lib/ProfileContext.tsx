@@ -6,27 +6,27 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { fetchFullProfile, type FullProfile } from "./wareraApi";
+import { fetchFullProfileById, type FullProfile } from "./wareraApi";
 
 interface ProfileState {
   profile: FullProfile | null;
   loading: boolean;
   error: string | null;
-  loadProfile: (username: string) => Promise<void>;
+  loadProfile: (userId: string) => Promise<void>;
   clearProfile: () => void;
 }
 
 const ProfileContext = createContext<ProfileState | null>(null);
 
-const STORAGE_KEY = "warera-profile-id";
+const STORAGE_KEY = "warera-profile-userid";
 
-function loadUsernameFromStorage(): string | null {
+function loadUserIdFromStorage(): string | null {
   return localStorage.getItem(STORAGE_KEY);
 }
 
-function saveUsernameToStorage(username: string | null) {
-  if (username) {
-    localStorage.setItem(STORAGE_KEY, username);
+function saveUserIdToStorage(userId: string | null) {
+  if (userId) {
+    localStorage.setItem(STORAGE_KEY, userId);
   } else {
     localStorage.removeItem(STORAGE_KEY);
   }
@@ -37,33 +37,33 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // On mount, re-fetch profile if a username was previously stored
-  const loadProfile = useCallback(async (username: string) => {
+  const loadProfile = useCallback(async (userId: string) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchFullProfile(username);
+      const data = await fetchFullProfileById(userId);
       setProfile(data);
-      saveUsernameToStorage(username);
+      saveUserIdToStorage(userId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load profile");
       setProfile(null);
-      saveUsernameToStorage(null);
+      saveUserIdToStorage(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // On mount, re-fetch profile if a userId was previously stored
   useEffect(() => {
-    const stored = loadUsernameFromStorage();
+    const stored = loadUserIdFromStorage();
     if (stored) loadProfile(stored);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const clearProfile = useCallback(() => {
     setProfile(null);
     setError(null);
-    saveUsernameToStorage(null);
+    saveUserIdToStorage(null);
   }, []);
 
   return (

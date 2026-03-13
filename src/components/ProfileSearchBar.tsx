@@ -50,28 +50,17 @@ export default function ProfileSearchBar() {
     };
   }, [query]);
 
-  const handleSelect = (username: string) => {
+  const handleSelect = (userId: string) => {
     setShowDropdown(false);
     setQuery("");
     setSuggestions([]);
-    loadProfile(username);
-  };
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    const trimmed = query.trim();
-    if (trimmed) {
-      setShowDropdown(false);
-      setSuggestions([]);
-      loadProfile(trimmed);
-      setQuery("");
-    }
+    loadProfile(userId);
   };
 
   return (
     <>
       <div ref={wrapperRef} className="relative">
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
+        <form className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
             <input
@@ -84,13 +73,6 @@ export default function ProfileSearchBar() {
               disabled={loading}
             />
           </div>
-          <button
-            type="submit"
-            disabled={loading || !query.trim()}
-            className="h-9 rounded-md bg-zinc-100 px-4 text-sm font-medium text-zinc-900 transition-colors hover:bg-white disabled:opacity-50"
-          >
-            {loading ? "Loading…" : "Load"}
-          </button>
         </form>
 
         {showDropdown && (
@@ -102,7 +84,7 @@ export default function ProfileSearchBar() {
               <button
                 key={s._id}
                 type="button"
-                onClick={() => handleSelect(s.username)}
+                onClick={() => handleSelect(s._id)}
                 className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-zinc-800"
               >
                 <img
