@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Loader2, Target, Coins, Globe, DollarSign, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import { CountryFlag } from "@/components/CountryFlag";
 import { useProfile } from "@/lib/ProfileContext";
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis } from "recharts";
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis, ReferenceArea, ReferenceLine, Label } from "recharts";
 
 const API_BASE = "https://warvault.shadoooow.workers.dev/api";
 const LIMIT = 250;
@@ -375,6 +375,26 @@ export default function NationalRecords() {
     return null;
   };
 
+  const citizenStats = useMemo(() => {
+    if (chartUsers.length === 0) return { avgDmg: 0, avgWlt: 0 };
+    const validDmg = chartUsers.map(u => u.weekly_damage || 0).filter(v => v > 0);
+    const validWlt = chartUsers.map(u => u.wealth || 0).filter(v => v > 0);
+    return {
+      avgDmg: validDmg.length > 0 ? validDmg.reduce((a, b) => a + b, 0) / validDmg.length : 0,
+      avgWlt: validWlt.length > 0 ? validWlt.reduce((a, b) => a + b, 0) / validWlt.length : 0
+    };
+  }, [chartUsers]);
+
+  const countryGlobalStats = useMemo(() => {
+    if (allCountriesStats.length === 0) return { avgDmg: 0, avgWlt: 0 };
+    const validDmg = allCountriesStats.map(c => c.weekly_damage || 0).filter(v => v > 0);
+    const validWlt = allCountriesStats.map(c => c.money || 0).filter(v => v > 0);
+    return {
+      avgDmg: validDmg.length > 0 ? validDmg.reduce((a, b) => a + b, 0) / validDmg.length : 0,
+      avgWlt: validWlt.length > 0 ? validWlt.reduce((a, b) => a + b, 0) / validWlt.length : 0
+    };
+  }, [allCountriesStats]);
+
   if (error) {
     return (
       <div className="p-6">
@@ -596,8 +616,21 @@ export default function NationalRecords() {
                       <XAxis type="number" scale="log" dataKey="weekly_damage" name="Weekly Damage" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Weekly Damage (Log)', position: 'insideBottom', offset: -10, fill: '#71717a', fontSize: 12 }} />
                       <YAxis type="number" scale="log" dataKey="wealth" name="Wealth" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Wealth (Log)', angle: -90, position: 'insideLeft', offset: 10, fill: '#71717a', fontSize: 12 }} />
                       <ZAxis type="number" dataKey="level" range={[10, 200]} name="Level" />
+                      
+                      {citizenStats.avgDmg > 0 && (
+                        <>
+                          <ReferenceArea x1={0} x2={citizenStats.avgDmg * 0.5} fill="#ef4444" fillOpacity={0.05} />
+                          <ReferenceArea x1={citizenStats.avgDmg * 1.5} x2={Infinity} fill="#22c55e" fillOpacity={0.05} />
+                          <ReferenceLine x={citizenStats.avgDmg} stroke="#3b82f6" strokeDasharray="5 5" strokeOpacity={0.5}>
+                            <Label value="Avg Damage" position="top" fill="#3b82f6" fontSize={10} />
+                          </ReferenceLine>
+                          <ReferenceLine y={citizenStats.avgWlt} stroke="#eab308" strokeDasharray="5 5" strokeOpacity={0.5}>
+                            <Label value="Avg Wealth" position="right" fill="#eab308" fontSize={10} />
+                          </ReferenceLine>
+                        </>
+                      )}
+
                       <Tooltip content={<CitizenTooltip />} cursor={{ strokeDasharray: '3 3', stroke: '#3f3f46' }} />
-                      {/* Log scales crash on 0 values, so we bind Math.max(1, value) inline */}
                       <Scatter data={chartUsers.map(u => ({ ...u, weekly_damage: Math.max(1, u.weekly_damage || 1), wealth: Math.max(1, u.wealth || 1) }))} shape={<CitizenDot />} />
                     </ScatterChart>
                   </ResponsiveContainer>
@@ -724,8 +757,21 @@ export default function NationalRecords() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
                       <XAxis type="number" scale="log" dataKey="weekly_damage" name="Weekly Damage" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Weekly Damage (Log)', position: 'insideBottom', offset: -10, fill: '#71717a', fontSize: 12 }} />
                       <YAxis type="number" scale="log" dataKey="money" name="Wealth" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Wealth (Log)', angle: -90, position: 'insideLeft', offset: 10, fill: '#71717a', fontSize: 12 }} />
+                      
+                      {countryGlobalStats.avgDmg > 0 && (
+                        <>
+                          <ReferenceArea x1={0} x2={countryGlobalStats.avgDmg * 0.5} fill="#ef4444" fillOpacity={0.05} />
+                          <ReferenceArea x1={countryGlobalStats.avgDmg * 1.5} x2={Infinity} fill="#22c55e" fillOpacity={0.05} />
+                          <ReferenceLine x={countryGlobalStats.avgDmg} stroke="#3b82f6" strokeDasharray="5 5" strokeOpacity={0.5}>
+                            <Label value="Avg Damage" position="top" fill="#3b82f6" fontSize={10} />
+                          </ReferenceLine>
+                          <ReferenceLine y={countryGlobalStats.avgWlt} stroke="#eab308" strokeDasharray="5 5" strokeOpacity={0.5}>
+                            <Label value="Avg Wealth" position="right" fill="#eab308" fontSize={10} />
+                          </ReferenceLine>
+                        </>
+                      )}
+
                       <Tooltip content={<CountryTooltip />} cursor={{ strokeDasharray: '3 3', stroke: '#3f3f46' }} />
-                      {/* Log scales crash on 0 values, so we bind Math.max(1, value) inline */}
                       <Scatter data={allCountriesStats.map(c => ({ ...c, weekly_damage: Math.max(1, c.weekly_damage || 1), money: Math.max(1, c.money || 1) }))} shape={<CountryDot />} />
                     </ScatterChart>
                   </ResponsiveContainer>
