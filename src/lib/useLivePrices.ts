@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { API_BASE } from "./wareraApi";
-
-const API_URL = API_BASE + "/itemTrading.getPrices";
+import { getItemPrices } from "./api/warera";
 
 export interface LivePrices {
   prices: Record<string, number>;
@@ -21,14 +20,7 @@ export function useLivePrices(intervalMs = 30_000) {
       if (fetchingRef.current) return;
       fetchingRef.current = true;
       try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: "{}",
-        });
-        if (!res.ok) throw new Error("Failed to fetch prices");
-        const json = (await res.json()) as { result?: { data?: Record<string, number> } };
-        const prices = json?.result?.data;
+        const prices = await getItemPrices()
         if (!prices || typeof prices !== "object") throw new Error("Unexpected API shape");
         if (mountedRef.current) {
           setData({ prices, timestamp: Date.now() });
