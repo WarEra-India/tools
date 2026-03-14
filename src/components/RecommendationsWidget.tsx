@@ -62,7 +62,11 @@ function buildActions(
       const current = locationBonus.regionById[company.region];
       const industrialism = locationBonus.countryIndustrialism[current?.countryId ?? ""] ?? 0;
       const depositMatch = current?.depositType === code ? (current?.depositBonus ?? 0) : 0;
-      const ethics = getEthicsBonus(code, industrialism);
+      const ethics = getEthicsBonus(
+        code,
+        industrialism,
+        locationBonus.countrySpecializedItem[current?.countryId ?? ""]
+      );
       const currentBonus = calcBonus(depositMatch, current?.stratBonus ?? 0, ethics, industrialism);
 
       // Only recommend if the best region is actually better

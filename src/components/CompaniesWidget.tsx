@@ -12,7 +12,11 @@ function calcCompanyBonus(company: CompanyInfo, locationBonus: LocationBonus): n
   if (!region) return null;
   const industrialism = locationBonus.countryIndustrialism[region.countryId] ?? 0;
   const depositMatch = region.depositType === company.itemCode ? region.depositBonus : 0;
-  const ethics = getEthicsBonus(company.itemCode, industrialism);
+  const ethics = getEthicsBonus(
+    company.itemCode,
+    industrialism,
+    locationBonus.countrySpecializedItem[region.countryId]
+  );
   return calcBonus(depositMatch, region.stratBonus, ethics, industrialism);
 }
 
@@ -67,29 +71,28 @@ export default function CompaniesWidget({ locationBonus }: Props) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-zinc-200 truncate">{company.name}</p>
                     <p className="text-xs text-zinc-500 truncate">
-                      {itemName(company.itemCode)}
+                      {/* {itemName(company.itemCode)} */}
                       {regionInfo && (
-                        <> &mdash; {regionInfo.name}, {regionInfo.countryName}</>
+                        <> {regionInfo.name}, {regionInfo.countryName}</>
                       )}
                     </p>
                   </div>
 
                   {/* Workers */}
-                  {!!company.workerCount  && (
-                      <div className="flex items-center gap-1 text-xs text-zinc-400 shrink-0">
-                          <img src={WORKER_ICON} alt="PP" className="h-3.5 w-3.5" />
-                          <span>{company.workerCount} workers</span>
-                      </div>
+                  {!!company.workerCount && (
+                    <div className="flex items-center gap-1 text-xs text-zinc-400 shrink-0">
+                      <img src={WORKER_ICON} alt="PP" className="h-3.5 w-3.5" />
+                      <span>{company.workerCount} workers</span>
+                    </div>
                   )}
 
                   {/* Bonus badge */}
                   {bonus !== null ? (
                     <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        bonus > 0
-                          ? "bg-emerald-900/50 text-emerald-400"
-                          : "bg-zinc-800 text-zinc-500"
-                      }`}
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${bonus > 0
+                        ? "bg-emerald-900/50 text-emerald-400"
+                        : "bg-zinc-800 text-zinc-500"
+                        }`}
                     >
                       +{bonus}%
                     </span>

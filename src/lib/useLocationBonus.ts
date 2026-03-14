@@ -16,17 +16,29 @@ const DEPOSIT_CATEGORY: Record<string, "agricultural" | "industrial"> = {
   iron: "industrial",
   lead: "industrial",
   petroleum: "industrial",
+  concrete: "industrial",
+  steel: "industrial",
+  oil: "industrial",
+  ammo: "industrial",
+  lightAmmo: "industrial",
+  heavyAmmo: "industrial",
 };
 
 /** Returns the ethics production bonus % for a given deposit type and industrialism value */
 export function getEthicsBonus(
   itemCode: string | null,
-  industrialism: number
+  industrialism: number,
+  specializedItem: string | null = null
 ): number {
   if (!itemCode) return 0;
+
   const category = DEPOSIT_CATEGORY[itemCode];
   if (!category) return 0;
+
   if (industrialism === -2 && category === "agricultural") return 30;
+
+  if (specializedItem && itemCode !== specializedItem) return 0;
+
   if (industrialism === -1 && category === "agricultural") return 10;
   if (industrialism === 1 && category === "industrial") return 10;
   if (industrialism === 2 && category === "industrial") return 30;
@@ -42,10 +54,11 @@ export function calcBonus(
   ethicsBonus: number,
   industrialism: number
 ): number {
-  return stratBonus + ((industrialism === -2 || industrialism === 2)
-    ? ethicsBonus
-    : depositBonus + ethicsBonus
-  );
+  return stratBonus + depositBonus + ethicsBonus;
+  // return stratBonus + ((industrialism === -2 || industrialism === 2)
+  //   ? ethicsBonus
+  //   : depositBonus + ethicsBonus
+  // );
 }
 
 export interface BestLocation {
@@ -76,6 +89,8 @@ export interface LocationBonus {
   regionById: Record<string, RegionInfo>;
   /** country ID → ruling party industrialism value (for ethics bonus lookup) */
   countryIndustrialism: Record<string, number>;
+  /** country ID → specialized item (for ethics bonus lookup) */
+  countrySpecializedItem: Record<string, string | null>;
 }
 
 interface CountryData {
@@ -87,6 +102,7 @@ interface CountryData {
       productionPercent?: number;
     };
   };
+  specializedItem?: string | null;
 }
 
 interface RegionData {
@@ -161,10 +177,12 @@ export function useLocationBonus() {
         const countryBonus: Record<string, number> = {};
         const countryName: Record<string, string> = {};
         const countryIndustrialism: Record<string, number> = {};
+        const countrySpecializedItem: Record<string, string | null> = {};
         for (const c of countries) {
           countryBonus[c._id] =
             c.strategicResources?.bonuses?.productionPercent ?? 0;
           countryName[c._id] = c.name;
+          countrySpecializedItem[c._id] = c.specializedItem ?? null;
           if (c.rulingParty && partyById[c.rulingParty]) {
             countryIndustrialism[c._id] =
               partyById[c.rulingParty].industrialism ?? 0;
@@ -197,7 +215,8 @@ export function useLocationBonus() {
           // ethics bonus applies based on the item's category regardless of the deposit.
           for (const itemCode of Object.keys(DEPOSIT_CATEGORY)) {
             const deposit = depositType === itemCode ? regionBonus : 0;
-            const ethicsBonus = getEthicsBonus(itemCode, industrialism);
+            const specializedItem = countrySpecializedItem[r.country] ?? null;
+            const ethicsBonus = getEthicsBonus(itemCode, industrialism, specializedItem);
             const total = calcBonus(deposit, stratBonus, ethicsBonus, industrialism);
             if (total > 0 && total > (bonusByType[itemCode] ?? 0)) {
               bonusByType[itemCode] = total;
@@ -211,7 +230,7 @@ export function useLocationBonus() {
         }
 
         if (mountedRef.current) {
-          setData({ bonusByType, bestByType, regionById, countryIndustrialism });
+          setData({ bonusByType, bestByType, regionById, countryIndustrialism, countrySpecializedItem });
         }
       } catch (e) {
         console.error("Failed to fetch location bonus data:", e);
