@@ -7,7 +7,8 @@ import { itemName } from "@/lib/items";
 import { itemImageUrl } from "@/lib/images";
 import type { CompanyInfo } from "@/lib/wareraApi";
 
-function calcCompanyBonus(company: CompanyInfo, locationBonus: LocationBonus): number | null {
+function calcCompanyBonus(company: CompanyInfo, locationBonus: LocationBonus | null): any | null {
+  if (!locationBonus) return null;
   const region = locationBonus.regionById[company.region];
   if (!region) return null;
   const industrialism = locationBonus.countryIndustrialism[region.countryId] ?? 0;
@@ -17,7 +18,13 @@ function calcCompanyBonus(company: CompanyInfo, locationBonus: LocationBonus): n
     industrialism,
     locationBonus.countrySpecializedItem[region.countryId]
   );
-  return calcBonus(depositMatch, region.stratBonus, ethics, industrialism);
+  return {
+    totalBonus: calcBonus(depositMatch, region.stratBonus, ethics, industrialism),
+    depositMatch,
+    ethics,
+    industrialism,
+    stratBonus: region.stratBonus,
+  };
 }
 
 const WORKER_ICON = `${import.meta.env.BASE_URL}images/worker.svg`;
@@ -55,7 +62,8 @@ export default function CompaniesWidget({ locationBonus }: Props) {
           <div className="space-y-2">
             {profile.companies.map((company) => {
               const regionInfo = locationBonus?.regionById[company.region];
-              const bonus = locationBonus ? calcCompanyBonus(company, locationBonus) : null;
+              const { totalBonus, depositMatch, ethics, industrialism, stratBonus } = (calcCompanyBonus(company, locationBonus) ?? {});
+              const bonus = locationBonus ? totalBonus : null;
 
               return (
                 <div
@@ -89,6 +97,7 @@ export default function CompaniesWidget({ locationBonus }: Props) {
                   {/* Bonus badge */}
                   {bonus !== null ? (
                     <span
+                      title={`Deposit: ${depositMatch}%\nStrat: ${stratBonus}%\nEthics: ${ethics}%`}
                       className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${bonus > 0
                         ? "bg-emerald-900/50 text-emerald-400"
                         : "bg-zinc-800 text-zinc-500"

@@ -65,6 +65,9 @@ export interface BestLocation {
   bonus: number;
   regionName: string;
   countryName: string;
+  depositBonus: number;
+  stratBonus: number;
+  ethicsBonus: number;
 }
 
 export interface RegionInfo {
@@ -224,6 +227,9 @@ export function useLocationBonus() {
                 bonus: total,
                 regionName: r.name,
                 countryName: countryName[r.country] ?? "Unknown",
+                depositBonus: deposit,
+                stratBonus,
+                ethicsBonus,
               };
             }
           }

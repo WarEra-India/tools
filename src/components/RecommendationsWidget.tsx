@@ -25,6 +25,8 @@ interface MoveAction {
   newProfitPer100PP: number;
   concreteCost: number;
   concreteQty: number;
+  fromBreakdown?: { deposit: number; strat: number; ethics: number };
+  toBreakdown?: { deposit: number; strat: number; ethics: number };
 }
 
 interface ProduceAction {
@@ -37,6 +39,7 @@ interface ProduceAction {
   slotsAvailable: number;
   concreteQty: number;
   concreteCost: number;
+  breakdown?: { deposit: number; strat: number; ethics: number };
 }
 
 type Action = MoveAction | ProduceAction;
@@ -96,6 +99,8 @@ function buildActions(
         newProfitPer100PP: newProfitPer100,
         concreteQty: 5,
         concreteCost: 5 * concretePrice,
+        fromBreakdown: { deposit: depositMatch, strat: current?.stratBonus ?? 0, ethics },
+        toBreakdown: { deposit: best.depositBonus, strat: best.stratBonus, ethics: best.ethicsBonus },
       });
     }
   }
@@ -122,6 +127,7 @@ function buildActions(
       slotsAvailable,
       concreteQty,
       concreteCost: concreteQty * concretePrice,
+      breakdown: { deposit: bestLoc?.depositBonus ?? 0, strat: bestLoc?.stratBonus ?? 0, ethics: bestLoc?.ethicsBonus ?? 0 },
     });
   }
 
@@ -209,9 +215,13 @@ export default function RecommendationsWidget({ locationBonus, profitRows, concr
                     </div>
                     <div className="flex items-center gap-2 text-zinc-400">
                       <span className="text-zinc-500 w-16">Bonus</span>
-                      <span>+{a.fromBonus}%</span>
+                      <span title={a.fromBreakdown ? `Deposit: ${a.fromBreakdown.deposit}%\nStrat: ${a.fromBreakdown.strat}%\nEthics: ${a.fromBreakdown.ethics}%` : undefined}>
+                        +{a.fromBonus}%
+                      </span>
                       <ArrowRight className="h-3 w-3 text-zinc-600" />
-                      <span className="text-emerald-400">+{a.toBonus}%</span>
+                      <span className="text-emerald-400" title={a.toBreakdown ? `Deposit: ${a.toBreakdown.deposit}%\nStrat: ${a.toBreakdown.strat}%\nEthics: ${a.toBreakdown.ethics}%` : undefined}>
+                        +{a.toBonus}%
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-zinc-400">
                       <span className="text-zinc-500 w-16 shrink-0">Profit</span>
@@ -271,7 +281,9 @@ export default function RecommendationsWidget({ locationBonus, profitRows, concr
                     </div>
                     <div className="flex items-center gap-2 text-zinc-400">
                       <span className="text-zinc-500 w-16">Bonus</span>
-                      <span className="text-emerald-400">+{a.bonus}%</span>
+                      <span className="text-emerald-400" title={a.breakdown ? `Deposit: ${a.breakdown.deposit}%\nStrat: ${a.breakdown.strat}%\nEthics: ${a.breakdown.ethics}%` : undefined}>
+                        +{a.bonus}%
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-zinc-400">
                       <span className="text-zinc-500 w-16 shrink-0">Profit</span>
