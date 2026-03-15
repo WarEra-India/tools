@@ -1,24 +1,4 @@
-export interface GameData {
-  prices: Record<string, number>;
-  rawPP: Record<string, number>;
-  recipes: Record<string, { pp: number; inputs: Record<string, number> }>;
-  /** deposit type → best bonus percent (e.g. 35 means +35% PP) */
-  locationBonus?: Record<string, number>;
-}
-
-export interface ProfitRow {
-  item: string;
-  type: "Raw" | "Processed";
-  sell: number;
-  cost: number;
-  profit: number;
-  bonusAmount: number;
-  pp: number;
-  basePP: number;
-  bonusPct: number;
-  profitPP: number;
-  inputs?: Record<string, number>;
-}
+import type { GameData, ProfitRow } from "@/lib/useGameConfig";
 
 export function calculate(data: GameData): ProfitRow[] {
   const rows: ProfitRow[] = [];

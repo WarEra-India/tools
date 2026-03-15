@@ -39,6 +39,14 @@ export const calculators: CalculatorMeta[] = [
     // iconUrl: "https://app.warera.io/images/flags/in.svg",
     component: lazy(() => import("./national-records/index")),
   },
+  {
+    id: "craft-theory",
+    name: "Craft Theory",
+    description: "Craft items based on current market prices and production points.",
+    path: "/craft-theory",
+    icon: "craft",
+    component: lazy(() => import("./craft-theory/index")),
+  },
   // {
   //   id: "battle-plan",
   //   name: "Battle Plan",
