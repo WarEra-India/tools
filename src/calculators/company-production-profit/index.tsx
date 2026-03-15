@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Drawer } from "@/components/ui/drawer"
-import { useGameConfig } from "./data"
+import { useGameConfig } from "@/lib/useGameConfig"
 import { calculate } from "./calculator"
 import { itemImageUrl } from "@/lib/images"
 import { itemName } from "@/lib/items"
@@ -192,34 +192,21 @@ const PROCESSED_BG_COLOR = "rgba(96,165,250,0.08)"
 
 export default function CompanyProductionProfit() {
   const { data: gameConfig, loading: configLoading } = useGameConfig()
-  const [data, setData] = useState(gameConfig)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [useBestLocation, setUseBestLocation] = useState(true)
   const { data: livePrices, loading: pricesLoading } = useLivePrices()
   const { data: locationBonus } = useLocationBonus()
 
+  const data = useMemo(() => {
+    if (!gameConfig) return null
+    if (!livePrices?.prices) return gameConfig
+    return {
+      ...gameConfig,
+      prices: { ...gameConfig.prices, ...livePrices.prices },
+    }
+  }, [gameConfig, livePrices])
+
   const isLoading = configLoading || pricesLoading || !data
-
-  // Initialise data once game config loads
-  useEffect(() => {
-    if (!gameConfig) return
-    setData((prev) => {
-      if (prev) return prev
-      return gameConfig
-    })
-  }, [gameConfig])
-
-  // Auto-update prices whenever live data arrives
-  useEffect(() => {
-    if (!livePrices?.prices || !data) return
-    setData((prev) => {
-      if (!prev) return prev
-      return {
-        ...prev,
-        prices: { ...prev.prices, ...livePrices.prices },
-      }
-    })
-  }, [livePrices])
 
   const rows = useMemo(
     () =>

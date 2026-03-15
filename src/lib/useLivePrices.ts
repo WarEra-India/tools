@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { API_BASE } from "./wareraApi";
 import { getItemPrices } from "./api/warera";
 
 export interface LivePrices {

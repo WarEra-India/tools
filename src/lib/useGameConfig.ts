@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import type { GameData } from "./calculator";
-import { API_BASE } from "../../lib/wareraApi";
+import { API_BASE } from "./api/warera";
+import type { GameData } from "@/calculators/company-production-profit/calculator";
 
 const GAME_CONFIG_URL = API_BASE + "/gameConfig.getGameConfig";
 
