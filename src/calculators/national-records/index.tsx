@@ -77,23 +77,23 @@ export default function NationalRecords() {
     setUpdateLoading(true);
     if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
     try {
-      const res = await fetch(`${API_BASE}/collect`, { 
+      const res = await fetch(`${API_BASE}/collect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) throw new Error("Update failed");
-      
+
       const data = await res.json();
       const parts = [];
       if (data.usersUpserted) parts.push(`${data.usersUpserted} users`);
       if (data.userDamageRows) parts.push(`${data.userDamageRows} dmg records`);
       if (data.countriesUpserted) parts.push(`${data.countriesUpserted} countries`);
       if (data.countryStatsRows) parts.push(`${data.countryStatsRows} country stats`);
-      
+
       const message = parts.length > 0
         ? `Updated: ${parts.join(', ')}`
         : "Records updated successfully";
-        
+
       setToast({ message, type: "success" });
     } catch (err) {
       console.error("Failed to update records:", err);
@@ -366,7 +366,7 @@ export default function NationalRecords() {
             </div>
             <div>
               <p className="text-zinc-500 text-xs">Wealth</p>
-              <p className="font-mono text-green-400">{formatNumber(data.money)}</p>
+              <p className="font-mono text-green-400">{formatNumber(data.wealth)}</p>
             </div>
           </div>
         </div>
@@ -388,7 +388,7 @@ export default function NationalRecords() {
   const countryGlobalStats = useMemo(() => {
     if (allCountriesStats.length === 0) return { avgDmg: 0, avgWlt: 0 };
     const validDmg = allCountriesStats.map(c => c.weekly_damage || 0).filter(v => v > 0);
-    const validWlt = allCountriesStats.map(c => c.money || 0).filter(v => v > 0);
+    const validWlt = allCountriesStats.map(c => c.wealth || 0).filter(v => v > 0);
     return {
       avgDmg: validDmg.length > 0 ? validDmg.reduce((a, b) => a + b, 0) / validDmg.length : 0,
       avgWlt: validWlt.length > 0 ? validWlt.reduce((a, b) => a + b, 0) / validWlt.length : 0
@@ -616,7 +616,7 @@ export default function NationalRecords() {
                       <XAxis type="number" scale="log" dataKey="weekly_damage" name="Weekly Damage" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Weekly Damage (Log)', position: 'insideBottom', offset: -10, fill: '#71717a', fontSize: 12 }} />
                       <YAxis type="number" scale="log" dataKey="wealth" name="Wealth" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Wealth (Log)', angle: -90, position: 'insideLeft', offset: 10, fill: '#71717a', fontSize: 12 }} />
                       <ZAxis type="number" dataKey="level" range={[10, 200]} name="Level" />
-                      
+
                       {citizenStats.avgDmg > 0 && (
                         <>
                           <ReferenceArea x1={0} x2={citizenStats.avgDmg * 0.5} fill="#ef4444" fillOpacity={0.05} />
@@ -756,8 +756,8 @@ export default function NationalRecords() {
                     <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
                       <XAxis type="number" scale="log" dataKey="weekly_damage" name="Weekly Damage" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Weekly Damage (Log)', position: 'insideBottom', offset: -10, fill: '#71717a', fontSize: 12 }} />
-                      <YAxis type="number" scale="log" dataKey="money" name="Wealth" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Wealth (Log)', angle: -90, position: 'insideLeft', offset: 10, fill: '#71717a', fontSize: 12 }} />
-                      
+                      <YAxis type="number" scale="log" dataKey="wealth" name="Wealth" tickFormatter={(val) => formatNumber(val === 1 ? 0 : val)} stroke="#52525b" tick={{ fill: '#a1a1aa', fontSize: 12 }} domain={['auto', 'auto']} label={{ value: 'Wealth (Log)', angle: -90, position: 'insideLeft', offset: 10, fill: '#71717a', fontSize: 12 }} />
+
                       {countryGlobalStats.avgDmg > 0 && (
                         <>
                           <ReferenceArea x1={0} x2={countryGlobalStats.avgDmg * 0.5} fill="#ef4444" fillOpacity={0.05} />
@@ -772,7 +772,7 @@ export default function NationalRecords() {
                       )}
 
                       <Tooltip content={<CountryTooltip />} cursor={{ strokeDasharray: '3 3', stroke: '#3f3f46' }} />
-                      <Scatter data={allCountriesStats.map(c => ({ ...c, weekly_damage: Math.max(1, c.weekly_damage || 1), money: Math.max(1, c.money || 1) }))} shape={<CountryDot />} />
+                      <Scatter data={allCountriesStats.map(c => ({ ...c, weekly_damage: Math.max(1, c.weekly_damage || 1), wealth: Math.max(1, c.wealth || 1) }))} shape={<CountryDot />} />
                     </ScatterChart>
                   </ResponsiveContainer>
                 </div>
