@@ -81,6 +81,7 @@ export interface RegionInfo {
   stratBonus: number;
   /** depositBonus + stratBonus (no ethics — ethics is item-specific, computed by the consumer) */
   bonus: number;
+  incomeTax: number;
 }
 
 export interface LocationBonus {
@@ -106,6 +107,11 @@ interface CountryData {
     };
   };
   specializedItem?: string | null;
+  taxes: {
+    income: number;
+    market: number;
+    selfWork: number;
+  };
 }
 
 interface RegionData {
@@ -197,6 +203,7 @@ export function useLocationBonus() {
         const bestByType: Record<string, BestLocation> = {};
         const regionById: Record<string, RegionInfo> = {};
         for (const r of Object.values(regionsObj)) {
+          const country = countries.find(c => c._id === r.country);
           const depositType = r.deposit?.type ?? null;
           const regionBonus = r.deposit?.bonusPercent ?? 0;
           const stratBonus = countryBonus[r.country] ?? 0;
@@ -211,6 +218,7 @@ export function useLocationBonus() {
             depositBonus: regionBonus,
             stratBonus,
             bonus: regionBonus + stratBonus,
+            incomeTax: country?.taxes.income ?? 0,
           };
 
           // bestByType: check this region for every possible item type.

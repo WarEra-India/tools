@@ -98,9 +98,36 @@ interface CompaniesResult {
 export async function getCompanyIds(userId: string): Promise<string[]> {
   const data = await post<CompaniesResult>("company.getCompanies", {
     userId,
-    perPage: 50,
+    // perPage: 50,
   });
   return data.items;
+}
+
+export interface UserWorkers {
+  _id: string,
+  user: string,
+  company: string,
+  employer: string,
+  wage: number,
+  joinedAt: string,
+  lockedUntil: string,
+  fidelity: number,
+  createdAt: string,
+  updatedAt: string,
+  __v: number,
+  lastFidelityIncreaseAt: string,
+  lastWageReductionAt: string,
+  previousWage: number,
+  lastWageReductionAcceptationAt: string
+}
+
+export async function getUserWorkers(userId: string): Promise<UserWorkers[]> {
+  const data = await post<Record<string, any>>("worker.getWorkers", { userId });
+  const workers: UserWorkers[] = [];
+  data.workersPerCompany.forEach((company: any) => {
+    workers.push(...company.workers);
+  });
+  return workers;
 }
 
 export interface CompanyInfo {
@@ -140,15 +167,17 @@ async function getCompaniesBatch(companyIds: string[]): Promise<CompanyInfo[]> {
 export interface FullProfile {
   user: UserProfile;
   companies: CompanyInfo[];
+  workers: UserWorkers[];
 }
 
 export async function fetchFullProfileById(userId: string): Promise<FullProfile> {
-  const [user, companyIds] = await Promise.all([
+  const [user, companyIds, workers] = await Promise.all([
     getUserProfile(userId),
     getCompanyIds(userId),
+    getUserWorkers(userId),
   ]);
 
   const companies = await getCompaniesBatch(companyIds);
 
-  return { user, companies };
+  return { user, companies, workers };
 }

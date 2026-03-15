@@ -30,6 +30,8 @@ function calcCompanyBonus(company: CompanyInfo, locationBonus: LocationBonus | n
 }
 
 const WORKER_ICON = `${import.meta.env.BASE_URL}images/worker.svg`;
+const STORAGE_ICON = `${import.meta.env.BASE_URL}images/storage.svg`;
+const AUTOMATED_ENGINE_ICON = `${import.meta.env.BASE_URL}images/ae.svg`;
 
 interface Props {
   locationBonus: LocationBonus | null;
@@ -37,7 +39,7 @@ interface Props {
 
 export default function CompaniesWidget({ locationBonus }: Props) {
   const { profile } = useProfile();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   if (!profile || profile.companies.length === 0) return null;
 
@@ -88,12 +90,35 @@ export default function CompaniesWidget({ locationBonus }: Props) {
                     </p>
                   </div>
 
+                  {/* Comapny Levels */}
+                  {!!company.activeUpgradeLevels.automatedEngine && (
+                    <div className="flex items-center gap-1 text-xs text-zinc-400 shrink-0">
+                      <span className="font-bold">{company.activeUpgradeLevels.automatedEngine}</span>
+                      <img src={AUTOMATED_ENGINE_ICON} alt="Automated Engine" className="h-3.5 w-3.5" />
+                    </div>
+                  )}
+                  {!!company.activeUpgradeLevels.storage && (
+                    <div className="flex items-center gap-1 text-xs text-zinc-400 shrink-0">
+                      <span className="font-bold">{company.activeUpgradeLevels.storage}</span>
+                      <img src={STORAGE_ICON} alt="Storage" className="h-3.5 w-3.5" />
+                    </div>
+                  )}
+
                   {/* Workers */}
                   {!!company.workerCount && (
                     <div className="flex items-center gap-1 text-xs text-zinc-400 shrink-0">
+                      <span className="font-bold">{company.workerCount}</span>
                       <img src={WORKER_ICON} alt="PP" className="h-3.5 w-3.5" />
-                      <span>{company.workerCount} workers</span>
                     </div>
+                  )}
+
+                  {/* Income Tax badge */}
+                  {regionInfo?.incomeTax && regionInfo.incomeTax > 0 && (
+                    <span
+                      className="shrink-0 rounded-full bg-yellow-900/50 px-2 py-0.5 text-xs text-yellow-400"
+                    >
+                      {regionInfo.incomeTax}%
+                    </span>
                   )}
 
                   {/* Bonus badge */}

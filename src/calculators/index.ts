@@ -39,12 +39,12 @@ export const calculators: CalculatorMeta[] = [
     // iconUrl: "https://app.warera.io/images/flags/in.svg",
     component: lazy(() => import("./national-records/index")),
   },
-  {
-    id: "battle-plan",
-    name: "Battle Plan",
-    description: "Intelligence, combat analysis, live battles, and market tracking.",
-    path: "/battle-plan",
-    icon: "battle",
-    component: lazy(() => import("./battle-plan/index")),
-  },
+  // {
+  //   id: "battle-plan",
+  //   name: "Battle Plan",
+  //   description: "Intelligence, combat analysis, live battles, and market tracking.",
+  //   path: "/battle-plan",
+  //   icon: "battle",
+  //   component: lazy(() => import("./battle-plan/index")),
+  // },
 ]
