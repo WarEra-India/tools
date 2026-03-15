@@ -11,19 +11,21 @@ function calcCompanyBonus(company: CompanyInfo, locationBonus: LocationBonus | n
   if (!locationBonus) return null;
   const region = locationBonus.regionById[company.region];
   if (!region) return null;
+  const specializedItem = locationBonus.countrySpecializedItem[region.countryId] ?? null;
+  const itemStratBonus = company.itemCode === specializedItem ? region.stratBonus : 0;
   const industrialism = locationBonus.countryIndustrialism[region.countryId] ?? 0;
   const depositMatch = region.depositType === company.itemCode ? region.depositBonus : 0;
   const ethics = getEthicsBonus(
     company.itemCode,
     industrialism,
-    locationBonus.countrySpecializedItem[region.countryId]
+    specializedItem
   );
   return {
-    totalBonus: calcBonus(depositMatch, region.stratBonus, ethics, industrialism),
+    totalBonus: calcBonus(depositMatch, itemStratBonus, ethics, industrialism),
     depositMatch,
     ethics,
     industrialism,
-    stratBonus: region.stratBonus,
+    stratBonus: itemStratBonus,
   };
 }
 

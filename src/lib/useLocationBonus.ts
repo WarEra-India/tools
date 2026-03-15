@@ -11,6 +11,10 @@ const DEPOSIT_CATEGORY: Record<string, "agricultural" | "industrial"> = {
   livestock: "agricultural",
   fish: "agricultural",
   coca: "agricultural",
+  // bread: "agricultural",
+  // steak: "agricultural",
+  // cookedFish: "agricultural",
+  // cocaine: "agricultural",
 
   limestone: "industrial",
   iron: "industrial",
@@ -54,11 +58,7 @@ export function calcBonus(
   ethicsBonus: number,
   industrialism: number
 ): number {
-  return stratBonus + depositBonus + ethicsBonus;
-  // return stratBonus + ((industrialism === -2 || industrialism === 2)
-  //   ? ethicsBonus
-  //   : depositBonus + ethicsBonus
-  // );
+  return stratBonus + Math.max(depositBonus, ethicsBonus);
 }
 
 export interface BestLocation {
@@ -219,8 +219,9 @@ export function useLocationBonus() {
           for (const itemCode of Object.keys(DEPOSIT_CATEGORY)) {
             const deposit = depositType === itemCode ? regionBonus : 0;
             const specializedItem = countrySpecializedItem[r.country] ?? null;
+            const itemStratBonus = itemCode === specializedItem ? stratBonus : 0;
             const ethicsBonus = getEthicsBonus(itemCode, industrialism, specializedItem);
-            const total = calcBonus(deposit, stratBonus, ethicsBonus, industrialism);
+            const total = calcBonus(deposit, itemStratBonus, ethicsBonus, industrialism);
             if (total > 0 && total > (bonusByType[itemCode] ?? 0)) {
               bonusByType[itemCode] = total;
               bestByType[itemCode] = {
@@ -228,7 +229,7 @@ export function useLocationBonus() {
                 regionName: r.name,
                 countryName: countryName[r.country] ?? "Unknown",
                 depositBonus: deposit,
-                stratBonus,
+                stratBonus: itemStratBonus,
                 ethicsBonus,
               };
             }
