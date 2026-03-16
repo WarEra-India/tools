@@ -67,6 +67,15 @@ const RARITY_COLORS: Record<string, any> = {
   }
 }
 
+const RARITY_OTHER_NAMES: Record<string, string> = {
+  common: "Basic",
+  uncommon: "Reinforced",
+  rare: "Advanced",
+  epic: "Elite",
+  legendary: "Legendary",
+  mythic: "Mythic",
+}
+
 export default function CraftTheory() {
   const { data: gameConfig, loading: configLoading } = useGameConfig()
   const { data: livePrices, loading: pricesLoading } = useLivePrices()
@@ -262,7 +271,9 @@ export default function CraftTheory() {
                           />
                         )}
                         <div className="flex flex-col">
-                          <span className="capitalize">{r.isRandom ? `Random ${r.rarity}` : `${r.rarity} ${r.code.replace(/[0-9]/g, '')}`}</span>
+                          <span className="capitalize">
+                            {r.isRandom ? `Random ${r.rarity}` : `${r.type == "weapon" ? "" : RARITY_OTHER_NAMES[r.rarity]} ${r.code.replace(/[0-9]/g, '')}`}
+                          </span>
                           {!r.isRandom && (
                             <div className="flex gap-2 items-center">
                               {Object.entries(r.dynamicStats).map(([key, value]: [string, any]) => (
