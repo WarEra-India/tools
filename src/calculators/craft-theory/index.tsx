@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react"
+import { useMemo } from "react"
 import { Link } from "react-router-dom"
-import { ArrowLeft, Hammer, Info, Swords } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import {
   Card,
   CardHeader,
@@ -21,12 +21,14 @@ import { useGameConfig } from "@/lib/useGameConfig"
 import { useLivePrices } from "@/lib/useLivePrices"
 import { useEquipmentPrices } from "@/lib/useEquipmentPrices"
 
-const COIN_ICON = `${import.meta.env.BASE_URL}images/game_coin.svg`
-const CRAFT_ICON = `${import.meta.env.BASE_URL}images/craft.svg`
-const SCRAPS_ICON = `https://app.warera.io/images/items/scraps.png`
-const STEEL_ICON = `https://app.warera.io/images/items/steel.png`
-const CASE1_ICON = `https://app.warera.io/images/items/case1.png`
-const CASE2_ICON = `https://app.warera.io/images/items/case2.png`
+const PUBLIC_IMAGES_BASE_URL = `${import.meta.env.BASE_URL}images/`
+const COIN_ICON = `${PUBLIC_IMAGES_BASE_URL}game_coin.svg`
+const CRAFT_ICON = `${PUBLIC_IMAGES_BASE_URL}craft.svg`
+const BASE_IMAGES_URL = "https://app.warera.io/images/items/"
+const SCRAPS_ICON = `${BASE_IMAGES_URL}scraps.png`
+const STEEL_ICON = `${BASE_IMAGES_URL}steel.png`
+const CASE1_ICON = `${BASE_IMAGES_URL}case1.png`
+const CASE2_ICON = `${BASE_IMAGES_URL}case2.png`
 
 // Rarity costs from sketch.md
 const RARITY_COSTS: Record<string, { scraps: number; steel: number }> = {
@@ -253,21 +255,35 @@ export default function CraftTheory() {
                           </div>
                         ) : (
                           <img
-                            src={`https://app.warera.io/images/items/${r.iconImg ?? (r.code + ".png")}`}
+                            src={`${BASE_IMAGES_URL}${r.iconImg ?? (r.code + ".png")}`}
                             style={{ background: RARITY_COLORS[r.rarity].bg }}
                             alt={r.code}
                             className="h-10 w-10 rounded-md object-contain"
                           />
                         )}
                         <div className="flex flex-col">
-                          <span className="capitalize">{r.isRandom ? `Random ${r.rarity}` : r.code.replace(/[0-9]/g, '')}</span>
-                          {!r.isRandom && <span className="text-xs text-zinc-500">{JSON.stringify(r.dynamicStats)}</span>}
+                          <span className="capitalize">{r.isRandom ? `Random ${r.rarity}` : `${r.rarity} ${r.code.replace(/[0-9]/g, '')}`}</span>
+                          {!r.isRandom && (
+                            <div className="flex gap-2 items-center">
+                              {Object.entries(r.dynamicStats).map(([key, value]: [string, any]) => (
+                                <div className="flex items-center gap-1">
+                                  <img
+                                    key={key}
+                                    src={`${PUBLIC_IMAGES_BASE_URL}${key}.svg`}
+                                    alt={key}
+                                    className="h-4 w-4 object-contain"
+                                  />
+                                  <span className="text-xs text-zinc-500">{value.join('-')}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant="outline"
+                        variant="default"
                         style={{ background: RARITY_COLORS[r.rarity].bg, color: RARITY_COLORS[r.rarity].color, outlineColor: RARITY_COLORS[r.rarity].color }}
                       >
                         {r.rarity.toUpperCase()}
