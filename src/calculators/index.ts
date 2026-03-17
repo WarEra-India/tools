@@ -47,4 +47,12 @@ export const calculators: CalculatorMeta[] = [
     icon: "craft",
     component: lazy(() => import("./craft-theory/index")),
   },
+  {
+    id: "nation-power",
+    name: "Nation Power Index",
+    description: "Analyze a nation's economic strength, combat power, and plan eco rotations to maximize sustainable daily damage.",
+    path: "/nation-power",
+    icon: "battle",
+    component: lazy(() => import("./nation-power/index")),
+  },
 ]
