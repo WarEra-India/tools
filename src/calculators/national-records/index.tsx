@@ -8,6 +8,7 @@ import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Responsive
 
 const API_BASE = "https://warvault.shadoooow.workers.dev/api";
 const LIMIT = 250;
+const FLAG_ICON = `${import.meta.env.BASE_URL}images/flag.svg`;
 
 function formatNumber(n: number) {
   if (n === null || n === undefined) return "0";
@@ -422,7 +423,7 @@ export default function NationalRecords() {
               <ArrowLeft className="w-6 h-6 text-zinc-400" />
             </Link>
             <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-              <Globe className="w-8 h-8 text-blue-500" />
+              <img src={FLAG_ICON} alt="craft" className="h-8 w-8" />
               National Records
             </h1>
           </div>

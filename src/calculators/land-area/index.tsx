@@ -8,6 +8,7 @@ import * as topojson from "topojson-client"
 const API_BASE = "https://api5.warera.io/trpc"
 const EARTH_RADIUS_KM = 6371
 const EARTH_AREA_KM2 = 4 * Math.PI * EARTH_RADIUS_KM * EARTH_RADIUS_KM  // ~510M km²
+const LAND_ICON = `${import.meta.env.BASE_URL}images/ground.svg`;
 
 // Compute spherical area of a GeoJSON polygon ring in steradians
 function ringArea(coords: number[][]): number {
@@ -269,6 +270,7 @@ export default function LandArea() {
             <ArrowLeft className="h-4 w-4" />
             Back to Calculators
           </Link>
+          <img src={LAND_ICON} alt="craft" className="h-8 w-8" />
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Land Area</h1>
           <p className="text-zinc-400">All countries ranked by total controlled land area, including occupied territories.</p>
         </div>
@@ -349,9 +351,8 @@ export default function LandArea() {
                     return (
                       <tr
                         key={c.countryId}
-                        className={`border-b border-zinc-800/50 transition-colors hover:bg-zinc-900/50 ${
-                          i % 2 === 0 ? "" : "bg-zinc-900/20"
-                        }`}
+                        className={`border-b border-zinc-800/50 transition-colors hover:bg-zinc-900/50 ${i % 2 === 0 ? "" : "bg-zinc-900/20"
+                          }`}
                       >
                         <td className="px-4 py-3 text-zinc-500 font-mono">{i + 1}</td>
                         <td className="px-4 py-3">

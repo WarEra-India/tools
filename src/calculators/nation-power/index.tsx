@@ -1,12 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Target, Coins, Globe, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Users, TrendingUp, Zap, Sliders, CheckSquare, Square } from "lucide-react";
-import { CountryFlag } from "@/components/CountryFlag";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, Coins, Globe, ArrowLeft, Users, Zap, CheckSquare } from "lucide-react";
 import { useProfile } from "@/lib/ProfileContext";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, Cell } from "recharts";
 
 const API_BASE = "https://warvault.shadoooow.workers.dev/api";
+const BATTLE_ICON = `${import.meta.env.BASE_URL}images/battle.svg`;
 
 function formatNumber(n: number) {
   if (n === null || n === undefined) return "0";
@@ -199,7 +198,7 @@ export default function NationPower() {
             <ArrowLeft className="w-6 h-6 text-zinc-400" />
           </Link>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <Zap className="w-8 h-8 text-yellow-500" />
+            <img src={BATTLE_ICON} alt="craft" className="h-8 w-8" />
             Nation Strategic Control
           </h1>
         </div>
@@ -263,7 +262,7 @@ export default function NationPower() {
                   <p className="text-[10px] text-zinc-500 uppercase font-black mb-1 tracking-widest">Simulated Firepower</p>
                   <p className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]">{formatNumber(ecoStats.activeDmg)}</p>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-zinc-900/80 rounded-xl border border-zinc-800 text-center">
                     <p className="text-[8px] text-zinc-500 uppercase font-black mb-1">Force Loss</p>
@@ -285,7 +284,7 @@ export default function NationPower() {
                     <button onClick={() => applyPreset("top10")} className="py-2 bg-zinc-900/50 hover:bg-red-500/10 border border-zinc-800 rounded-lg text-[9px] font-black uppercase text-zinc-500 hover:text-red-400 transition-colors">Top 10</button>
                     <button onClick={() => applyPreset("bottom25")} className="py-2 bg-zinc-900/50 hover:bg-blue-500/10 border border-zinc-800 rounded-lg text-[9px] font-black uppercase text-zinc-500 hover:text-blue-400 transition-colors">Bottom 25%</button>
                   </div>
-                  
+
                   <div className="flex gap-2 mt-2">
                     <input
                       type="number"
@@ -296,7 +295,7 @@ export default function NationPower() {
                     <button onClick={() => applyPreset("topX")} className="flex-1 h-9 bg-zinc-900/80 hover:bg-red-500/10 border border-zinc-800 rounded-lg text-[9px] font-black uppercase text-zinc-500 hover:text-red-400 transition-colors">Pull Top X</button>
                     <button onClick={() => applyPreset("bottomX")} className="flex-1 h-9 bg-zinc-900/80 hover:bg-blue-500/10 border border-zinc-800 rounded-lg text-[9px] font-black uppercase text-zinc-500 hover:text-blue-400 transition-colors">Pull Bottom X</button>
                   </div>
-                  
+
                   <button onClick={() => applyPreset("clear")} className="w-full py-2 text-[9px] font-bold text-zinc-600 hover:text-zinc-400 uppercase tracking-widest transition-colors">
                     Reset Mission Deck
                   </button>
@@ -313,14 +312,14 @@ export default function NationPower() {
                 <p className="text-[10px] text-zinc-500 font-medium">Sorted by highest firepower combat data (last completed week)</p>
               </div>
               <div className="flex gap-3">
-                <button 
-                  onClick={() => requestSort("weekly_damage")} 
+                <button
+                  onClick={() => requestSort("weekly_damage")}
                   className={`text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border transition-all ${sortConfig?.key === 'weekly_damage' ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' : 'bg-transparent border-zinc-800 text-zinc-500'}`}
                 >
                   Damage
                 </button>
-                <button 
-                  onClick={() => requestSort("wealth")} 
+                <button
+                  onClick={() => requestSort("wealth")}
                   className={`text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border transition-all ${sortConfig?.key === 'wealth' ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' : 'bg-transparent border-zinc-800 text-zinc-500'}`}
                 >
                   Wealth
@@ -333,37 +332,35 @@ export default function NationPower() {
                 <div
                   key={f.user_id}
                   onClick={() => toggleEco(f.user_id)}
-                  className={`relative cursor-pointer rounded-xl border transition-all duration-300 p-3 ${
-                    ecoUserIds.has(f.user_id) 
-                      ? 'bg-zinc-900/20 border-zinc-800/50 grayscale opacity-60' 
-                      : 'bg-zinc-950/40 border-zinc-800/80 hover:border-blue-500/40 hover:bg-zinc-900 shadow-lg'
-                  }`}
+                  className={`relative cursor-pointer rounded-xl border transition-all duration-300 p-3 ${ecoUserIds.has(f.user_id)
+                    ? 'bg-zinc-900/20 border-zinc-800/50 grayscale opacity-60'
+                    : 'bg-zinc-950/40 border-zinc-800/80 hover:border-blue-500/40 hover:bg-zinc-900 shadow-lg'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <img 
-                        src={f.avatar_url} 
-                        className={`w-12 h-12 rounded-lg border ${ecoUserIds.has(f.user_id) ? 'border-zinc-800' : 'border-zinc-700'}`} 
-                        alt="" 
+                      <img
+                        src={f.avatar_url}
+                        className={`w-12 h-12 rounded-lg border ${ecoUserIds.has(f.user_id) ? 'border-zinc-800' : 'border-zinc-700'}`}
+                        alt=""
                       />
                       <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-zinc-950 flex items-center justify-center ${ecoUserIds.has(f.user_id) ? 'bg-blue-500' : 'bg-transparent border-zinc-800'}`}>
                         {ecoUserIds.has(f.user_id) && <CheckSquare className="w-2 h-2 text-white" />}
                       </div>
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <p className={`text-xs font-black truncate leading-none ${ecoUserIds.has(f.user_id) ? 'text-zinc-500 line-through' : 'text-zinc-100'}`}>
                           {f.username}
                         </p>
-                        <span className={`text-[7px] font-black uppercase px-1 py-0.5 rounded border ${
-                          f.tier?.toLowerCase() === 'diamond' ? 'bg-blue-500/20 border-blue-500/30 text-blue-400' :
+                        <span className={`text-[7px] font-black uppercase px-1 py-0.5 rounded border ${f.tier?.toLowerCase() === 'diamond' ? 'bg-blue-500/20 border-blue-500/30 text-blue-400' :
                           'bg-zinc-900 border-zinc-800 text-zinc-500'
-                        }`}>
+                          }`}>
                           {f.tier || 'Std'}
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-zinc-800/40">
                         <div>
                           <p className="text-[7px] text-zinc-600 uppercase font-black">Firepower</p>
