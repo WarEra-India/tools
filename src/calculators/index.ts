@@ -49,10 +49,18 @@ export const calculators: CalculatorMeta[] = [
   },
   {
     id: "nation-power",
-    name: "Nation Power Index",
-    description: "Analyze a nation's economic strength, combat power, and plan eco rotations to maximize sustainable daily damage.",
+    name: "Nation Strategic Control",
+    description: "Analyze a nation's tactical strength, firepower distribution, and plan eco rotations.",
     path: "/nation-power",
     icon: "battle",
     component: lazy(() => import("./nation-power/index")),
   },
-]
+  {
+    id: "baby-boom",
+    name: "Baby Boom Analysis",
+    description: "Track and compare new player join rates (account creations) across different nations.",
+    path: "/baby-boom",
+    icon: "trending_up",
+    component: lazy(() => import("./baby-boom/index")),
+  },
+];
