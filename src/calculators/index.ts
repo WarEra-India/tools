@@ -60,7 +60,7 @@ export const calculators: CalculatorMeta[] = [
     name: "Baby Boom Analysis",
     description: "Track and compare new player join rates (account creations) across different nations.",
     path: "/baby-boom",
-    icon: "trending_up",
+    icon: "worker",
     component: lazy(() => import("./baby-boom/index")),
   },
 ];
