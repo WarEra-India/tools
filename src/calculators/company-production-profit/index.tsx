@@ -40,7 +40,7 @@ import { useLocationBonus } from "@/lib/useLocationBonus"
 import RecommendationsWidget from "@/components/RecommendationsWidget"
 import CompaniesWidget from "@/components/CompaniesWidget"
 
-const PP_ICON = `${import.meta.env.BASE_URL}images/production_point.svg`
+const PP_ICON = `${import.meta.env.BASE_URL}images/production.svg`
 const COIN_ICON = `${import.meta.env.BASE_URL}images/game_coin.svg`
 
 /* ---- Skeleton helpers ---- */

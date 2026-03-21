@@ -6,6 +6,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, RadarChart, 
 import { useProfile } from "@/lib/ProfileContext";
 
 const API_BASE = "https://warvault.shadoooow.workers.dev/api";
+const SKILLS_BASE_IMAGE_URL = `${import.meta.env.BASE_URL}images/`;
 
 interface SkillInfo {
   l: number; // level
@@ -52,10 +53,12 @@ interface AnalyzedUser extends UserRecord {
   archetype: Archetype;
 }
 
-const SKILL_GROUPS = {
-  WAR: ["attack", "criticalChance", "criticalDamages", "armor", "precision", "dodge", "health", "hunger"],
+const SKILL_GROUPS: { WAR: (keyof UserSkills)[]; ECO: (keyof UserSkills)[] } = {
   ECO: ["companies", "entrepreneurship", "production", "management", "lootChance", "energy"],
+  WAR: ["attack", "criticalChance", "criticalDamages", "armor", "precision", "dodge", "health", "hunger"],
 };
+
+const MODE_TYPES = Object.keys(SKILL_GROUPS) as Array<keyof typeof SKILL_GROUPS>;
 
 const COLORS = {
   Vanguard: "#ef4444", // Red
@@ -361,7 +364,11 @@ export default function ArchetypeAnalysis() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filteredData.map(u => (
-                <div key={u.user_id} className="bg-zinc-950/40 border border-zinc-800 p-4 rounded-2xl hover:bg-zinc-900/80 transition-all group overflow-hidden relative">
+                <div
+                  key={u.user_id}
+                  className="bg-zinc-950/40 border p-4 rounded-2xl transition-all group overflow-hidden relative"
+                  style={{ backgroundColor: `${COLORS[u.archetype]}10`, borderColor: `${COLORS[u.archetype]}30` }}
+                >
                   {/* Subtle Background Icon */}
                   <div className="absolute -bottom-4 -right-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
                     {u.archetype === 'Vanguard' ? <Swords className="w-24 h-24" /> : u.archetype === 'Industrialist' ? <Coins className="w-24 h-24" /> : <Shield className="w-24 h-24" />}
@@ -370,16 +377,17 @@ export default function ArchetypeAnalysis() {
                   <div className="flex items-center gap-4 relative z-10">
                     <div className="relative">
                       <img src={u.avatar_url} className="w-14 h-14 rounded-xl border border-zinc-800 shadow-xl" alt="" />
-                      <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-zinc-950`} style={{ backgroundColor: COLORS[u.archetype] }} />
+                      {/* <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-zinc-950`} style={{ backgroundColor: COLORS[u.archetype] }} /> */}
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
+                      <div className="flex items-center gap-2 mb-2">
                         <p className="text-sm font-black text-white truncate">{u.username}</p>
-                        <span className="text-[8px] font-black text-blue-500 uppercase font-mono">{u.level}</span>
+                        <span className="text-[10px] font-bold text-blue-500 uppercase font-mono">{u.level}</span>
+                        {/* <span className="text-[10px] ml-auto font-bold text-red-500 font-mono">W/E {(u.warFocus * 100).toFixed(0)}</span> */}
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      {/* <div className="flex items-center gap-2">
                         <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded-full border shadow-sm`} style={{
                           backgroundColor: `${COLORS[u.archetype]}10`,
                           borderColor: `${COLORS[u.archetype]}30`,
@@ -390,9 +398,9 @@ export default function ArchetypeAnalysis() {
                         <span className="text-[7px] font-bold text-zinc-300 uppercase tracking-tighter">
                           {u.tier} {u.tier && '•'} War Focus: {(u.warFocus * 100).toFixed(0)}%
                         </span>
-                      </div>
+                      </div> */}
 
-                      <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-zinc-900/50">
+                      {/* <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-zinc-900/50">
                         <div>
                           <p className="text-[8px] text-zinc-600 uppercase font-black tracking-tighter">Combat Prowess</p>
                           <p className="text-xs font-black text-white font-mono">{u.warScore} <span className="text-[8px] text-zinc-700 font-bold">PTS</span></p>
@@ -401,7 +409,30 @@ export default function ArchetypeAnalysis() {
                           <p className="text-[8px] text-zinc-600 uppercase font-black tracking-tighter">Economic Savvy</p>
                           <p className="text-xs font-black text-white font-mono">{u.ecoScore} <span className="text-[8px] text-zinc-700 font-bold">PTS</span></p>
                         </div>
+                      </div> */}
+
+                      <div className="flex items-centre gap-4 w-full">
+                        {MODE_TYPES.map((key) => {
+                          const focus = key == "WAR" ? u.warFocus : (1 - u.warFocus)
+                          if (focus == 0) {
+                            return null
+                          }
+
+                          return (
+                            <div className="flex flex-col gap-2 flex-1">
+                              <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-tighter text-center">{key} {(focus * 100).toFixed(0)}%</span>
+                              <div className="flex flex-wrap gap-1">
+                                {SKILL_GROUPS[key].map(s => {
+                                  return Array.from({ length: u.parsedSkills[s].l }).map((_, i) => (
+                                    <img src={`${SKILLS_BASE_IMAGE_URL}${s}.svg`} alt={s} className="w-2 h-2" />
+                                  ))
+                                })}
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
+
                     </div>
                   </div>
                 </div>

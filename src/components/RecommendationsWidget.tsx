@@ -139,7 +139,7 @@ function buildActions(
 /* ---- component ---- */
 
 const COIN_ICON = `${import.meta.env.BASE_URL}images/game_coin.svg`;
-const PP_ICON = `${import.meta.env.BASE_URL}images/production_point.svg`;
+const PP_ICON = `${import.meta.env.BASE_URL}images/production.svg`;
 
 interface Props {
   locationBonus: LocationBonus | null;

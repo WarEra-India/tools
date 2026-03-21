@@ -17,7 +17,7 @@ export const calculators: CalculatorMeta[] = [
     description:
       "Calculate the most profitable items to produce based on current market prices and production points.",
     path: "/company-production-profit",
-    icon: "company",
+    icon: "companies",
     component: lazy(() => import("./company-production-profit/index")),
   },
   {
