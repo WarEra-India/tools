@@ -63,4 +63,12 @@ export const calculators: CalculatorMeta[] = [
     icon: "worker",
     component: lazy(() => import("./baby-boom/index")),
   },
+  {
+    id: "archetype-analysis",
+    name: "Strategic Archetype Analysis",
+    description: "Analyze and categorize national roster into tactical archetypes (War/Eco/Hybrid) based on skill investment.",
+    path: "/archetype-analysis",
+    icon: "skills",
+    component: lazy(() => import("./archetype-analysis/index")),
+  },
 ];
