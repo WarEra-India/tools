@@ -44,7 +44,7 @@ export const calculators: CalculatorMeta[] = [
     name: "Craft Theory",
     description: "Craft items based on current market prices and production points.",
     path: "/craft-theory",
-    icon: "craft",
+    icon: "craftItem",
     component: lazy(() => import("./craft-theory/index")),
   },
   {

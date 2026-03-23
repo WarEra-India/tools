@@ -23,7 +23,7 @@ import { useEquipmentPrices } from "@/lib/useEquipmentPrices"
 
 const PUBLIC_IMAGES_BASE_URL = `${import.meta.env.BASE_URL}images/`
 const COIN_ICON = `${PUBLIC_IMAGES_BASE_URL}game_coin.svg`
-const CRAFT_ICON = `${PUBLIC_IMAGES_BASE_URL}craft.svg`
+const CRAFT_ICON = `${PUBLIC_IMAGES_BASE_URL}craftItem.svg`
 const BASE_IMAGES_URL = "https://app.warera.io/images/items/"
 const SCRAPS_ICON = `${BASE_IMAGES_URL}scraps.png`
 const STEEL_ICON = `${BASE_IMAGES_URL}steel.png`

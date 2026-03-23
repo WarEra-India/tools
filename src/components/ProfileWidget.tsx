@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { X, User, Building2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { X, User, Building2, Receipt } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProfile } from "@/lib/ProfileContext";
 import ProfileSearchBar from "@/components/ProfileSearchBar";
@@ -49,13 +50,22 @@ export default function ProfileWidget() {
                 )}
               </div>
             </div>
-            <button
-              onClick={clearProfile}
-              className="rounded p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
-              aria-label="Remove profile"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex gap-2">
+              <Link
+                to="/passbook"
+                className="rounded p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+                aria-label="View passbook"
+              >
+                <Receipt className="h-4 w-4" />
+              </Link>
+              <button
+                onClick={clearProfile}
+                className="rounded p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+                aria-label="Remove profile"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         )}
 

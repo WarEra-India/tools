@@ -1,9 +1,18 @@
 export const API_BASE = "https://api5.warera.io/trpc";
 
 async function post<T>(endpoint: string, body: Record<string, unknown>): Promise<T> {
+  const token = localStorage.getItem("warera-api-token");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Accept": "*/*",
+  };
+  if (token) {
+    headers["X-API-KEY"] = token;
+  }
+
   const res = await fetch(`${API_BASE}/${endpoint}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "*/*" },
+    headers,
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
