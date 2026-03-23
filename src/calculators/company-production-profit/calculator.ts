@@ -34,12 +34,9 @@ export function calculate(data: GameData): ProfitRow[] {
     const primaryInput = Object.keys(recipe.inputs)[0] ?? "";
     const bonusPct = bonus[primaryInput] ?? 0;
 
-    let baseTotalPP = recipe.pp;
-
     for (const input in recipe.inputs) {
       const qty = recipe.inputs[input];
       rawCost += qty * (data.prices[input] ?? 0);
-      baseTotalPP += qty * data.rawPP[input];
     }
 
     const sell = data.prices[item] ?? 0;
@@ -53,10 +50,10 @@ export function calculate(data: GameData): ProfitRow[] {
       cost: rawCost,
       profit: profit,
       bonusAmount: bonusAmount,
-      pp: baseTotalPP,
-      basePP: baseTotalPP,
+      pp: recipe.pp,
+      basePP: recipe.pp,
       bonusPct: bonusPct,
-      profitPP: (profit + bonusAmount) / baseTotalPP,
+      profitPP: (profit + bonusAmount) / recipe.pp,
       inputs: recipe.inputs,
     });
   }
