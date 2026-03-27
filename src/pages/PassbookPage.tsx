@@ -8,6 +8,15 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import {
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Area,
+  AreaChart,
+} from "recharts";
 import { useProfile } from "@/lib/ProfileContext";
 import { useTransactions } from "@/lib/hooks/useTransactions";
 import { GameItemIcon } from "@/components/GameItemIcon";
@@ -15,6 +24,7 @@ import { GameItemIcon } from "@/components/GameItemIcon";
 const PUBLIC_IMAGES_BASE_URL = `${import.meta.env.BASE_URL}images/`;
 const COIN_ICON = `${PUBLIC_IMAGES_BASE_URL}game_coin.svg`;
 const BASE_IMAGES_URL = "https://app.warera.io/images/items/";
+const API_BASE = "https://warvault.shadoooow.workers.dev/api"
 
 function getCategoryIcon(type: string) {
   if (type == "openCase") return `${BASE_IMAGES_URL}case1.png`;
@@ -22,6 +32,125 @@ function getCategoryIcon(type: string) {
   // Remove virtual prefix if present
   const baseType = type.split('-')[0];
   return PUBLIC_IMAGES_BASE_URL + baseType + ".svg"
+}
+
+function WealthHistoryChart({ data, loading }: { data: any[]; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="h-[300px] w-full bg-zinc-900/20 rounded-[32px] border border-zinc-800/50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-800 border-t-emerald-500" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Syncing History</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data || data.length === 0) return null;
+
+  return (
+    <div className="h-[350px] w-full bg-zinc-900/20 rounded-[32px] border border-zinc-800/50 p-6 backdrop-blur-sm relative overflow-hidden group">
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500/20 via-zinc-500/20 to-rose-500/20 opacity-30" />
+
+      <div className="flex items-center justify-between mb-6 px-2">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-1">Performance Index</span>
+          <h3 className="text-lg font-black font-mono tracking-tight text-white uppercase italic">Growth Metrics</h3>
+        </div>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">Wealth</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">Damage</span>
+          </div>
+        </div>
+      </div>
+
+      <ResponsiveContainer width="100%" height="80%">
+        <AreaChart data={data}>
+          <defs>
+            <linearGradient id="colorWealth" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
+              <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="colorDamage" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1} />
+              <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} opacity={0.5} />
+          <XAxis
+            dataKey="date"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: '#52525b', fontSize: 9, fontWeight: 700 }}
+            dy={10}
+            tickFormatter={(str) => {
+              const d = new Date(str);
+              return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            }}
+          />
+          <YAxis
+            yAxisId="left"
+            orientation="left"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: '#10b981', fontSize: 9, fontWeight: 800, fontFamily: 'monospace' }}
+            tickFormatter={(val) => `${(val / 1000).toFixed(1)}k`}
+          />
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: '#f43f5e', fontSize: 9, fontWeight: 800, fontFamily: 'monospace' }}
+            tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`}
+          />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: '#09090b',
+              border: '1px solid #27272a',
+              borderRadius: '16px',
+              fontSize: '11px',
+              fontWeight: 800,
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
+            }}
+            itemStyle={{ padding: '2px 0' }}
+            labelStyle={{ color: '#71717a', marginBottom: '8px', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+            formatter={(value: any, name: any) => [
+              <span className="font-mono text-zinc-200">{value?.toLocaleString() || '0'}</span>,
+              <span className={name === "wealth" ? "text-emerald-500" : "text-rose-500"}>{name?.toUpperCase() || ''}</span>
+            ]}
+          />
+          <Area
+            yAxisId="left"
+            type="monotone"
+            dataKey="wealth"
+            name="wealth"
+            stroke="#10b981"
+            strokeWidth={3}
+            fillOpacity={1}
+            fill="url(#colorWealth)"
+            animationDuration={2000}
+          />
+          <Area
+            yAxisId="right"
+            type="monotone"
+            dataKey="total_damage"
+            name="damage"
+            stroke="#f43f5e"
+            strokeWidth={3}
+            fillOpacity={1}
+            fill="url(#colorDamage)"
+            animationDuration={2000}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
 }
 
 interface TypeSummary {
@@ -47,6 +176,23 @@ export default function PassbookPage() {
   const [token, setToken] = useState<string>(localStorage.getItem("warera-api-token") || "");
   const [isEditingToken, setIsEditingToken] = useState(!localStorage.getItem("warera-api-token"));
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const [wealthHistory, setWealthHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    setHistoryLoading(true);
+    fetch(`${API_BASE}/user-wealth-history?user=${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        setWealthHistory(data);
+        setHistoryLoading(false);
+      })
+      .catch(err => {
+        console.error("Wealth history fetch error:", err);
+        setHistoryLoading(false);
+      });
+  }, [userId]);
 
   const saveToken = () => {
     localStorage.setItem("warera-api-token", token);
@@ -282,6 +428,10 @@ export default function PassbookPage() {
           </div>
         ) : (
           <div className="space-y-16">
+            <div className="animate-in fade-in slide-in-from-top-8 duration-1000 delay-150">
+              <WealthHistoryChart data={wealthHistory} loading={historyLoading} />
+            </div>
+
             {groupedTransactions.map((group) => (
               <div key={group.date} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex flex-row items-end justify-between px-2 mb-6">
