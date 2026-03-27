@@ -37,10 +37,11 @@ function getCategoryIcon(type: string) {
 function WealthHistoryChart({ data, loading }: { data: any[]; loading: boolean }) {
   if (loading) {
     return (
-      <div className="h-[300px] w-full bg-zinc-900/20 rounded-[32px] border border-zinc-800/50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-800 border-t-emerald-500" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Syncing History</span>
+      <div className="h-[350px] w-full bg-zinc-950 rounded-[32px] border border-[#27272a]/20 flex items-center justify-center">
+        <div className="flex items-center gap-3 opacity-20">
+          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce" />
+          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.2s]" />
+          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.4s]" />
         </div>
       </div>
     );
@@ -49,7 +50,7 @@ function WealthHistoryChart({ data, loading }: { data: any[]; loading: boolean }
   if (!data || data.length === 0) return null;
 
   return (
-    <div className="h-[350px] w-full bg-zinc-900/20 rounded-[32px] border border-zinc-800/50 p-6 backdrop-blur-sm relative overflow-hidden group">
+    <div className="h-[350px] w-full bg-zinc-900/20 rounded-[32px] border border-[#27272a]/30 p-6 backdrop-blur-md relative overflow-hidden group shadow-2xl shadow-black/20">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500/20 via-zinc-500/20 to-rose-500/20 opacity-30" />
 
       <div className="flex items-center justify-between mb-6 px-2">
@@ -428,7 +429,7 @@ export default function PassbookPage() {
           </div>
         ) : (
           <div className="space-y-16">
-            <div className="animate-in fade-in slide-in-from-top-8 duration-1000 delay-150">
+            <div className="animate-in fade-in duration-1000">
               <WealthHistoryChart data={wealthHistory} loading={historyLoading} />
             </div>
 
@@ -436,11 +437,8 @@ export default function PassbookPage() {
               <div key={group.date} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex flex-row items-end justify-between px-2 mb-6">
                   <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600">
-                      {group.date}
-                    </span>
                     <h2 className="text-3xl font-black font-mono tracking-tighter text-white uppercase italic">
-                      Analysis Report
+                      {group.date}
                     </h2>
                   </div>
                   <div className="flex flex-col items-end">
@@ -464,7 +462,7 @@ export default function PassbookPage() {
                     return (
                       <div
                         key={summary.type}
-                        className={`flex flex-col rounded-[24px] transition-all duration-300 backdrop-blur-sm border ${canExpand ? "cursor-pointer" : "cursor-default"
+                        className={`flex flex-col h-fit rounded-[24px] transition-all duration-300 backdrop-blur-sm border ${canExpand ? "cursor-pointer" : "cursor-default"
                           } ${isExpanded
                             ? "bg-zinc-900/60 border-zinc-700/50 shadow-2xl scale-[1.02] z-10"
                             : "bg-zinc-900/30 border-zinc-800/50 hover:bg-zinc-900/50 hover:border-zinc-700/30"

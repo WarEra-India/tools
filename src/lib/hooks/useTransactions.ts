@@ -52,14 +52,29 @@ export function useTransactions(userId: string | undefined) {
   const fetchMore = useCallback(async () => {
     if (loading || !hasMore || !userId || !nextCursor) return;
     setLoading(true);
-    for (let i = 0; i < 10 && hasMore; i++) {
-      const data = await fetchBatch(nextCursor);
+    
+    let currentCursor: string | null = nextCursor;
+    let accumulated: TransactionItem[] = [];
+    let stopFetching = false;
+
+    for (let i = 0; i < 5 && !stopFetching; i++) {
+      const data = await fetchBatch(currentCursor);
       if (data) {
-        setTransactions(prev => [...prev, ...data.items]);
-        setNextCursor(data.nextCursor);
-        setHasMore(!!data.nextCursor);
+        accumulated = [...accumulated, ...data.items];
+        currentCursor = data.nextCursor;
+        if (!currentCursor || data.items.length < 100) {
+          stopFetching = true;
+        }
+      } else {
+        stopFetching = true;
       }
     }
+
+    if (accumulated.length > 0) {
+      setTransactions(prev => [...prev, ...accumulated]);
+    }
+    setNextCursor(currentCursor);
+    setHasMore(!!currentCursor);
     setLoading(false);
   }, [loading, hasMore, userId, nextCursor, fetchBatch]);
 
