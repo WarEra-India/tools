@@ -6,6 +6,7 @@ export interface TransactionItem {
   buyerId: string;
   sellerId?: string;
   sellerMuId?: string;
+  sellerCountryId?: string;
   transactionType:
   | "applicationFee"
   | "trading"

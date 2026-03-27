@@ -12,7 +12,7 @@ export default function ProfileWidget() {
   const [countries, setCountries] = useState<Record<string, Country>>({});
 
   useEffect(() => {
-    getAllCountries().then(setCountries).catch(() => {});
+    getAllCountries().then(setCountries).catch(() => { });
   }, []);
 
   const userCountry = profile?.user?.country ? countries[profile.user.country] : null;
@@ -53,14 +53,14 @@ export default function ProfileWidget() {
             <div className="flex gap-2">
               <Link
                 to="/passbook"
-                className="rounded p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+                className="rounded p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300 flex items-center gap-2"
                 aria-label="View passbook"
               >
-                <Receipt className="h-4 w-4" />
+                Passbook <Receipt className="h-4 w-4" />
               </Link>
               <button
                 onClick={clearProfile}
-                className="rounded p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+                className="rounded p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300 cursor-pointer"
                 aria-label="Remove profile"
               >
                 <X className="h-4 w-4" />

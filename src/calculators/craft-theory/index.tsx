@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { useGameConfig } from "@/lib/useGameConfig"
 import { useLivePrices } from "@/lib/useLivePrices"
 import { useEquipmentPrices } from "@/lib/useEquipmentPrices"
+import { GameItemIcon, RARITY_COLORS } from "@/components/GameItemIcon"
 
 const PUBLIC_IMAGES_BASE_URL = `${import.meta.env.BASE_URL}images/`
 const COIN_ICON = `${PUBLIC_IMAGES_BASE_URL}game_coin.svg`
@@ -27,8 +28,6 @@ const CRAFT_ICON = `${PUBLIC_IMAGES_BASE_URL}craftItem.svg`
 const BASE_IMAGES_URL = "https://app.warera.io/images/items/"
 const SCRAPS_ICON = `${BASE_IMAGES_URL}scraps.png`
 const STEEL_ICON = `${BASE_IMAGES_URL}steel.png`
-const CASE1_ICON = `${BASE_IMAGES_URL}case1.png`
-const CASE2_ICON = `${BASE_IMAGES_URL}case2.png`
 
 // Rarity costs from sketch.md
 const RARITY_COSTS: Record<string, { scraps: number; steel: number }> = {
@@ -40,32 +39,6 @@ const RARITY_COSTS: Record<string, { scraps: number; steel: number }> = {
   mythic: { scraps: 1460, steel: 64 },
 }
 
-const RARITY_COLORS: Record<string, any> = {
-  common: {
-    color: "#546A78",
-    bg: "linear-gradient(45deg,#252E35,#101417)",
-  },
-  uncommon: {
-    color: "#82D8A2",
-    bg: "linear-gradient(45deg,#143320,#09160E)",
-  },
-  rare: {
-    color: "#2B50A1",
-    bg: "linear-gradient(45deg,#132347,#080F1E)",
-  },
-  epic: {
-    color: "#634294",
-    bg: "linear-gradient(45deg,#2B1D41,#130C1C)",
-  },
-  legendary: {
-    color: "#E1C997",
-    bg: "linear-gradient(45deg, #3C3016, #1A150A)",
-  },
-  mythic: {
-    color: "#E68989",
-    bg: "linear-gradient(45deg,#3E1212,#1B0808)",
-  }
-}
 
 const RARITY_OTHER_NAMES: Record<string, string> = {
   common: "Basic",
@@ -209,19 +182,19 @@ export default function CraftTheory() {
             <CardContent>
               <div className="flex gap-6">
                 <div className="flex items-center gap-2">
-                  <img
-                    src={CASE1_ICON}
-                    style={{ background: RARITY_COLORS["legendary"].bg }}
-                    className="h-8 w-8 object-contain rounded-md"
+                  <GameItemIcon
+                    itemCode="case1"
+                    rarity="legendary"
+                    className="h-8 w-8 rounded-md"
                   />
                   <span className="text-zinc-500">Case:</span>
                   <span className="text-emerald-400">{(livePrices?.prices["case1"] ?? 0).toFixed(4)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <img
-                    src={CASE2_ICON}
-                    style={{ background: RARITY_COLORS["mythic"].bg }}
-                    className="h-8 w-8 object-contain rounded-md"
+                  <GameItemIcon
+                    itemCode="case2"
+                    rarity="mythic"
+                    className="h-8 w-8 rounded-md"
                   />
                   <span className="text-zinc-500">Elite Case:</span>
                   <span className="text-emerald-400">{(livePrices?.prices["case2"] ?? 0).toFixed(4)}</span>
@@ -255,21 +228,13 @@ export default function CraftTheory() {
                   <TableRow key={r.code}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-3">
-                        {r.isRandom ? (
-                          <div
-                            style={{ background: RARITY_COLORS[r.rarity].bg, color: RARITY_COLORS[r.rarity].color }}
-                            className="h-10 w-10 rounded-md flex items-center justify-center text-2xl font-[Saira] font-[600]"
-                          >
-                            ?
-                          </div>
-                        ) : (
-                          <img
-                            src={`${BASE_IMAGES_URL}${r.iconImg ?? (r.code + ".png")}`}
-                            style={{ background: RARITY_COLORS[r.rarity].bg }}
-                            alt={r.code}
-                            className="h-10 w-10 rounded-md object-contain"
-                          />
-                        )}
+                        <GameItemIcon
+                          itemCode={r.isRandom ? undefined : r.code}
+                          rarity={r.rarity}
+                          className="h-10 w-10 rounded-md text-2xl font-[Saira] font-[600]"
+                        >
+                          {r.isRandom && "?"}
+                        </GameItemIcon>
                         <div className="flex flex-col">
                           <span className="capitalize">
                             {r.isRandom ? `Random ${r.rarity}` : `${r.type == "weapon" ? "" : RARITY_OTHER_NAMES[r.rarity]} ${r.code.replace(/[0-9]/g, '')}`}

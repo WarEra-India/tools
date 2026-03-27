@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Target, Coins, Globe, DollarSign, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, Target, Coins, Globe, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import { CountryFlag } from "@/components/CountryFlag";
 import { useProfile } from "@/lib/ProfileContext";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis, ReferenceArea, ReferenceLine, Label } from "recharts";

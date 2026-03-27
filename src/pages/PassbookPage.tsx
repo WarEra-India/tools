@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Receipt, Key, Package, Info, ChevronRight } from "lucide-react";
+import { ArrowLeft, Receipt, Key, ChevronRight, User } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -10,43 +10,32 @@ import {
 } from "@/components/ui/card";
 import { useProfile } from "@/lib/ProfileContext";
 import { useTransactions } from "@/lib/hooks/useTransactions";
+import { GameItemIcon } from "@/components/GameItemIcon";
 
 const PUBLIC_IMAGES_BASE_URL = `${import.meta.env.BASE_URL}images/`;
 const COIN_ICON = `${PUBLIC_IMAGES_BASE_URL}game_coin.svg`;
 const BASE_IMAGES_URL = "https://app.warera.io/images/items/";
-const SCRAPS_ICON = `${BASE_IMAGES_URL}scraps.png`;
-const CASE1_ICON = `${BASE_IMAGES_URL}case1.png`;
-const CASE2_ICON = `${BASE_IMAGES_URL}case2.png`;
 
-const TRANSACTION_ICONS: Record<string, string> = {
-  trading: `${PUBLIC_IMAGES_BASE_URL}trading.svg`,
-  itemMarket: `${PUBLIC_IMAGES_BASE_URL}itemMarket.svg`,
-  wage: `${PUBLIC_IMAGES_BASE_URL}wage.svg`,
-  donation: `${PUBLIC_IMAGES_BASE_URL}donation.svg`,
-  articleTip: `${PUBLIC_IMAGES_BASE_URL}articleTip.svg`,
-  craftItem: `${PUBLIC_IMAGES_BASE_URL}craftItem.svg`,
-  dismantleItem: `${PUBLIC_IMAGES_BASE_URL}dismantleItem.svg`,
-  applicationFee: `${PUBLIC_IMAGES_BASE_URL}wage.svg`, // Fallback
-};
+function getCategoryIcon(type: string) {
+  if (type == "openCase") return `${BASE_IMAGES_URL}case1.png`;
 
-function getTransactionIcon(type: string, itemCode?: string) {
-  if (type === "openCase") {
-    return itemCode === "case2" ? CASE2_ICON : CASE1_ICON;
-  }
-  if (type === "dismantleItem") {
-    return SCRAPS_ICON;
-  }
   // Remove virtual prefix if present
   const baseType = type.split('-')[0];
-  return TRANSACTION_ICONS[baseType] || null;
+  return PUBLIC_IMAGES_BASE_URL + baseType + ".svg"
 }
 
 interface TypeSummary {
-  type: string; // Internal key, e.g., 'wage-income'
-  displayType: string; // e.g., 'Wage (Income)'
+  type: string;
+  displayType: string;
   totalMoney: number;
   count: number;
-  items: Record<string, number>; // itemCode -> quantity
+
+  // Detailed data for expansion
+  tradingDetails: Record<string, { quantity: number; money: number }>;
+  wageLaborDetails: Record<string, number>; // sellerId -> totalMoney
+  dismantleDetails: Record<string, { quantity: number; scraps: number }>; // sourceCode -> {qty, scraps}
+  openCaseDetails: Record<string, { quantity: number; rewards: Record<string, number> }>; // caseCode -> {qty, rewards}
+  donationDetails: { country: number; mu: number };
 }
 
 export default function PassbookPage() {
@@ -65,7 +54,8 @@ export default function PassbookPage() {
     window.location.reload();
   };
 
-  const toggleCard = (id: string) => {
+  const toggleCard = (id: string, type: string) => {
+    if (type === "wage-income") return; // No expand for wage income
     setExpandedCards(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
@@ -108,7 +98,6 @@ export default function PassbookPage() {
       let type = tx.transactionType;
       let displayType = type.replace(/([A-Z])/g, ' $1').trim();
 
-      // Differentiate wages
       if (type === "wage") {
         if (tx.sellerId === userId) {
           type = "wage-income";
@@ -120,23 +109,77 @@ export default function PassbookPage() {
       }
 
       if (!groups[date].typeSummaries[type]) {
-        groups[date].typeSummaries[type] = { type, displayType, totalMoney: 0, count: 0, items: {} };
+        groups[date].typeSummaries[type] = {
+          type,
+          displayType,
+          totalMoney: 0,
+          count: 0,
+          tradingDetails: {},
+          wageLaborDetails: {},
+          dismantleDetails: {},
+          openCaseDetails: {},
+          donationDetails: { country: 0, mu: 0 }
+        };
       }
 
       const summary = groups[date].typeSummaries[type];
       summary.count += 1;
 
+      const isBuyer = tx.buyerId === userId;
+      const amount = tx.money ? (isBuyer ? -tx.money : tx.money) : 0;
+
       if (tx.money) {
-        const isBuyer = tx.buyerId === userId;
-        const amount = isBuyer ? -tx.money : tx.money;
         summary.totalMoney += amount;
         groups[date].totalMoney += amount;
       }
 
-      if (tx.itemCode && tx.quantity) {
-        summary.items[tx.itemCode] = (summary.items[tx.itemCode] || 0) + tx.quantity;
-      } else if (tx.item?.code) {
-        summary.items[tx.item.code] = (summary.items[tx.item.code] || 0) + (tx.quantity || 1);
+      // Detailed data collection
+      if (type === "trading" || type === "itemMarket") {
+        const code = tx.itemCode || tx.item?.code || "unknown";
+        if (!summary.tradingDetails[code]) {
+          summary.tradingDetails[code] = { quantity: 0, money: 0 };
+        }
+        summary.tradingDetails[code].quantity += (tx.quantity || 1);
+        summary.tradingDetails[code].money += amount;
+      }
+
+      if (type === "wage-expense" && tx.sellerId) {
+        summary.wageLaborDetails[tx.sellerId] = (summary.wageLaborDetails[tx.sellerId] || 0) + Math.abs(amount);
+      }
+
+      if (type === "dismantleItem") {
+        // subagent finding: source item in item.code, scraps qty in root quantity
+        const sourceCode = tx.item?.code || "unknown";
+        const sourceQty = tx.item?.quantity || 1;
+        const scrapsQty = tx.quantity || 0;
+
+        if (!summary.dismantleDetails[sourceCode]) {
+          summary.dismantleDetails[sourceCode] = { quantity: 0, scraps: 0 };
+        }
+        summary.dismantleDetails[sourceCode].quantity += sourceQty;
+        summary.dismantleDetails[sourceCode].scraps += scrapsQty;
+      }
+
+      if (type === "openCase") {
+        // subagent finding: case in itemCode, reward in item.code, reward qty in item.quantity
+        const caseCode = tx.itemCode || "unknown";
+        const numCases = tx.quantity || 1;
+        const rewardCode = tx.item?.code || "unknown";
+        const rewardQty = tx.item?.quantity || 1;
+
+        if (!summary.openCaseDetails[caseCode]) {
+          summary.openCaseDetails[caseCode] = { quantity: 0, rewards: {} };
+        }
+        summary.openCaseDetails[caseCode].quantity += numCases;
+        summary.openCaseDetails[caseCode].rewards[rewardCode] = (summary.openCaseDetails[caseCode].rewards[rewardCode] || 0) + rewardQty;
+      }
+
+      if (type === "donation") {
+        if (tx.sellerCountryId) {
+          summary.donationDetails.country += Math.abs(amount);
+        } else if (tx.sellerMuId) {
+          summary.donationDetails.mu += Math.abs(amount);
+        }
       }
     });
 
@@ -184,7 +227,7 @@ export default function PassbookPage() {
                   />
                   <div>
                     <div className="text-xs font-bold leading-none">{profile.user.username}</div>
-                    <div className="text-[9px] text-zinc-200 mt-0.5 tracking-tighter">Level {profile.user.leveling.level}</div>
+                    <div className="text-[9px] text-zinc-600 mt-0.5 uppercase tracking-tighter">Verified User</div>
                   </div>
                 </div>
               )}
@@ -243,11 +286,11 @@ export default function PassbookPage() {
               <div key={group.date} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex flex-row items-end justify-between px-2 mb-6">
                   <div className="flex flex-col gap-1">
-                    {/* <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600">
                       {group.date}
-                    </span> */}
+                    </span>
                     <h2 className="text-3xl font-black font-mono tracking-tighter text-white uppercase italic">
-                      {group.date}
+                      Analysis Report
                     </h2>
                   </div>
                   <div className="flex flex-col items-end">
@@ -260,21 +303,23 @@ export default function PassbookPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
                   {group.summaries.map((summary) => {
                     const cardId = `${group.date}-${summary.type}`;
                     const isExpanded = expandedCards[cardId];
-                    const icon = getTransactionIcon(summary.type);
+                    const icon = getCategoryIcon(summary.type);
                     const isPositive = summary.totalMoney >= 0;
+                    const canExpand = summary.type !== "wage-income";
 
                     return (
                       <div
                         key={summary.type}
-                        className={`flex flex-col rounded-[24px] transition-all duration-300 backdrop-blur-sm cursor-pointer border ${isExpanded
-                          ? "bg-zinc-900/60 border-zinc-700/50 shadow-2xl scale-[1.02] z-10"
-                          : "bg-zinc-900/30 border-zinc-800/50 hover:bg-zinc-900/50 hover:border-zinc-700/30"
+                        className={`flex flex-col rounded-[24px] transition-all duration-300 backdrop-blur-sm border ${canExpand ? "cursor-pointer" : "cursor-default"
+                          } ${isExpanded
+                            ? "bg-zinc-900/60 border-zinc-700/50 shadow-2xl scale-[1.02] z-10"
+                            : "bg-zinc-900/30 border-zinc-800/50 hover:bg-zinc-900/50 hover:border-zinc-700/30"
                           }`}
-                        onClick={() => toggleCard(cardId)}
+                        onClick={() => toggleCard(cardId, summary.type)}
                       >
                         <div className="p-6">
                           <div className="flex items-center justify-between mb-5">
@@ -289,7 +334,9 @@ export default function PassbookPage() {
                               <span className="text-[10px] font-black font-mono text-zinc-500 bg-zinc-950/80 px-2 py-0.5 rounded-lg border border-zinc-800/50">
                                 {summary.count} Events
                               </span>
-                              <ChevronRight className={`h-4 w-4 text-zinc-700 transition-transform duration-300 ${isExpanded ? "rotate-90" : ""}`} />
+                              {canExpand && (
+                                <ChevronRight className={`h-4 w-4 text-zinc-700 transition-transform duration-300 ${isExpanded ? "rotate-90" : ""}`} />
+                              )}
                             </div>
                           </div>
 
@@ -298,37 +345,142 @@ export default function PassbookPage() {
                               {summary.displayType}
                             </h3>
                             {summary.totalMoney !== 0 && (
-                              <div className={`flex items-center gap-1.5 text-2xl font-black font-mono tracking-tighter ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
+                              <div className={`text-2xl font-black font-mono tracking-tighter flex items-center gap-1 ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
                                 {summary.totalMoney > 0 ? "+" : "-"}
                                 {Math.abs(summary.totalMoney).toFixed(2)}
-                                <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
+                                <img src={COIN_ICON} alt="coins" className="h-5 w-5" />
                               </div>
                             )}
                           </div>
                         </div>
 
                         {isExpanded && (
-                          <div className="px-6 pb-6 pt-0 animate-in fade-in duration-300">
-                            {Object.keys(summary.items).length > 0 && (
-                              <div className="mt-2 border-t border-zinc-800/50 pt-4">
-                                <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-3">
-                                  <Package className="h-3.5 w-3.5" />
-                                  Aggregated Yield
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  {Object.entries(summary.items).map(([code, qty]) => (
-                                    <div key={code} className="bg-zinc-950 border border-zinc-800/50 rounded-xl px-2 py-1 flex items-center gap-2">
-                                      <span className="text-[10px] font-black text-emerald-500">{qty}x</span>
-                                      <span className="text-[10px] font-bold text-zinc-400 truncate max-w-[80px]">{code}</span>
+                          <div className="px-6 pb-6 pt-0 animate-in fade-in duration-300 space-y-4">
+                            <div className="border-t border-zinc-800/50 pt-4">
+                              {/* Trading / Item Market Breakdown */}
+                              {(summary.type === "trading" || summary.type === "itemMarket") && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-3">
+                                    Detailed Valuations
+                                  </div>
+                                  {Object.entries(summary.tradingDetails).map(([code, data]) => (
+                                    <div key={code} className="flex items-center justify-between text-[11px] font-mono">
+                                      <div className="flex items-center gap-2">
+                                        <span className={data.money >= 0 ? "text-emerald-500" : "text-red-500"}>
+                                          {data.money >= 0 ? "Sell" : "Buy"}
+                                        </span>
+                                        <span className="text-zinc-400">{data.quantity}x</span>
+                                        <GameItemIcon itemCode={code} className="h-5 w-5 rounded-md" />
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-zinc-500">=</span>
+                                        <span className={data.money >= 0 ? "text-emerald-500" : "text-red-500"}>
+                                          {Math.abs(data.money).toFixed(2)}
+                                        </span>
+                                        <img src={COIN_ICON} alt="coins" className="h-3 w-3" />
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
-                              </div>
-                            )}
-                            {/* <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-zinc-600 uppercase border-t border-zinc-800/50 pt-4">
-                              <Info className="h-3 w-3" />
-                              Calculated weighted average
-                            </div> */}
+                              )}
+
+                              {/* Wage Labor Breakdown */}
+                              {summary.type === "wage-expense" && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-3">
+                                    <User className="h-3 w-3" />
+                                    Payroll Recipients
+                                  </div>
+                                  {Object.entries(summary.wageLaborDetails).map(([sid, money]) => (
+                                    <div key={sid} className="flex items-center justify-between text-[10px] font-mono">
+                                      <span className="text-zinc-500 truncate max-w-[140px]">{sid}</span>
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-zinc-400">{money.toFixed(2)}</span>
+                                        <img src={COIN_ICON} alt="coins" className="h-2.5 w-2.5" />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Dismantle Breakdown */}
+                              {summary.type === "dismantleItem" && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-3">
+                                    Conversion Results
+                                  </div>
+                                  {Object.entries(summary.dismantleDetails).map(([code, data]) => (
+                                    <div key={code} className="flex items-center justify-between text-[11px] font-mono">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-zinc-400">{data.quantity}x</span>
+                                        <GameItemIcon itemCode={code} className="h-5 w-5 rounded-md" />
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-zinc-500">=</span>
+                                        <span className="text-emerald-500">{data.scraps > 0 ? Math.floor(data.scraps) : "?"}</span>
+                                        <GameItemIcon itemCode="scraps" className="h-5 w-5" />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Open Case Breakdown */}
+                              {summary.type === "openCase" && (
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-3">
+                                    Unboxing History
+                                  </div>
+                                  {Object.entries(summary.openCaseDetails).map(([caseCode, data]) => (
+                                    <div key={caseCode} className="space-y-2">
+                                      <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
+                                        <span>{data.quantity}x</span>
+                                        <GameItemIcon itemCode={caseCode} className="h-5 w-5" />
+                                        <span className="text-zinc-600">:</span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-2 pl-4">
+                                        {Object.entries(data.rewards).map(([rewardCode, qty]) => (
+                                          <div key={rewardCode} className="flex items-center gap-1.5 px-1.5 py-0.5">
+                                            <span className="text-[10px] font-black text-emerald-500">{qty}x</span>
+                                            <GameItemIcon itemCode={rewardCode} className="h-5 w-5 rounded-md" />
+                                          </div>
+                                        ))}
+                                        {Object.keys(data.rewards).length === 0 && (
+                                          <span className="text-[10px] text-zinc-700 italic">No reward data preserved</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Donation Breakdown */}
+                              {summary.type === "donation" && (
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-3">
+                                    Philanthropy Targets
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="bg-zinc-950 border border-zinc-800/50 p-3 rounded-2xl flex flex-col items-center gap-1">
+                                      <img src={PUBLIC_IMAGES_BASE_URL + "government.svg"} className="h-4 w-4 text-blue-500 mb-1" />
+                                      <span className="text-[10px] font-bold text-zinc-600 uppercase">Country</span>
+                                      <div className="flex items-center gap-1 font-mono text-zinc-300">
+                                        {summary.donationDetails.country.toFixed(0)}
+                                        <img src={COIN_ICON} alt="coins" className="h-2.5 w-2.5" />
+                                      </div>
+                                    </div>
+                                    <div className="bg-zinc-950 border border-zinc-800/50 p-3 rounded-2xl flex flex-col items-center gap-1">
+                                      <img src={PUBLIC_IMAGES_BASE_URL + "military.svg"} className="h-4 w-4 text-purple-500 mb-1" />
+                                      <span className="text-[10px] font-bold text-zinc-600 uppercase">Military Unit</span>
+                                      <div className="flex items-center gap-1 font-mono text-zinc-300">
+                                        {summary.donationDetails.mu.toFixed(0)}
+                                        <img src={COIN_ICON} alt="coins" className="h-2.5 w-2.5" />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
