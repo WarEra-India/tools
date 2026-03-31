@@ -30,7 +30,7 @@ function getCategoryIcon(type: string) {
   if (type == "openCase") return `${BASE_IMAGES_URL}case1.png`;
 
   // Remove virtual prefix if present
-  const baseType = type.split('-')[0];
+  const baseType = type == "battleLoot" ? "lootChance" : type.split('-')[0];
   return PUBLIC_IMAGES_BASE_URL + baseType + ".svg"
 }
 
@@ -158,10 +158,12 @@ interface TypeSummary {
   type: string;
   displayType: string;
   totalMoney: number;
+  totalScraps: number;
   count: number;
 
   // Detailed data for expansion
   tradingDetails: Record<string, { quantity: number; money: number }>;
+  battleLootDetails: Record<string, number>; // itemCode -> totalQuantity
   wageLaborDetails: Record<string, number>; // sellerId -> totalMoney
   dismantleDetails: Record<string, { quantity: number; scraps: number }>; // sourceCode -> {qty, scraps}
   openCaseDetails: Record<string, { quantity: number; rewards: Record<string, number> }>; // caseCode -> {qty, rewards}
@@ -242,7 +244,7 @@ export default function PassbookPage() {
         groups[date] = { totalMoney: 0, typeSummaries: {} };
       }
 
-      let type = tx.transactionType;
+      let type: string = tx.transactionType;
       let displayType = type.replace(/([A-Z])/g, ' $1').trim();
 
       if (type === "wage") {
@@ -260,8 +262,10 @@ export default function PassbookPage() {
           type,
           displayType,
           totalMoney: 0,
+          totalScraps: 0,
           count: 0,
           tradingDetails: {},
+          battleLootDetails: {},
           wageLaborDetails: {},
           dismantleDetails: {},
           openCaseDetails: {},
@@ -305,6 +309,13 @@ export default function PassbookPage() {
         }
         summary.dismantleDetails[sourceCode].quantity += sourceQty;
         summary.dismantleDetails[sourceCode].scraps += scrapsQty;
+        summary.totalScraps += scrapsQty;
+      }
+
+      if (type === "battleLoot") {
+        const lootCode = tx.itemCode || tx.item?.code || "unknown";
+        const lootQty = tx.quantity || tx.item?.quantity || 1;
+        summary.battleLootDetails[lootCode] = (summary.battleLootDetails[lootCode] || 0) + lootQty;
       }
 
       if (type === "openCase") {
@@ -492,7 +503,12 @@ export default function PassbookPage() {
                             <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-1 group-hover:text-zinc-400 transition-colors">
                               {summary.displayType}
                             </h3>
-                            {summary.totalMoney !== 0 && (
+                            {summary.type === "dismantleItem" ? (
+                              <div className="text-2xl font-black font-mono tracking-tighter flex items-center gap-1 text-emerald-400">
+                                {Math.floor(summary.totalScraps)}
+                                <GameItemIcon itemCode="scraps" className="h-5 w-5" />
+                              </div>
+                            ) : summary.totalMoney !== 0 && (
                               <div className={`text-2xl font-black font-mono tracking-tighter flex items-center gap-1 ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
                                 {summary.totalMoney > 0 ? "+" : "-"}
                                 {Math.abs(summary.totalMoney).toFixed(2)}
@@ -526,6 +542,24 @@ export default function PassbookPage() {
                                           {Math.abs(data.money).toFixed(2)}
                                         </span>
                                         <img src={COIN_ICON} alt="coins" className="h-3 w-3" />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Battle Loot Breakdown */}
+                              {summary.type === "battleLoot" && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-3">
+                                    Loot Acquired
+                                  </div>
+                                  {Object.entries(summary.battleLootDetails).map(([code, quantity]) => (
+                                    <div key={code} className="flex items-center justify-between text-[11px] font-mono">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-emerald-500">Loot</span>
+                                        <span className="text-zinc-400">{quantity}x</span>
+                                        <GameItemIcon itemCode={code} className="h-5 w-5 rounded-md" />
                                       </div>
                                     </div>
                                   ))}
