@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Loader2, Target, Coins, Globe, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import { CountryFlag } from "@/components/CountryFlag";
 import { useProfile } from "@/lib/ProfileContext";
+import { HistoryChart } from "@/components/HistoryChart";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis, ReferenceArea, ReferenceLine, Label } from "recharts";
 
 const API_BASE = "https://warvault.shadoooow.workers.dev/api";
@@ -572,6 +573,14 @@ export default function NationalRecords() {
                 )}
               </CardContent>
             </Card>
+          </div>
+
+          <div className="mb-6 animate-in fade-in duration-1000">
+            <HistoryChart
+              countryId={selectedCountry}
+              title="National Performance"
+              subtitle="Economic & Military Metrics"
+            />
           </div>
 
           {/* Whale vs Plankton Scatter Plot */}

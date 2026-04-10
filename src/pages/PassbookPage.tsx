@@ -20,6 +20,7 @@ import {
 import { useProfile } from "@/lib/ProfileContext";
 import { useTransactions } from "@/lib/hooks/useTransactions";
 import { GameItemIcon } from "@/components/GameItemIcon";
+import { HistoryChart } from "@/components/HistoryChart";
 
 const PUBLIC_IMAGES_BASE_URL = `${import.meta.env.BASE_URL}images/`;
 const COIN_ICON = `${PUBLIC_IMAGES_BASE_URL}game_coin.svg`;
@@ -34,125 +35,7 @@ function getCategoryIcon(type: string) {
   return PUBLIC_IMAGES_BASE_URL + baseType + ".svg"
 }
 
-function WealthHistoryChart({ data, loading }: { data: any[]; loading: boolean }) {
-  if (loading) {
-    return (
-      <div className="h-[350px] w-full bg-zinc-950 rounded-[32px] border border-[#27272a]/20 flex items-center justify-center">
-        <div className="flex items-center gap-3 opacity-20">
-          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce" />
-          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.2s]" />
-          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.4s]" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!data || data.length === 0) return null;
-
-  return (
-    <div className="h-[350px] w-full bg-zinc-900/20 rounded-[32px] border border-[#27272a]/30 p-6 backdrop-blur-md relative overflow-hidden group shadow-2xl shadow-black/20">
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500/20 via-zinc-500/20 to-rose-500/20 opacity-30" />
-
-      <div className="flex items-center justify-between mb-6 px-2">
-        <div className="flex flex-col">
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-1">Performance Index</span>
-          <h3 className="text-lg font-black font-mono tracking-tight text-white uppercase italic">Growth Metrics</h3>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">Wealth</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
-            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">Damage</span>
-          </div>
-        </div>
-      </div>
-
-      <ResponsiveContainer width="100%" height="80%">
-        <AreaChart data={data}>
-          <defs>
-            <linearGradient id="colorWealth" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
-              <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="colorDamage" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1} />
-              <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} opacity={0.5} />
-          <XAxis
-            dataKey="date"
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: '#52525b', fontSize: 9, fontWeight: 700 }}
-            dy={10}
-            tickFormatter={(str) => {
-              const d = new Date(str);
-              return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-            }}
-          />
-          <YAxis
-            yAxisId="left"
-            orientation="left"
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: '#10b981', fontSize: 9, fontWeight: 800, fontFamily: 'monospace' }}
-            tickFormatter={(val) => `${(val / 1000).toFixed(1)}k`}
-          />
-          <YAxis
-            yAxisId="right"
-            orientation="right"
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: '#f43f5e', fontSize: 9, fontWeight: 800, fontFamily: 'monospace' }}
-            tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: '#09090b',
-              border: '1px solid #27272a',
-              borderRadius: '16px',
-              fontSize: '11px',
-              fontWeight: 800,
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
-            }}
-            itemStyle={{ padding: '2px 0' }}
-            labelStyle={{ color: '#71717a', marginBottom: '8px', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
-            formatter={(value: any, name: any) => [
-              <span className="font-mono text-zinc-200">{value?.toLocaleString() || '0'}</span>,
-              <span className={name === "wealth" ? "text-emerald-500" : "text-rose-500"}>{name?.toUpperCase() || ''}</span>
-            ]}
-          />
-          <Area
-            yAxisId="left"
-            type="monotone"
-            dataKey="wealth"
-            name="wealth"
-            stroke="#10b981"
-            strokeWidth={3}
-            fillOpacity={1}
-            fill="url(#colorWealth)"
-            animationDuration={2000}
-          />
-          <Area
-            yAxisId="right"
-            type="monotone"
-            dataKey="total_damage"
-            name="damage"
-            stroke="#f43f5e"
-            strokeWidth={3}
-            fillOpacity={1}
-            fill="url(#colorDamage)"
-            animationDuration={2000}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
+// Removed local WealthHistoryChart (now using @/components/HistoryChart)
 
 interface TypeSummary {
   type: string;
@@ -179,23 +62,8 @@ export default function PassbookPage() {
   const [token, setToken] = useState<string>(localStorage.getItem("warera-api-token") || "");
   const [isEditingToken, setIsEditingToken] = useState(!localStorage.getItem("warera-api-token"));
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
-  const [wealthHistory, setWealthHistory] = useState<any[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
 
-  useEffect(() => {
-    if (!userId) return;
-    setHistoryLoading(true);
-    fetch(`${API_BASE}/user-wealth-history?user=${userId}`)
-      .then(res => res.json())
-      .then(data => {
-        setWealthHistory(data);
-        setHistoryLoading(false);
-      })
-      .catch(err => {
-        console.error("Wealth history fetch error:", err);
-        setHistoryLoading(false);
-      });
-  }, [userId]);
+  // Removed local fetch (handled by HistoryChart)
 
   const saveToken = () => {
     localStorage.setItem("warera-api-token", token);
@@ -441,7 +309,7 @@ export default function PassbookPage() {
         ) : (
           <div className="space-y-16">
             <div className="animate-in fade-in duration-1000">
-              <WealthHistoryChart data={wealthHistory} loading={historyLoading} />
+              <HistoryChart userId={userId} />
             </div>
 
             {groupedTransactions.map((group) => (
