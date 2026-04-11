@@ -29,8 +29,8 @@ export function useTransactions(userId: string | undefined) {
     let accumulated: TransactionItem[] = [];
     let shouldContinue = true;
 
-    // Fetch up to 10 batches of 100
-    for (let i = 0; i < 10 && shouldContinue; i++) {
+    // Fetch up to 15 batches of 100
+    for (let i = 0; i < 15 && shouldContinue; i++) {
       const data = await fetchBatch(currentCursor);
       if (data) {
         accumulated = [...accumulated, ...data.items];
@@ -52,12 +52,12 @@ export function useTransactions(userId: string | undefined) {
   const fetchMore = useCallback(async () => {
     if (loading || !hasMore || !userId || !nextCursor) return;
     setLoading(true);
-    
+
     let currentCursor: string | null = nextCursor;
     let accumulated: TransactionItem[] = [];
     let stopFetching = false;
 
-    for (let i = 0; i < 5 && !stopFetching; i++) {
+    for (let i = 0; i < 15 && !stopFetching; i++) {
       const data = await fetchBatch(currentCursor);
       if (data) {
         accumulated = [...accumulated, ...data.items];

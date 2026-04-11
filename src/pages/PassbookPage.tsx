@@ -62,6 +62,7 @@ export default function PassbookPage() {
   const [token, setToken] = useState<string>(localStorage.getItem("warera-api-token") || "");
   const [isEditingToken, setIsEditingToken] = useState(!localStorage.getItem("warera-api-token"));
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const [viewMode, setViewMode] = useState<"daily" | "weekly">("daily");
 
   // Removed local fetch (handled by HistoryChart)
 
@@ -97,19 +98,37 @@ export default function PassbookPage() {
     };
   }, [hasMore, loading, fetchMore]);
 
+  useEffect(() => {
+    if (viewMode === "weekly" && transactions.length < 500 && hasMore && !loading) {
+      fetchMore();
+    }
+  }, [viewMode, transactions.length, hasMore, loading, fetchMore]);
+
   const groupedTransactions = useMemo(() => {
-    const groups: Record<string, { totalMoney: number; typeSummaries: Record<string, TypeSummary> }> = {};
+    const groups: Record<string, {
+      totalMoney: number;
+      typeSummaries: Record<string, TypeSummary>;
+      dailyFlows: Record<string, number>;
+    }> = {};
+
+    const getMonday = (d: Date) => {
+      const date = new Date(d);
+      const day = date.getUTCDay();
+      const diff = date.getUTCDate() - day + (day === 0 ? -6 : 1);
+      return new Date(date.setUTCDate(diff));
+    };
 
     transactions.forEach((tx) => {
-      const date = new Date(tx.createdAt).toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
+      const txDate = new Date(tx.createdAt);
+      const utcDateStr = txDate.toISOString().split("T")[0];
 
-      if (!groups[date]) {
-        groups[date] = { totalMoney: 0, typeSummaries: {} };
+      let groupKey = utcDateStr;
+      if (viewMode === "weekly") {
+        groupKey = getMonday(txDate).toISOString().split("T")[0];
+      }
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = { totalMoney: 0, typeSummaries: {}, dailyFlows: {} };
       }
 
       let type: string = tx.transactionType;
@@ -125,8 +144,8 @@ export default function PassbookPage() {
         }
       }
 
-      if (!groups[date].typeSummaries[type]) {
-        groups[date].typeSummaries[type] = {
+      if (!groups[groupKey].typeSummaries[type]) {
+        groups[groupKey].typeSummaries[type] = {
           type,
           displayType,
           totalMoney: 0,
@@ -141,7 +160,7 @@ export default function PassbookPage() {
         };
       }
 
-      const summary = groups[date].typeSummaries[type];
+      const summary = groups[groupKey].typeSummaries[type];
       summary.count += 1;
 
       const isBuyer = tx.buyerId === userId;
@@ -149,7 +168,8 @@ export default function PassbookPage() {
 
       if (tx.money) {
         summary.totalMoney += amount;
-        groups[date].totalMoney += amount;
+        groups[groupKey].totalMoney += amount;
+        groups[groupKey].dailyFlows[utcDateStr] = (groups[groupKey].dailyFlows[utcDateStr] || 0) + amount;
       }
 
       // Detailed data collection
@@ -209,12 +229,13 @@ export default function PassbookPage() {
       }
     });
 
-    return Object.entries(groups).map(([date, data]) => ({
-      date,
+    return Object.entries(groups).map(([key, data]) => ({
+      date: key,
       totalMoney: data.totalMoney,
       summaries: Object.values(data.typeSummaries),
+      dailyFlows: data.dailyFlows,
     }));
-  }, [transactions, userId]);
+  }, [transactions, userId, viewMode]);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50 font-sans selection:bg-emerald-500/30">
@@ -236,27 +257,43 @@ export default function PassbookPage() {
                 Deeper financial insights and performance metrics across your entire profile.
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsEditingToken(true)}
-                className="rounded-full bg-zinc-900 border border-zinc-800 p-2 text-zinc-500 hover:text-zinc-200 hover:border-zinc-700 transition-all shadow-inner"
-                title="Update API Token"
-              >
-                <Key className="h-4 w-4" />
-              </button>
-              {profile && (
-                <div className="flex items-center gap-3 rounded-full bg-zinc-900/50 p-1.5 pr-4 border border-zinc-800/50 backdrop-blur-md">
-                  <img
-                    src={profile.user.avatarUrl}
-                    alt={profile.user.username}
-                    className="h-8 w-8 rounded-full border border-zinc-700/50 object-cover"
-                  />
-                  <div>
-                    <div className="text-xs font-bold leading-none">{profile.user.username}</div>
-                    <div className="text-[9px] text-zinc-600 mt-0.5 uppercase tracking-tighter">Verified User</div>
+            <div className="flex flex-col items-end gap-3">
+              <div className="flex bg-zinc-900/80 p-1 rounded-xl border border-zinc-800/50 shadow-inner">
+                <button
+                  onClick={() => setViewMode("daily")}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${viewMode === "daily" ? "bg-zinc-800 text-white shadow-lg" : "text-zinc-600 hover:text-zinc-400"}`}
+                >
+                  DAILY
+                </button>
+                <button
+                  onClick={() => setViewMode("weekly")}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${viewMode === "weekly" ? "bg-zinc-800 text-white shadow-lg" : "text-zinc-600 hover:text-zinc-400"}`}
+                >
+                  WEEKLY
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsEditingToken(true)}
+                  className="rounded-full bg-zinc-900 border border-zinc-800 p-2 text-zinc-500 hover:text-zinc-200 hover:border-zinc-700 transition-all shadow-inner"
+                  title="Update API Token"
+                >
+                  <Key className="h-4 w-4" />
+                </button>
+                {profile?.user && (
+                  <div className="flex items-center gap-3 rounded-full bg-zinc-900/50 p-1.5 pr-4 border border-zinc-800/50 backdrop-blur-md">
+                    <img
+                      src={profile.user.avatarUrl}
+                      alt={profile.user.username}
+                      className="h-8 w-8 rounded-full border border-zinc-700/50 object-cover"
+                    />
+                    <div>
+                      <div className="text-xs font-bold leading-none">{profile.user.username}</div>
+                      <div className="text-[9px] text-zinc-600 mt-0.5 uppercase tracking-tighter">Verified User</div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -315,9 +352,45 @@ export default function PassbookPage() {
             {groupedTransactions.map((group) => (
               <div key={group.date} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex flex-row items-end justify-between px-2 mb-6">
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-1">
+                      {viewMode === "daily" ? "Daily Report" : "Weekly Report"}
+                    </span>
                     <h2 className="text-3xl font-black font-mono tracking-tighter text-white uppercase italic">
-                      {group.date}
+                      {viewMode === "daily" ? (
+                        new Date(group.date + "T00:00:00Z").toLocaleDateString("en-US", {
+                          weekday: "long",
+                          month: "long",
+                          day: "numeric",
+                          // year: "numeric",
+                          timeZone: "UTC"
+                        })
+                      ) : (
+                        (() => {
+                          const startDate = new Date(group.date + "T00:00:00Z");
+                          const sundayDate = new Date(startDate);
+                          sundayDate.setUTCDate(startDate.getUTCDate() + 6);
+                          
+                          const today = new Date();
+                          const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+                          
+                          const endDate = sundayDate < todayUTC ? sundayDate : todayUTC;
+
+                          const startStr = startDate.toLocaleDateString("en-US", {
+                            month: "long",
+                            day: "numeric",
+                            timeZone: "UTC"
+                          });
+                          
+                          const endStr = endDate.toLocaleDateString("en-US", {
+                            month: "long",
+                            day: "numeric",
+                            timeZone: "UTC"
+                          });
+
+                          return `${startStr} - ${endStr}`;
+                        })()
+                      )}
                     </h2>
                   </div>
                   <div className="flex flex-col items-end">
@@ -329,6 +402,24 @@ export default function PassbookPage() {
                     </div>
                   </div>
                 </div>
+
+                {viewMode === "weekly" && (
+                  <div className="mb-8 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+                    {Object.entries(group.dailyFlows)
+                      .sort((a, b) => a[0].localeCompare(b[0]))
+                      .map(([date, money]) => (
+                        <div key={date} className="bg-zinc-900/40 rounded-2xl border border-zinc-800/30 p-3 backdrop-blur-sm">
+                          <div className="text-[9px] font-black text-zinc-600 uppercase tracking-wider mb-2">
+                            {new Date(date + "T00:00:00Z").toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })}
+                          </div>
+                          <div className={`text-sm font-black font-mono tracking-tighter ${money >= 0 ? "text-emerald-500/80" : "text-red-500/80"}`}>
+                            {money > 0 ? "+" : money < 0 ? "-" : ""}
+                            {Math.abs(money).toFixed(1)}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
                   {group.summaries.map((summary) => {
