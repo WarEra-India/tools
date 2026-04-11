@@ -69,6 +69,7 @@ const CASE_CHANCES: Record<string, { types: Record<string, number>, rarity: Reco
     }
   }
 }
+const BULK_TEST_VALUE = 10000;
 
 const RARITY_OTHER_NAMES: Record<string, string> = {
   common: "Basic",
@@ -220,6 +221,21 @@ export default function CraftTheory() {
           </p>
         </div>
 
+        <div className="my-6 flex flex-wrap gap-4 justify-center">
+          <div className="rounded-md bg-zinc-900 px-3 py-2 border border-zinc-800 backdrop-blur-sm">
+            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold block mb-1">Expected Value Formula</span>
+            <code className="text-xs font-mono">
+              EV = Σ [ P(rarity) × Σ ( P(type) × AvgPrice(rarity, type) ) ]
+            </code>
+          </div>
+          {/* <div className="rounded-md bg-zinc-900 px-3 py-2 border border-zinc-800 backdrop-blur-sm">
+              <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold block mb-1">Profit Formula</span>
+              <code className="text-xs font-mono text-emerald-400">
+                Profit = EV - CaseMarketPrice
+              </code>
+            </div> */}
+        </div>
+
         <div className="mb-6 grid gap-6 lg:grid-cols-2">
           {caseAnalysis.map((ca) => (
             <Card key={ca.code} className="relative overflow-hidden border-zinc-800 bg-zinc-900/40">
@@ -238,7 +254,7 @@ export default function CraftTheory() {
                     <CardDescription className="flex items-center gap-2 mt-1">
                       Market Price:
                       <span className="flex items-center gap-1 font-semibold text-zinc-100">
-                        {ca.price.toFixed(4)}
+                        {ca.price.toFixed(2)}
                         <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
                       </span>
                     </CardDescription>
@@ -250,14 +266,14 @@ export default function CraftTheory() {
                   <div className="rounded-lg border border-zinc-800 bg-black/20 p-3">
                     <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Expected Value</span>
                     <div className="flex items-center gap-1 text-xl font-bold text-emerald-400 mt-1">
-                      {ca.ev.toFixed(4)}
+                      {ca.ev.toFixed(2)}
                       <img src={COIN_ICON} alt="coins" className="h-5 w-5" />
                     </div>
                   </div>
                   <div className="rounded-lg border border-zinc-800 bg-black/20 p-3">
                     <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Estimated {ca.profit > 0 ? "Profit" : "Loss"}</span>
                     <div className={`flex items-center gap-1 text-xl font-bold mt-1 ${ca.profit > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                      {ca.profit.toFixed(4)}
+                      {ca.profit.toFixed(2)}
                       <img src={COIN_ICON} alt="coins" className="h-5 w-5" />
                     </div>
                   </div>
@@ -300,31 +316,31 @@ export default function CraftTheory() {
                 </div>
 
                 <div className="mt-8 rounded-lg border border-zinc-800/50 bg-black/40 p-4 relative overflow-hidden group">
-                  <div className="absolute right-[-20px] bottom-[-20px] text-zinc-800/10 text-8xl font-black italic pointer-events-none transition-transform group-hover:scale-110">10000X</div>
+                  <div className="absolute right-[-20px] bottom-[-20px] text-zinc-800/10 text-8xl font-black italic pointer-events-none transition-transform group-hover:scale-110">{BULK_TEST_VALUE}X</div>
                   <h4 className="text-[10px] uppercase tracking-widest text-zinc-500 font-black mb-4 flex items-center gap-2">
                     <span className={`h-2 w-2 rounded-full ${ca.profit > 0 ? "bg-emerald-500" : "bg-red-500"} animate-pulse mb-1`} />
-                    Bulk Analysis (10,000 Crates)
+                    Bulk Analysis ({BULK_TEST_VALUE.toLocaleString()} Crates)
                   </h4>
 
                   <div className="space-y-3 relative z-10">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-zinc-500">Revenue from Selling</span>
                       <span className="flex items-center gap-1 font-mono font-semibold">
-                        {Math.round(ca.price * 10000).toLocaleString()}
+                        {Math.round(ca.price * BULK_TEST_VALUE).toLocaleString()}
                         <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-zinc-500">Revenue from Opening</span>
                       <span className="flex items-center gap-1 font-mono font-semibold text-emerald-400">
-                        {Math.round(ca.ev * 10000).toLocaleString()}
+                        {Math.round(ca.ev * BULK_TEST_VALUE).toLocaleString()}
                         <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
                       </span>
                     </div>
                     <div className="pt-2 border-t border-zinc-800/50 flex justify-between items-center">
                       <span className="text-xs font-bold uppercase tracking-tight text-zinc-400">Net {ca.profit > 0 ? "Profit" : "Loss"}</span>
                       <div className={`flex items-center gap-1 text-lg font-black ${ca.profit > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                        {Math.round(ca.profit * 10000).toLocaleString()}
+                        {Math.round(ca.profit * BULK_TEST_VALUE).toLocaleString()}
                         <img src={COIN_ICON} alt="coins" className="h-5 w-5" />
                       </div>
                     </div>
