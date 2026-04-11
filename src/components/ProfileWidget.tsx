@@ -24,7 +24,7 @@ export default function ProfileWidget() {
         {!profile ? (
           <ProfileSearchBar />
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 sm:flex-row flex-col">
             <img
               src={profile.user.avatarUrl}
               alt={profile.user.username}

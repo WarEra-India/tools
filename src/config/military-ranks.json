@@ -1,0 +1,722 @@
+[
+    {
+        "rank": 1,
+        "name": "Initiate",
+        "dmg": 0,
+        "bonus": 0
+    },
+    {
+        "rank": 2,
+        "name": "1★ Initiate",
+        "dmg": 500,
+        "bonus": 0.25
+    },
+    {
+        "rank": 3,
+        "name": "2★ Initiate",
+        "dmg": 1000,
+        "bonus": 0.5
+    },
+    {
+        "rank": 4,
+        "name": "3★ Initiate",
+        "dmg": 2000,
+        "bonus": 0.75
+    },
+    {
+        "rank": 5,
+        "name": "Trainee",
+        "dmg": 4000,
+        "bonus": 1.25
+    },
+    {
+        "rank": 6,
+        "name": "1★ Trainee",
+        "dmg": 5000,
+        "bonus": 1.5
+    },
+    {
+        "rank": 7,
+        "name": "2★ Trainee",
+        "dmg": 6000,
+        "bonus": 1.75
+    },
+    {
+        "rank": 8,
+        "name": "3★ Trainee",
+        "dmg": 8000,
+        "bonus": 2
+    },
+    {
+        "rank": 9,
+        "name": "Recruit",
+        "dmg": 10000,
+        "bonus": 2.5
+    },
+    {
+        "rank": 10,
+        "name": "1★ Recruit",
+        "dmg": 11400,
+        "bonus": 2.75
+    },
+    {
+        "rank": 11,
+        "name": "2★ Recruit",
+        "dmg": 12700,
+        "bonus": 3
+    },
+    {
+        "rank": 12,
+        "name": "3★ Recruit",
+        "dmg": 15300,
+        "bonus": 3.25
+    },
+    {
+        "rank": 13,
+        "name": "Cadet",
+        "dmg": 18000,
+        "bonus": 3.75
+    },
+    {
+        "rank": 14,
+        "name": "1★ Cadet",
+        "dmg": 20400,
+        "bonus": 4
+    },
+    {
+        "rank": 15,
+        "name": "2★ Cadet",
+        "dmg": 22700,
+        "bonus": 4.25
+    },
+    {
+        "rank": 16,
+        "name": "3★ Cadet",
+        "dmg": 27300,
+        "bonus": 4.5
+    },
+    {
+        "rank": 17,
+        "name": "Private",
+        "dmg": 32000,
+        "bonus": 5
+    },
+    {
+        "rank": 18,
+        "name": "1★ Private",
+        "dmg": 35000,
+        "bonus": 5.25
+    },
+    {
+        "rank": 19,
+        "name": "2★ Private",
+        "dmg": 38000,
+        "bonus": 5.5
+    },
+    {
+        "rank": 20,
+        "name": "3★ Private",
+        "dmg": 44000,
+        "bonus": 5.75
+    },
+    {
+        "rank": 21,
+        "name": "Trooper",
+        "dmg": 50000,
+        "bonus": 6.25
+    },
+    {
+        "rank": 22,
+        "name": "1★ Trooper",
+        "dmg": 55000,
+        "bonus": 6.5
+    },
+    {
+        "rank": 23,
+        "name": "2★ Trooper",
+        "dmg": 60000,
+        "bonus": 6.75
+    },
+    {
+        "rank": 24,
+        "name": "3★ Trooper",
+        "dmg": 70000,
+        "bonus": 7
+    },
+    {
+        "rank": 25,
+        "name": "Specialist",
+        "dmg": 80000,
+        "bonus": 7.5
+    },
+    {
+        "rank": 26,
+        "name": "1★ Specialist",
+        "dmg": 87500,
+        "bonus": 7.75
+    },
+    {
+        "rank": 27,
+        "name": "2★ Specialist",
+        "dmg": 95000,
+        "bonus": 8
+    },
+    {
+        "rank": 28,
+        "name": "3★ Specialist",
+        "dmg": 110000,
+        "bonus": 8.25
+    },
+    {
+        "rank": 29,
+        "name": "Corporal",
+        "dmg": 125000,
+        "bonus": 8.75
+    },
+    {
+        "rank": 30,
+        "name": "1★ Corporal",
+        "dmg": 138000,
+        "bonus": 9
+    },
+    {
+        "rank": 31,
+        "name": "2★ Corporal",
+        "dmg": 150000,
+        "bonus": 9.25
+    },
+    {
+        "rank": 32,
+        "name": "3★ Corporal",
+        "dmg": 175000,
+        "bonus": 9.5
+    },
+    {
+        "rank": 33,
+        "name": "Sergeant",
+        "dmg": 200000,
+        "bonus": 10
+    },
+    {
+        "rank": 34,
+        "name": "1★ Sergeant",
+        "dmg": 217000,
+        "bonus": 10.25
+    },
+    {
+        "rank": 35,
+        "name": "2★ Sergeant",
+        "dmg": 234000,
+        "bonus": 10.5
+    },
+    {
+        "rank": 36,
+        "name": "3★ Sergeant",
+        "dmg": 267000,
+        "bonus": 10.75
+    },
+    {
+        "rank": 37,
+        "name": "Vanguard",
+        "dmg": 300000,
+        "bonus": 11.25
+    },
+    {
+        "rank": 38,
+        "name": "1★ Vanguard",
+        "dmg": 325000,
+        "bonus": 11.5
+    },
+    {
+        "rank": 39,
+        "name": "2★ Vanguard",
+        "dmg": 350000,
+        "bonus": 11.75
+    },
+    {
+        "rank": 40,
+        "name": "3★ Vanguard",
+        "dmg": 400000,
+        "bonus": 12
+    },
+    {
+        "rank": 41,
+        "name": "Operative",
+        "dmg": 450000,
+        "bonus": 12.5
+    },
+    {
+        "rank": 42,
+        "name": "1★ Operative",
+        "dmg": 487000,
+        "bonus": 12.75
+    },
+    {
+        "rank": 43,
+        "name": "2★ Operative",
+        "dmg": 524000,
+        "bonus": 13
+    },
+    {
+        "rank": 44,
+        "name": "3★ Operative",
+        "dmg": 597000,
+        "bonus": 13.25
+    },
+    {
+        "rank": 45,
+        "name": "Petty Officer",
+        "dmg": 670000,
+        "bonus": 13.75
+    },
+    {
+        "rank": 46,
+        "name": "1★ Petty Officer",
+        "dmg": 725000,
+        "bonus": 14
+    },
+    {
+        "rank": 47,
+        "name": "2★ Petty Officer",
+        "dmg": 780000,
+        "bonus": 14.25
+    },
+    {
+        "rank": 48,
+        "name": "3★ Petty Officer",
+        "dmg": 890000,
+        "bonus": 14.5
+    },
+    {
+        "rank": 49,
+        "name": "Chief",
+        "dmg": 1000000,
+        "bonus": 15
+    },
+    {
+        "rank": 50,
+        "name": "1★ Chief",
+        "dmg": 1090000,
+        "bonus": 15.25
+    },
+    {
+        "rank": 51,
+        "name": "2★ Chief",
+        "dmg": 1170000,
+        "bonus": 15.5
+    },
+    {
+        "rank": 52,
+        "name": "3★ Chief",
+        "dmg": 1330000,
+        "bonus": 15.75
+    },
+    {
+        "rank": 53,
+        "name": "Warrant Officer",
+        "dmg": 1500000,
+        "bonus": 16.25
+    },
+    {
+        "rank": 54,
+        "name": "1★ Warrant Officer",
+        "dmg": 1630000,
+        "bonus": 16.5
+    },
+    {
+        "rank": 55,
+        "name": "2★ Warrant Officer",
+        "dmg": 1750000,
+        "bonus": 16.75
+    },
+    {
+        "rank": 56,
+        "name": "3★ Warrant Officer",
+        "dmg": 1990000,
+        "bonus": 17
+    },
+    {
+        "rank": 57,
+        "name": "Ensign",
+        "dmg": 2230000,
+        "bonus": 17.5
+    },
+    {
+        "rank": 58,
+        "name": "1★ Ensign",
+        "dmg": 2430000,
+        "bonus": 17.75
+    },
+    {
+        "rank": 59,
+        "name": "2★ Ensign",
+        "dmg": 2620000,
+        "bonus": 18
+    },
+    {
+        "rank": 60,
+        "name": "3★ Ensign",
+        "dmg": 3010000,
+        "bonus": 18.25
+    },
+    {
+        "rank": 61,
+        "name": "Lieutenant",
+        "dmg": 3400000,
+        "bonus": 18.75
+    },
+    {
+        "rank": 62,
+        "name": "1★ Lieutenant",
+        "dmg": 3670000,
+        "bonus": 19
+    },
+    {
+        "rank": 63,
+        "name": "2★ Lieutenant",
+        "dmg": 3940000,
+        "bonus": 19.25
+    },
+    {
+        "rank": 64,
+        "name": "3★ Lieutenant",
+        "dmg": 4470000,
+        "bonus": 19.5
+    },
+    {
+        "rank": 65,
+        "name": "Captain",
+        "dmg": 5000000,
+        "bonus": 20
+    },
+    {
+        "rank": 66,
+        "name": "1★ Captain",
+        "dmg": 5450000,
+        "bonus": 20.25
+    },
+    {
+        "rank": 67,
+        "name": "2★ Captain",
+        "dmg": 5900000,
+        "bonus": 20.5
+    },
+    {
+        "rank": 68,
+        "name": "3★ Captain",
+        "dmg": 6800000,
+        "bonus": 20.75
+    },
+    {
+        "rank": 69,
+        "name": "Major",
+        "dmg": 7700000,
+        "bonus": 21.25
+    },
+    {
+        "rank": 70,
+        "name": "1★ Major",
+        "dmg": 8330000,
+        "bonus": 21.5
+    },
+    {
+        "rank": 71,
+        "name": "2★ Major",
+        "dmg": 8950000,
+        "bonus": 21.75
+    },
+    {
+        "rank": 72,
+        "name": "3★ Major",
+        "dmg": 10200000,
+        "bonus": 22
+    },
+    {
+        "rank": 73,
+        "name": "Lt. Colonel",
+        "dmg": 11500000,
+        "bonus": 22.5
+    },
+    {
+        "rank": 74,
+        "name": "1★ Lt. Colonel",
+        "dmg": 12500000,
+        "bonus": 22.75
+    },
+    {
+        "rank": 75,
+        "name": "2★ Lt. Colonel",
+        "dmg": 13400000,
+        "bonus": 23
+    },
+    {
+        "rank": 76,
+        "name": "3★ Lt. Colonel",
+        "dmg": 15200000,
+        "bonus": 23.25
+    },
+    {
+        "rank": 77,
+        "name": "Colonel",
+        "dmg": 17000000,
+        "bonus": 23.75
+    },
+    {
+        "rank": 78,
+        "name": "1★ Colonel",
+        "dmg": 18500000,
+        "bonus": 24
+    },
+    {
+        "rank": 79,
+        "name": "2★ Colonel",
+        "dmg": 20000000,
+        "bonus": 24.25
+    },
+    {
+        "rank": 80,
+        "name": "3★ Colonel",
+        "dmg": 23000000,
+        "bonus": 24.5
+    },
+    {
+        "rank": 81,
+        "name": "Brigadier",
+        "dmg": 26000000,
+        "bonus": 25
+    },
+    {
+        "rank": 82,
+        "name": "1★ Brigadier",
+        "dmg": 28200000,
+        "bonus": 25.25
+    },
+    {
+        "rank": 83,
+        "name": "2★ Brigadier",
+        "dmg": 30400000,
+        "bonus": 25.5
+    },
+    {
+        "rank": 84,
+        "name": "3★ Brigadier",
+        "dmg": 34700000,
+        "bonus": 25.75
+    },
+    {
+        "rank": 85,
+        "name": "Commodore",
+        "dmg": 39000000,
+        "bonus": 26.25
+    },
+    {
+        "rank": 86,
+        "name": "1★ Commodore",
+        "dmg": 42200000,
+        "bonus": 26.5
+    },
+    {
+        "rank": 87,
+        "name": "2★ Commodore",
+        "dmg": 45400000,
+        "bonus": 26.75
+    },
+    {
+        "rank": 88,
+        "name": "3★ Commodore",
+        "dmg": 51700000,
+        "bonus": 27
+    },
+    {
+        "rank": 89,
+        "name": "Marshal",
+        "dmg": 58000000,
+        "bonus": 27.5
+    },
+    {
+        "rank": 90,
+        "name": "1★ Marshal",
+        "dmg": 65000000,
+        "bonus": 27.75
+    },
+    {
+        "rank": 91,
+        "name": "2★ Marshal",
+        "dmg": 72000000,
+        "bonus": 28
+    },
+    {
+        "rank": 92,
+        "name": "3★ Marshal",
+        "dmg": 86000000,
+        "bonus": 28.25
+    },
+    {
+        "rank": 93,
+        "name": "Rear Admiral",
+        "dmg": 100000000,
+        "bonus": 28.75
+    },
+    {
+        "rank": 94,
+        "name": "1★ Rear Admiral",
+        "dmg": 114000000,
+        "bonus": 29
+    },
+    {
+        "rank": 95,
+        "name": "2★ Rear Admiral",
+        "dmg": 127000000,
+        "bonus": 29.25
+    },
+    {
+        "rank": 96,
+        "name": "3★ Rear Admiral",
+        "dmg": 153000000,
+        "bonus": 29.5
+    },
+    {
+        "rank": 97,
+        "name": "Vice Admiral",
+        "dmg": 180000000,
+        "bonus": 30
+    },
+    {
+        "rank": 98,
+        "name": "1★ Vice Admiral",
+        "dmg": 217000000,
+        "bonus": 30.25
+    },
+    {
+        "rank": 99,
+        "name": "2★ Vice Admiral",
+        "dmg": 254000000,
+        "bonus": 30.5
+    },
+    {
+        "rank": 100,
+        "name": "3★ Vice Admiral",
+        "dmg": 327000000,
+        "bonus": 30.75
+    },
+    {
+        "rank": 101,
+        "name": "Admiral",
+        "dmg": 400000000,
+        "bonus": 31.25
+    },
+    {
+        "rank": 102,
+        "name": "1★ Admiral",
+        "dmg": 445000000,
+        "bonus": 31.5
+    },
+    {
+        "rank": 103,
+        "name": "2★ Admiral",
+        "dmg": 489000000,
+        "bonus": 31.75
+    },
+    {
+        "rank": 104,
+        "name": "3★ Admiral",
+        "dmg": 577000000,
+        "bonus": 32
+    },
+    {
+        "rank": 105,
+        "name": "Lt. General",
+        "dmg": 666000000,
+        "bonus": 32.5
+    },
+    {
+        "rank": 106,
+        "name": "1★ Lt. General",
+        "dmg": 694000000,
+        "bonus": 32.75
+    },
+    {
+        "rank": 107,
+        "name": "2★ Lt. General",
+        "dmg": 722000000,
+        "bonus": 33
+    },
+    {
+        "rank": 108,
+        "name": "3★ Lt. General",
+        "dmg": 767000000,
+        "bonus": 33.25
+    },
+    {
+        "rank": 109,
+        "name": "4★ Lt. General",
+        "dmg": 833000000,
+        "bonus": 33.5
+    },
+    {
+        "rank": 110,
+        "name": "5★ Lt. General",
+        "dmg": 917000000,
+        "bonus": 33.75
+    },
+    {
+        "rank": 111,
+        "name": "General",
+        "dmg": 1000000000,
+        "bonus": 34.25
+    },
+    {
+        "rank": 112,
+        "name": "1★ General",
+        "dmg": 1090000000,
+        "bonus": 34.5
+    },
+    {
+        "rank": 113,
+        "name": "2★ General",
+        "dmg": 1170000000,
+        "bonus": 34.75
+    },
+    {
+        "rank": 114,
+        "name": "3★ General",
+        "dmg": 1300000000,
+        "bonus": 35
+    },
+    {
+        "rank": 115,
+        "name": "4★ General",
+        "dmg": 1500000000,
+        "bonus": 35.25
+    },
+    {
+        "rank": 116,
+        "name": "5★ General",
+        "dmg": 1750000000,
+        "bonus": 35.5
+    },
+    {
+        "rank": 117,
+        "name": "Commander",
+        "dmg": 2000000000,
+        "bonus": 36
+    },
+    {
+        "rank": 118,
+        "name": "High Commander",
+        "dmg": 3000000000,
+        "bonus": 36.5
+    },
+    {
+        "rank": 119,
+        "name": "Chief Commander",
+        "dmg": 5000000000,
+        "bonus": 37
+    },
+    {
+        "rank": 120,
+        "name": "Supreme Commander",
+        "dmg": 10000000000,
+        "bonus": 37.5
+    }
+]
