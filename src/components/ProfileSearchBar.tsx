@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import { Search } from "lucide-react";
 import { useProfile } from "@/lib/ProfileContext";
-import { searchUsers, getUserLiteSuggestion, type UserLiteSuggestion } from "@/lib/wareraApi";
+import { searchUsers, getUserByIdSuggestion, type UserLiteSuggestion } from "@/lib/wareraApi";
 
 export default function ProfileSearchBar() {
   const { loading, error, loadProfile } = useProfile();
@@ -36,7 +36,7 @@ export default function ProfileSearchBar() {
     debounceRef.current = setTimeout(async () => {
       try {
         const ids = await searchUsers(trimmed, 5);
-        const profiles = await Promise.all(ids.map(getUserLiteSuggestion));
+        const profiles = await Promise.all(ids.map(getUserByIdSuggestion));
         setSuggestions(profiles);
         setShowDropdown(profiles.length > 0);
       } catch {

@@ -6,6 +6,7 @@ import { useProfile } from "@/lib/ProfileContext";
 import ProfileSearchBar from "@/components/ProfileSearchBar";
 import { CountryFlag } from "@/components/CountryFlag";
 import { getAllCountries, type Country } from "@/lib/api/warera";
+import MilitaryRankIcon from "./MilitaryRankIcon";
 
 export default function ProfileWidget() {
   const { profile, clearProfile } = useProfile();
@@ -50,6 +51,9 @@ export default function ProfileWidget() {
                 )}
               </div>
             </div>
+
+            <MilitaryRankIcon rank={profile.user.militaryRank} imgClassName="h-8 w-8" />
+
             <div className="flex gap-2">
               <Link
                 to="/passbook"

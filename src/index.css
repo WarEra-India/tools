@@ -4,3 +4,21 @@
     --yellow-svg: #E1C997;
     --purple-svg: #CBBAE5;
 }
+
+@keyframes shine {
+    0% {
+        left: -125%;
+    }
+
+    30% {
+        left: -125%;
+    }
+
+    70% {
+        left: 125%;
+    }
+
+    100% {
+        left: 125%;
+    }
+}

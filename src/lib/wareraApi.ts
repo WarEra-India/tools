@@ -53,10 +53,10 @@ export interface UserLiteSuggestion {
 }
 
 /** Fetch minimal info for a user (for search suggestions). */
-export async function getUserLiteSuggestion(
+export async function getUserByIdSuggestion(
   userId: string,
 ): Promise<UserLiteSuggestion> {
-  const data = await post<UserProfile>("user.getUserLite", { userId });
+  const data = await post<UserProfile>("user.getUserById", { userId });
   return {
     _id: data._id,
     username: data.username,
@@ -84,6 +84,7 @@ export interface UserProfile {
   username: string;
   country: string;
   avatarUrl: string;
+  militaryRank: number;
   leveling: {
     level: number;
     totalXp: number;
@@ -95,7 +96,7 @@ export interface UserProfile {
 }
 
 export async function getUserProfile(userId: string): Promise<UserProfile> {
-  return post<UserProfile>("user.getUserLite", { userId });
+  return post<UserProfile>("user.getUserById", { userId });
 }
 
 /* ---------- companies ---------- */
