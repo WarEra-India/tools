@@ -302,7 +302,7 @@ export default function CraftTheory() {
                                 className="absolute h-full rounded-full transition-all duration-500"
                                 style={{
                                   width: `${Math.min(100, prob)}%`,
-                                  background: RARITY_COLORS[rarity]?.color || "#71717a"
+                                  background: RARITY_COLORS[rarity]?.color
                                 }}
                               />
                             )}
