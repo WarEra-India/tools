@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useGameConfig } from "@/lib/hooks/useGameConfig"
-import { useLivePrices } from "@/lib/useLivePrices"
-import { useEquipmentPrices } from "@/lib/useEquipmentPrices"
+import { useLivePrices } from "@/lib/hooks/useLivePrices"
+import { useEquipmentPrices } from "@/lib/hooks/useEquipmentPrices"
 import { GameItemIcon, RARITY_COLORS } from "@/components/GameItemIcon"
 
 const PUBLIC_IMAGES_BASE_URL = `${import.meta.env.BASE_URL}images/`

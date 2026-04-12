@@ -2,7 +2,7 @@ import { Building2, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProfile } from "@/lib/ProfileContext";
-import { type LocationBonus, getEthicsBonus, calcBonus } from "@/lib/useLocationBonus";
+import { type LocationBonus, getEthicsBonus, calcBonus } from "@/lib/hooks/useLocationBonus";
 import { itemName } from "@/lib/items";
 import { itemImageUrl } from "@/lib/images";
 import type { CompanyInfo } from "@/lib/wareraApi";

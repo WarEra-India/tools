@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ArrowRight, ChevronDown, ChevronRight, Lightbulb, Plus, MoveRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProfile } from "@/lib/ProfileContext";
-import { type LocationBonus, getEthicsBonus, calcBonus } from "@/lib/useLocationBonus";
+import { type LocationBonus, getEthicsBonus, calcBonus } from "@/lib/hooks/useLocationBonus";
 import { itemName } from "@/lib/items";
 import { itemImageUrl } from "@/lib/images";
 import ProfileSearchBar from "@/components/ProfileSearchBar";
