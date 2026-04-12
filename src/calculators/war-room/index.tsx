@@ -55,7 +55,7 @@ export default function WarRoom() {
         {profile ? (
           <div className="flex items-center gap-4 flex-col outline-1 outline-zinc-700 rounded-lg p-4">
 
-            <div className="flex items-center lg:flex-row lg:gap-12 justify-center w-full sm:flex-col sm:gap-4">
+            <div className="flex items-center justify-center w-full flex-col gap-4 lg:flex-row lg:gap-12">
 
               {/* User */}
               <div className="flex items-center gap-2">
@@ -73,7 +73,7 @@ export default function WarRoom() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap justify-center">
                 {SKILL_GROUPS.WAR.map((skillName) => {
                   const skill = profile.user.skills[skillName];
                   if (!skill) return null;
@@ -93,11 +93,11 @@ export default function WarRoom() {
             {/* Divider */}
             <div className="w-full bg-zinc-700" style={{ height: "1px" }} />
 
-            <div className="flex items-center lg:flex-row lg:gap-12 justify-center w-full sm:flex-col sm:gap-4">
+            <div className="flex items-center justify-center w-full flex-col gap-4 lg:flex-row lg:gap-12">
 
               {/* Weapons and Equipments */}
               {profile.equipment && (
-                <div className="flex gap-2 items-start">
+                <div className="flex gap-4 items-start flex-wrap justify-center flex-1">
                   {profile.equipment.weapon && (
                     <EquipmentSlot item={profile.equipment.weapon} />
                   )}
@@ -128,7 +128,7 @@ export default function WarRoom() {
                 </div>
               )}
 
-              <div className="flex px-2 gap-12">
+              <div className="flex items-center justify-center w-full flex-col gap-4 lg:flex-row lg:gap-12 flex-1">
 
                 {/* Buffs */}
                 <BuffSlot

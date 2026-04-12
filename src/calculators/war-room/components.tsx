@@ -142,7 +142,7 @@ export const StatBreakdown = ({
   isPercentage?: boolean;
 }) => {
   return (
-    <div className="flex flex-col gap-4 p-4 bg-zinc-900/40 rounded-xl border border-zinc-800 hover:border-zinc-700 transition-all group min-w-[240px]">
+    <div className="flex flex-col gap-4 p-4 bg-zinc-900/40 rounded-xl border border-zinc-800 hover:border-zinc-700 transition-all group w-full sm:min-w-[240px] sm:w-auto">
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-xl bg-zinc-800 flex items-center justify-center group-hover:bg-zinc-700 transition-colors">
           <img src={`${PUBLIC_IMAGES_BASE_URL}${icon}.svg`} alt={icon} className="h-6 w-6" />
@@ -158,7 +158,7 @@ export const StatBreakdown = ({
         </div>
       </div>
 
-      <div className="flex items-start gap-6 px-1">
+      <div className="flex items-start gap-x-6 gap-y-2 px-1 flex-wrap">
         {Object.entries(breakdown).map(([key, value]) => {
           if (value === 0 && key !== "skill") return null;
 
