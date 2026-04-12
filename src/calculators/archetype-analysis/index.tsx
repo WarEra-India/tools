@@ -383,8 +383,23 @@ export default function ArchetypeAnalysis() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
                         <p className="text-sm font-black text-white truncate">{u.username}</p>
-                        <span className="text-[10px] font-bold text-blue-500 uppercase font-mono">{u.level}</span>
-                        {/* <span className="text-[10px] ml-auto font-bold text-red-500 font-mono">W/E {(u.warFocus * 100).toFixed(0)}</span> */}
+                        <span className="text-[10px] font-bold text-blue-500 uppercase font-mono">Lvl {u.level}</span>
+                        
+                        <div className="flex items-center gap-2 ml-auto">
+                          <div className="flex flex-col items-end">
+                            <span className="text-[9px] font-black text-red-500 font-mono leading-none">
+                              {new Intl.NumberFormat('en-US', { notation: 'compact' }).format(u.weekly_damage)}
+                            </span>
+                            <span className="text-[7px] font-bold text-red-900 uppercase tracking-tighter">DMG/W</span>
+                          </div>
+                          <div className="h-6 w-px bg-zinc-800/50 mx-1" />
+                          <div className="flex flex-col items-end">
+                            <span className="text-[9px] font-black text-green-500 font-mono leading-none">
+                              {new Intl.NumberFormat('en-US', { notation: 'compact' }).format(u.wealth)}
+                            </span>
+                            <span className="text-[7px] font-bold text-green-900 uppercase tracking-tighter">WEALTH</span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* <div className="flex items-center gap-2">
