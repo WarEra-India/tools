@@ -192,3 +192,28 @@ export const StatBreakdown = ({
     </div>
   );
 };
+
+export const BriefStat = ({
+  icon,
+  value,
+  label,
+  isPercentage = true,
+}: {
+  icon: string;
+  value: number | string;
+  label?: string;
+  isPercentage?: boolean;
+}) => {
+  return (
+    <div
+      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-800/30 rounded-xl border border-zinc-800/50 hover:bg-zinc-800/50 transition-colors group cursor-default"
+      title={label}
+    >
+      <img src={`${PUBLIC_IMAGES_BASE_URL}${icon}.svg`} alt={icon} className="h-4 w-4 object-contain opacity-70 group-hover:opacity-100 transition-opacity" />
+      <span className="text-[11px] font-mono font-bold text-zinc-300">
+        {value}
+        {isPercentage && typeof value === "number" ? "%" : ""}
+      </span>
+    </div>
+  );
+};
