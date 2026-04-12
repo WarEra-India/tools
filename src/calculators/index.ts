@@ -71,4 +71,12 @@ export const calculators: CalculatorMeta[] = [
     icon: "skills",
     component: lazy(() => import("./archetype-analysis/index")),
   },
+  {
+    id: "war-room",
+    name: "War Room",
+    description: "All about War",
+    path: "/war-room",
+    icon: "battle",
+    component: lazy(() => import("./war-room/index")),
+  },
 ];

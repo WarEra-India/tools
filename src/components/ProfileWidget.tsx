@@ -27,7 +27,7 @@ export default function ProfileWidget() {
           <div className="flex items-center gap-3 sm:flex-row flex-col">
             <img
               src={profile.user.avatarUrl}
-              alt={profile.user.username}
+              // alt={profile.user.username}
               className="h-10 w-10 rounded-full border border-zinc-700 object-cover"
             />
             <div className="flex-1 min-w-0">
@@ -52,7 +52,7 @@ export default function ProfileWidget() {
               </div>
             </div>
 
-            <MilitaryRankIcon rank={profile.user.militaryRank} imgClassName="h-8 w-8" />
+            {/* <MilitaryRankIcon rank={profile.user.militaryRank} imgClassName="h-8 w-8" /> */}
 
             <div className="flex gap-2">
               <Link

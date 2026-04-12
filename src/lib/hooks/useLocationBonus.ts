@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { API_BASE } from "./wareraApi";
+import { API_BASE } from "../wareraApi";
 
 const COUNTRIES_URL = API_BASE + "/country.getAllCountries";
 const REGIONS_URL = API_BASE + "/region.getRegionsObject";

@@ -53,7 +53,7 @@ interface AnalyzedUser extends UserRecord {
   archetype: Archetype;
 }
 
-const SKILL_GROUPS: { WAR: (keyof UserSkills)[]; ECO: (keyof UserSkills)[] } = {
+export const SKILL_GROUPS: { WAR: (keyof UserSkills)[]; ECO: (keyof UserSkills)[] } = {
   ECO: ["companies", "entrepreneurship", "production", "management", "lootChance", "energy"],
   WAR: ["attack", "criticalChance", "criticalDamages", "armor", "precision", "dodge", "health", "hunger"],
 };

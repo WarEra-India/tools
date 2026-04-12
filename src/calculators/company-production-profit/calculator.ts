@@ -1,4 +1,4 @@
-import type { GameData, ProfitRow } from "@/lib/useGameConfig";
+import type { GameData, ProfitRow } from "@/lib/hooks/useGameConfig";
 
 export function calculate(data: GameData): ProfitRow[] {
   const rows: ProfitRow[] = [];

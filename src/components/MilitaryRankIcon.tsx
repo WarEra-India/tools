@@ -51,13 +51,13 @@ const formatter = new Intl.NumberFormat("en", {
 export default function MilitaryRankIcon({ rank, imgClassName = "h-5 w-5", className = "p-2 rounded-md" }: { rank: number, className?: string, imgClassName?: string }) {
   if (rank > 120 || rank < 1) return null;
 
-  const rankDetails = MilitaryRanks[rank];
+  const rankDetails = MilitaryRanks.find((r) => r.rank === rank);
   const division = Object.keys(RankColorMap).find((key) => rank <= Number(key));
   if (!division || !rankDetails) return null;
   const { color, bg, secondaryColor } = RankColorMap[Number(division)];
 
   return (
-    <div className="flex items-center gap-2 outline-1 outline-zinc-800 p-2 rounded-md">
+    <div className="flex items-center gap-2 rounded-md">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2 justify-between">
           <span className="text-sm font-semibold" style={{ color: color }}>{rankDetails.name}</span>
@@ -101,13 +101,3 @@ export default function MilitaryRankIcon({ rank, imgClassName = "h-5 w-5", class
     </div>
   );
 }
-
-// const calcMilBonus = (rank) => {
-//     let bonus = (rank-1) * 0.25;
-//     const levelJumps = Math.min(Math.floor((rank-1) / 4), 26) // it is correct upto 108
-//     console.log(levelJumps)
-//     if (levelJumps > 0) {
-//         bonus += (levelJumps * 0.25);
-//     }
-//     return bonus;
-// }

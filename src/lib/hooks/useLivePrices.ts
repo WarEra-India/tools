@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getItemPrices } from "./api/warera";
+import { getItemPrices } from "../api/warera";
 
 export interface LivePrices {
   prices: Record<string, number>;

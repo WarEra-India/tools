@@ -77,6 +77,10 @@ export interface UserSkill {
   equipment: number | null;
   limited: number | null;
   totalAfterSoftCap: number | null;
+  ammoPercent?: number;
+  buffsPercent?: number;
+  debuffsPercent?: number;
+  militaryRankPercent?: number;
 }
 
 export interface UserProfile {
@@ -93,6 +97,12 @@ export interface UserProfile {
     totalSkillPoints: number;
   };
   skills: Record<string, UserSkill>;
+  buffs?: {
+    buffCodes?: string[];
+    buffEndAt?: string;
+    debuffCodes?: string[];
+    debuffEndAt?: string;
+  };
 }
 
 export async function getUserProfile(userId: string): Promise<UserProfile> {
@@ -178,16 +188,45 @@ export interface FullProfile {
   user: UserProfile;
   companies: CompanyInfo[];
   workers: UserWorkers[];
+  equipment?: CurrentEquipment;
 }
 
 export async function fetchFullProfileById(userId: string): Promise<FullProfile> {
-  const [user, companyIds, workers] = await Promise.all([
+  const [user, companyIds, workers, equipment] = await Promise.all([
     getUserProfile(userId),
     getCompanyIds(userId),
     getUserWorkers(userId),
+    fetchCurrentEquipment(userId),
   ]);
 
   const companies = await getCompaniesBatch(companyIds);
 
-  return { user, companies, workers };
+  return { user, companies, workers, equipment };
+}
+
+/* ---------- equipment ---------- */
+
+export interface EquippedItem {
+  _id: string;
+  code: string;
+  type?: "equipment" | "weapon";
+  skills: Record<string, number>;
+  state: number;
+  maxState: number;
+  quantity: number;
+  lastAcquisitionAt: string;
+}
+
+export interface CurrentEquipment {
+  weapon?: EquippedItem;
+  ammo?: string;
+  helmet?: EquippedItem;
+  chest?: EquippedItem;
+  boots?: EquippedItem;
+  gloves?: EquippedItem;
+  pants?: EquippedItem;
+}
+
+export async function fetchCurrentEquipment(userId: string): Promise<CurrentEquipment> {
+  return post<CurrentEquipment>("inventory.fetchCurrentEquipment", { userId });
 }

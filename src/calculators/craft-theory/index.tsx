@@ -17,7 +17,7 @@ import {
   TableCell,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { useGameConfig } from "@/lib/useGameConfig"
+import { useGameConfig } from "@/lib/hooks/useGameConfig"
 import { useLivePrices } from "@/lib/useLivePrices"
 import { useEquipmentPrices } from "@/lib/useEquipmentPrices"
 import { GameItemIcon, RARITY_COLORS } from "@/components/GameItemIcon"

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { API_BASE } from "./api/warera";
+import { API_BASE } from "../api/warera";
 
 const GAME_CONFIG_URL = API_BASE + "/gameConfig.getGameConfig";
 

@@ -7,7 +7,7 @@ import { itemName } from "@/lib/items";
 import { itemImageUrl } from "@/lib/images";
 import ProfileSearchBar from "@/components/ProfileSearchBar";
 import type { FullProfile, CompanyInfo } from "@/lib/wareraApi";
-import type { ProfitRow } from "@/lib/useGameConfig";
+import type { ProfitRow } from "@/lib/hooks/useGameConfig";
 
 /* ---- types ---- */
 

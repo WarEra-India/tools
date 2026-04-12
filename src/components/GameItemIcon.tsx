@@ -47,14 +47,36 @@ export function GameItemIcon({ itemCode, rarity: rarityOverride, className = "h-
   let baseCode = itemCode;
 
   if (itemCode) {
-    const lastChar = itemCode.slice(-1);
-    const rarityLevel = parseInt(lastChar);
-    
-    if (!isNaN(rarityLevel) && rarityLevel >= 1 && rarityLevel <= 6) {
-      baseCode = itemCode.slice(0, -1);
-      if (!rarity) {
-        const mapping = ["common", "uncommon", "rare", "epic", "legendary", "mythic"];
-        rarity = mapping[rarityLevel - 1];
+    const WEAPON_ORDER = ["knife", "gun", "rifle", "sniper", "tank", "jet"];
+    const AMMO_MAPPING: Record<string, string> = {
+      lightAmmo: "uncommon",
+      ammo: "rare",
+      heavyAmmo: "epic",
+    };
+
+    if (AMMO_MAPPING[itemCode]) {
+      rarity = AMMO_MAPPING[itemCode];
+      baseCode = itemCode;
+    } else if (WEAPON_ORDER.includes(itemCode)) {
+      const idx = WEAPON_ORDER.indexOf(itemCode);
+      const mapping = ["common", "uncommon", "rare", "epic", "legendary", "mythic"];
+      rarity = mapping[idx];
+      baseCode = itemCode;
+    } else {
+      const lastChar = itemCode.slice(-1);
+      const rarityLevel = parseInt(lastChar);
+
+      if (!isNaN(rarityLevel) && rarityLevel >= 1 && rarityLevel <= 6) {
+        baseCode = itemCode.slice(0, -1);
+        if (!rarity) {
+          const mapping = ["common", "uncommon", "rare", "epic", "legendary", "mythic"];
+          rarity = mapping[rarityLevel - 1];
+        }
+      } else if (isNaN(rarityLevel)) {
+        // If it's just "boots" or similar without a number, default to rarity 1
+        if (!rarity) {
+           rarity = "common";
+        }
       }
     }
   }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { API_BASE } from "./api/warera";
+import { API_BASE } from "../api/warera";
 
 export interface EquipmentPrice {
   code: string;
