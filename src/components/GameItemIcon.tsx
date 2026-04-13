@@ -75,7 +75,7 @@ export function GameItemIcon({ itemCode, rarity: rarityOverride, className = "h-
       } else if (isNaN(rarityLevel)) {
         // If it's just "boots" or similar without a number, default to rarity 1
         if (!rarity) {
-           rarity = "common";
+          rarity = "common";
         }
       }
     }
@@ -84,14 +84,14 @@ export function GameItemIcon({ itemCode, rarity: rarityOverride, className = "h-
   const colors = rarity ? RARITY_COLORS[rarity] : null;
 
   return (
-    <div 
-      className={`relative flex items-center justify-center overflow-hidden ${className}`} 
+    <div
+      className={`relative flex items-center justify-center overflow-hidden ${className}`}
       style={colors ? { background: colors.bg } : {}}
     >
       {baseCode && (
-        <img 
-          src={`${BASE_IMAGES_URL}${baseCode}.png`} 
-          alt={itemCode || "item"} 
+        <img
+          src={`${BASE_IMAGES_URL}${baseCode}.png?v=1234`}
+          alt={itemCode || "item"}
           className="h-full w-full object-contain"
         />
       )}

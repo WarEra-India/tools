@@ -1,24 +1,43 @@
 import type { FullProfile } from "@/lib/wareraApi";
+import {
+  MIL_RANK_TIER1_MAX,
+  MIL_RANK_TIER2_MAX,
+  MIL_RANK_JUMP_THRESHOLD,
+  MIL_BASE_BONUS_MULTIPLIER,
+  MIL_HIGH_BONUS_MULTIPLIER,
+  EFFECTIVE_STAT_DIVISOR,
+  MODIFIER_PERCENTAGE,
+  SKILL_PROGRESSION
+} from "./constants";
+
+export const getSimSkillValue = (profile: FullProfile, sim: any, skillName: keyof typeof SKILL_PROGRESSION) => {
+  if (sim?.skills?.[skillName] !== undefined) {
+    const level = sim.skills[skillName];
+    const { base, inc } = SKILL_PROGRESSION[skillName];
+    return base + (level * inc);
+  }
+  return profile.user.skills[skillName]?.value || 0;
+};
 
 export const calcMilBonus = (rank: number): number => {
-  let bonus = (rank - 1) * 0.25 + Math.floor((rank - 1) / 4) * 0.25;
+  let bonus = (rank - 1) * MIL_BASE_BONUS_MULTIPLIER + Math.floor((rank - 1) / 4) * MIL_BASE_BONUS_MULTIPLIER;
 
-  // base logic (works till 108)
-  if (rank <= 108) {
+  // base logic
+  if (rank <= MIL_RANK_TIER1_MAX) {
     return bonus;
   }
 
-  const phase1 = Math.min(rank, 116) - 108;
+  const phase1 = Math.min(rank, MIL_RANK_TIER2_MAX) - MIL_RANK_TIER1_MAX;
 
   if (phase1 > 0) {
-    bonus += phase1 * 0.25;
+    bonus += phase1 * MIL_BASE_BONUS_MULTIPLIER;
 
-    // extra jump at 111
-    if (rank >= 111) bonus += 0.25;
+    // extra jump
+    if (rank >= MIL_RANK_JUMP_THRESHOLD) bonus += MIL_BASE_BONUS_MULTIPLIER;
   }
 
-  if (rank >= 117) {
-    bonus += (rank - 116) * 0.5;
+  if (rank >= MIL_RANK_TIER2_MAX + 1) {
+    bonus += (rank - MIL_RANK_TIER2_MAX) * MIL_HIGH_BONUS_MULTIPLIER;
   }
 
   return bonus;
@@ -26,7 +45,7 @@ export const calcMilBonus = (rank: number): number => {
 
 
 export const effectivePercentageValue = (totalValue: number): number => {
-  return Math.round((totalValue / (totalValue + 40)) * 100);
+  return Math.round((totalValue / (totalValue + EFFECTIVE_STAT_DIVISOR)) * 100);
 }
 
 export const effectiveTotalDamage = (
@@ -47,17 +66,19 @@ export const effectiveTotalDamage = (
   )
 }
 
-export const getAttackTotalAndBreakDown = (profile: FullProfile): {
+export const getAttackTotalAndBreakDown = (profile: FullProfile, sim?: any): {
   breakdown: { skill: number; weapon: number; ammo: number; military: number; orders: number; buff: number; debuff: number; }; total: number;
 } => {
+  const getStatAvg = (val: any) => val ? Math.ceil(Array.isArray(val) ? (val[0] + val[1]) / 2 : val) : 0;
+
   const breakdown = {
-    skill: profile.user.skills.attack.value || 0,
-    weapon: profile.equipment?.weapon?.skills?.attack || 0,
-    ammo: profile.user.skills?.attack?.ammoPercent || 0,
-    military: profile.user.skills.attack.militaryRankPercent || 0,
-    orders: 0,
-    buff: profile.user.skills.attack.buffsPercent || 0,
-    debuff: profile.user.skills.attack.debuffsPercent || 0,
+    skill: getSimSkillValue(profile, sim, 'attack'),
+    weapon: getStatAvg(sim?.weaponStats?.attack || profile.equipment?.weapon?.skills?.attack),
+    ammo: (sim?.ammoPercent ?? profile.user.skills?.attack?.ammoPercent) || 0,
+    military: sim?.militaryRank !== undefined ? calcMilBonus(sim.militaryRank) : (profile.user.skills.attack?.militaryRankPercent || 0),
+    orders: sim?.orders !== undefined ? sim.orders : 0,
+    buff: sim?.modifier === 'buff' ? MODIFIER_PERCENTAGE : (sim?.modifier === 'no buff' ? 0 : (sim?.modifier === 'debuff' ? 0 : (profile.user.skills.attack?.buffsPercent || 0))),
+    debuff: sim?.modifier === 'debuff' ? MODIFIER_PERCENTAGE : (sim?.modifier === 'no buff' ? 0 : (sim?.modifier === 'buff' ? 0 : (profile.user.skills.attack?.debuffsPercent || 0))),
   }
   return {
     breakdown,
@@ -72,103 +93,55 @@ export const getAttackTotalAndBreakDown = (profile: FullProfile): {
   }
 }
 
-export const getEffectiveStats = (profile: FullProfile) => {
+export const getEffectiveStats = (profile: FullProfile, sim?: any) => {
   const { user, equipment } = profile;
 
-  const armorTotal = (user.skills.armor?.value || 0) + (equipment?.chest?.skills?.armor || 0) + (equipment?.pants?.skills?.armor || 0);
-  const dodgeTotal = (user.skills.dodge?.value || 0) + (equipment?.boots?.skills?.dodge || 0);
+  const getStatAvg = (val: any) => val ? Math.ceil(Array.isArray(val) ? (val[0] + val[1]) / 2 : val) : 0;
+
+  const armorTotal = getSimSkillValue(profile, sim, 'armor') +
+    getStatAvg(sim?.chestStats?.armor || equipment?.chest?.skills?.armor) +
+    getStatAvg(sim?.pantsStats?.armor || equipment?.pants?.skills?.armor);
+
+  const dodgeTotal = getSimSkillValue(profile, sim, 'dodge') +
+    getStatAvg(sim?.bootsStats?.dodge || equipment?.boots?.skills?.dodge);
 
   return {
     precision: {
-      skill: user.skills.precision?.value || 0,
-      equipment: equipment?.gloves?.skills?.precision || 0,
-      total: (user.skills.precision?.value || 0) + (equipment?.gloves?.skills?.precision || 0),
+      skill: getSimSkillValue(profile, sim, 'precision'),
+      equipment: getStatAvg(sim?.glovesStats?.precision || equipment?.gloves?.skills?.precision),
+      total: getSimSkillValue(profile, sim, 'precision') + getStatAvg(sim?.glovesStats?.precision || equipment?.gloves?.skills?.precision),
     },
     criticalChance: {
-      skill: user.skills.criticalChance?.value || 0,
-      equipment: equipment?.weapon?.skills?.criticalChance || 0,
-      total: (user.skills.criticalChance?.value || 0) + (equipment?.weapon?.skills?.criticalChance || 0),
+      skill: getSimSkillValue(profile, sim, 'criticalChance'),
+      equipment: getStatAvg(sim?.weaponStats?.criticalChance || equipment?.weapon?.skills?.criticalChance),
+      total: getSimSkillValue(profile, sim, 'criticalChance') + getStatAvg(sim?.weaponStats?.criticalChance || equipment?.weapon?.skills?.criticalChance),
     },
     criticalDamages: {
-      skill: user.skills.criticalDamages?.value || 0,
-      equipment: equipment?.helmet?.skills?.criticalDamages || 0,
-      total: (user.skills.criticalDamages?.value || 0) + (equipment?.helmet?.skills?.criticalDamages || 0),
+      skill: getSimSkillValue(profile, sim, 'criticalDamages'),
+      equipment: getStatAvg(sim?.helmetStats?.criticalDamages || equipment?.helmet?.skills?.criticalDamages),
+      total: getSimSkillValue(profile, sim, 'criticalDamages') + getStatAvg(sim?.helmetStats?.criticalDamages || equipment?.helmet?.skills?.criticalDamages),
     },
     armor: {
-      skill: user.skills.armor?.value || 0,
-      chest: equipment?.chest?.skills?.armor || 0,
-      pants: equipment?.pants?.skills?.armor || 0,
+      skill: getSimSkillValue(profile, sim, 'armor'),
+      chest: getStatAvg(sim?.chestStats?.armor || equipment?.chest?.skills?.armor),
+      pants: getStatAvg(sim?.pantsStats?.armor || equipment?.pants?.skills?.armor),
       raw: armorTotal,
       effective: effectivePercentageValue(armorTotal),
     },
     dodge: {
-      skill: user.skills.dodge?.value || 0,
-      boots: equipment?.boots?.skills?.dodge || 0,
+      skill: getSimSkillValue(profile, sim, 'dodge'),
+      boots: getStatAvg(sim?.bootsStats?.dodge || equipment?.boots?.skills?.dodge),
       raw: dodgeTotal,
       effective: effectivePercentageValue(dodgeTotal),
     },
+    health: {
+      skill: getSimSkillValue(profile, sim, 'health'),
+    },
+    hunger: {
+      skill: getSimSkillValue(profile, sim, 'hunger'),
+    },
+    lootChance: {
+      skill: getSimSkillValue(profile, sim, 'lootChance'),
+    }
   };
 };
-
-
-// let base = Math.round((200 + 85) * 1.1 * 1.1825 * 1.6) // 593
-
-// let attack_bonus_multiplier = 1.7
-
-// let crit_bonus_multiplier = 2.89
-
-// let miss_shot_multiplier = 0.5
-
-// let precsion_percentage = 0.75
-
-
-
-// let crit_shots = [
-//   2730, 2920, 2950, 3050, 3130, 2820, 3090, 2860, 3040, 3060, 2650, 2660, 2800, 2940,
-// ]
-
-// let crit_dodge_shots = [
-//   2630, 3140, 2690, 2790, 2680, 3190, 2930,
-// ]
-
-// let crit_expected = base * crit_bonus_multiplier * attack_bonus_multiplier // 2913.409
-
-// let crits_avg = 2892.85
-
-
-
-
-// let dodge_shots = [
-//   945, 933, 990, 996, 930, 922, 909, 996, 926, 936, 988, 1090, 970, 1040, 1070,
-// ]
-
-// let normal_shots = [
-//   1060, 967, 950, 1030, 964, 925, 990, 1100, 1020, 1020,
-// ]
-
-// let normal_expected = base * attack_bonus_multiplier // 1008.1
-
-// let normal_avg = 986.68
-
-
-
-
-
-// let miss_shots = [
-//   503, 483, 518, 531, 475, 502,
-// ]
-
-// let miss_dodge_shots = [
-//   464, 464, 519, 464,
-// ]
-
-// let miss_expected = base * miss_shot_multiplier * attack_bonus_multiplier // 504.05
-
-// let miss_avg = 492.3
-
-
-
-
-
-// let total = 96_880 - 6540 // 90340
-

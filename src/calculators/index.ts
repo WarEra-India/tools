@@ -74,7 +74,7 @@ export const calculators: CalculatorMeta[] = [
   {
     id: "war-room",
     name: "War Room",
-    description: "All about War",
+    description: "Optimize your combat loadout, simulate stats, and prepare for battle in the War Room.",
     path: "/war-room",
     icon: "battle",
     component: lazy(() => import("./war-room/index")),

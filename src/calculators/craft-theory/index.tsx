@@ -71,7 +71,7 @@ const CASE_CHANCES: Record<string, { types: Record<string, number>, rarity: Reco
 }
 const BULK_TEST_VALUE = 10000;
 
-const RARITY_OTHER_NAMES: Record<string, string> = {
+export const RARITY_OTHER_NAMES: Record<string, string> = {
   common: "Basic",
   uncommon: "Reinforced",
   rare: "Advanced",
