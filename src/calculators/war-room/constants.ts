@@ -38,3 +38,9 @@ export const SKILL_PROGRESSION = {
 export const NOT_PERCENTAGE_SKILLS = ['health', 'hunger', 'attack', 'armor', 'dodge'];
 
 export const EQUIPEMENTS = ['weapon', 'ammo', 'helmet', 'chest', 'gloves', 'pants', 'boots'] as const;
+
+// Simulation constants
+export const HIT_BASE_HEALTH_COST = 10;
+export const MISS_DAMAGE_MULTIPLIER = 0.5;
+export const CASE1_CHANCE_PER_LOOT_PERCENT = 1;       // 1% per 1% loot chance
+export const CASE2_CHANCE_PER_LOOT_PERCENT = 0.01;    // 0.01% per 1% loot chance
