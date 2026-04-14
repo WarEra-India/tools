@@ -53,9 +53,17 @@ export function GameItemIcon({ itemCode, rarity: rarityOverride, className = "h-
       ammo: "rare",
       heavyAmmo: "epic",
     };
+    const FOOD_MAPPING: Record<string, string> = {
+      bread: "common",
+      steak: "rare",
+      cookedFish: "epic",
+    };
 
     if (AMMO_MAPPING[itemCode]) {
       rarity = AMMO_MAPPING[itemCode];
+      baseCode = itemCode;
+    } if (FOOD_MAPPING[itemCode]) {
+      rarity = FOOD_MAPPING[itemCode];
       baseCode = itemCode;
     } else if (WEAPON_ORDER.includes(itemCode)) {
       const idx = WEAPON_ORDER.indexOf(itemCode);

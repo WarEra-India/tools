@@ -91,6 +91,7 @@ export default function ProfileDetails() {
                   <BriefStat icon="armor" value={effectiveStats.armor.effective} label="Armor" />
                   <BriefStat icon="dodge" value={effectiveStats.dodge.effective} label="Dodge" />
                   <BriefStat icon="health" value={effectiveStats.health.skill} label="Health" isPercentage={false} />
+                  <BriefStat icon="hunger" value={effectiveStats.hunger.skill} label="Hunger" isPercentage={false} />
                 </>
               )}
             </div>
@@ -104,60 +105,59 @@ export default function ProfileDetails() {
           <div className="flex flex-col items-center gap-4 w-full bg-zinc-900/40 rounded-3xl p-6 border border-zinc-800/40 relative mt-2">
             <span className="absolute -top-2.5 left-8 px-2 bg-zinc-950 text-[10px] font-black text-zinc-600 uppercase tracking-widest rounded shadow">Loadout & Modifiers</span>
 
-            <div className="flex items-center justify-center w-full flex-col gap-4 lg:flex-row lg:gap-12 w-full">
+            <div className="flex items-center justify-center w-full flex-col gap-4 lg:flex-row lg:gap-12">
 
               {/* Weapons and Equipments */}
-              {profile.equipment && (
-                <div className="flex gap-4 items-start flex-wrap justify-center flex-2">
-                  {profile.equipment.weapon && (
-                    <EquipmentSlot item={profile.equipment.weapon} />
-                  )}
-                  {profile.equipment.ammo && (
-                    <div className="flex flex-col items-center gap-1">
-                      <GameItemIcon itemCode={profile.equipment.ammo} className="h-12 w-12 rounded-md" />
-                      <div className="flex items-center gap-0.5">
-                        <img
-                          src={`${PUBLIC_IMAGES_BASE_URL}attack.svg`}
-                          alt="attack"
-                          className="h-3 w-3 object-contain"
-                          title="Attack Multiplier"
-                        />
-                        <span className="text-[10px] text-zinc-400 font-mono font-bold">
-                          {profile.equipment.ammo === "lightAmmo" ? "+10%" :
-                            profile.equipment.ammo === "ammo" ? "+20%" :
-                              profile.equipment.ammo === "heavyAmmo" ? "+30%" : ""}
-                        </span>
+             
+              <div className="flex gap-4 items-start flex-wrap justify-center flex-2">
+                {profile.equipment && (
+                  <>
+                    {profile.equipment.weapon && (
+                      <EquipmentSlot item={profile.equipment.weapon} />
+                    )}
+                    {profile.equipment.ammo && (
+                      <div className="flex flex-col items-center gap-1">
+                        <GameItemIcon itemCode={profile.equipment.ammo} className="h-12 w-12 rounded-md" />
+                        <div className="flex items-center gap-0.5">
+                          <img
+                            src={`${PUBLIC_IMAGES_BASE_URL}attack.svg`}
+                            alt="attack"
+                            className="h-3 w-3 object-contain"
+                            title="Attack Multiplier"
+                          />
+                          <span className="text-[10px] text-zinc-400 font-mono font-bold">
+                            {profile.equipment.ammo === "lightAmmo" ? "+10%" :
+                              profile.equipment.ammo === "ammo" ? "+20%" :
+                                profile.equipment.ammo === "heavyAmmo" ? "+30%" : ""}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  <div className="w-1" />
-                  {profile.equipment.helmet && <EquipmentSlot item={profile.equipment.helmet} />}
-                  {profile.equipment.chest && <EquipmentSlot item={profile.equipment.chest} />}
-                  {profile.equipment.gloves && <EquipmentSlot item={profile.equipment.gloves} />}
-                  {profile.equipment.pants && <EquipmentSlot item={profile.equipment.pants} />}
-                  {profile.equipment.boots && <EquipmentSlot item={profile.equipment.boots} />}
-                </div>
-              )}
+                    )}
+                    {profile.equipment.helmet && <EquipmentSlot item={profile.equipment.helmet} />}
+                    {profile.equipment.chest && <EquipmentSlot item={profile.equipment.chest} />}
+                    {profile.equipment.gloves && <EquipmentSlot item={profile.equipment.gloves} />}
+                    {profile.equipment.pants && <EquipmentSlot item={profile.equipment.pants} />}
+                    {profile.equipment.boots && <EquipmentSlot item={profile.equipment.boots} />}
+                  </>
+                )}
 
-              <div className="flex items-center justify-center w-full flex-col gap-4 lg:flex-row lg:gap-8 flex-1">
                 {/* Buffs */}
-                <div className="flex gap-4">
-                  <BuffSlot
-                    type="buff"
-                    value={profile.user.skills.attack?.buffsPercent ?? 0}
-                    endAt={profile.user.buffs?.buffEndAt}
-                  />
-                  <BuffSlot
-                    type="debuff"
-                    value={profile.user.skills.attack?.debuffsPercent ?? 0}
-                    endAt={profile.user.buffs?.debuffEndAt}
-                  />
-                </div>
-
+                <BuffSlot
+                  type="buff"
+                  value={profile.user.skills.attack?.buffsPercent ?? 0}
+                  endAt={profile.user.buffs?.buffEndAt}
+                />
+                <BuffSlot
+                  type="debuff"
+                  value={profile.user.skills.attack?.debuffsPercent ?? 0}
+                  endAt={profile.user.buffs?.debuffEndAt}
+                />
+    
                 {/* Military Rank */}
-                <MilitaryRankIcon rank={profile.user.militaryRank} imgClassName="h-14 w-14" />
-              </div>
+                <MilitaryRankIcon rank={profile.user.militaryRank} imgClassName="h-10 w-10 lg:h-14 lg:w-14" />
 
+              </div>
+    
             </div>
           </div>
 

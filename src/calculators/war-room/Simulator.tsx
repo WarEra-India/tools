@@ -162,6 +162,10 @@ export default function Simulator({
     if (simEquipment.food && typeof simEquipment.food === 'string') {
       sum += (foodPrices[simEquipment.food] ?? 0) * totalHungerPoints;
     }
+    // Add Pill cost if buffed
+    if (simEquipment.modifier === 'buff') {
+      sum += livePrices?.prices?.cocain ?? 0;
+    }
     return sum;
   }, [simEquipment, livePrices, equipPrices, totalHungerPoints]);
 
@@ -366,12 +370,13 @@ export default function Simulator({
             <ModifierToggle
               modifier={simEquipment.modifier}
               onChange={(modifier) => setSimEquipment(s => ({ ...s, modifier }))}
+              livePrices={livePrices}
             />
 
             <div className="w-px h-12 bg-zinc-800/50 hidden md:block" />
 
             {/* Food Selector */}
-            <div className="flex flex-col items-center gap-1.5 min-w-[84px]">
+            <div className="flex flex-col items-center gap-1.5">
               <EquipmentSelectorPopover
                 slot="food"
                 currentValue={simEquipment.food}

@@ -279,9 +279,11 @@ export const ResourceInput = ({
 export const ModifierToggle = ({
   modifier,
   onChange,
+  livePrices,
 }: {
   modifier: 'buff' | 'debuff' | 'no buff';
   onChange: (mod: 'buff' | 'debuff' | 'no buff') => void;
+  livePrices: any;
 }) => (
   <div className="flex flex-col gap-2">
     <div className="flex bg-zinc-950 p-1.5 rounded-2xl border border-zinc-800 shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] gap-1">
@@ -315,7 +317,13 @@ export const ModifierToggle = ({
         </button>
       ))}
     </div>
-    <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest text-center">Pill</span>
+    <div className="flex items-center justify-center gap-2">
+      <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest text-center">Pill</span>
+      <div className="flex items-center gap-1">
+        <img src={COIN_ICON} className="h-3 w-3" />
+        <span className="text-[10px] font-mono font-bold text-zinc-200">{livePrices?.prices?.cocain?.toFixed(2) ?? 0}</span>
+      </div>
+    </div>
   </div>
 );
 
