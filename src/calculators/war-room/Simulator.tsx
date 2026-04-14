@@ -373,8 +373,6 @@ export default function Simulator({
               livePrices={livePrices}
             />
 
-            <div className="w-px h-12 bg-zinc-800/50 hidden md:block" />
-
             {/* Food Selector */}
             <div className="flex flex-col items-center gap-1.5">
               <EquipmentSelectorPopover
