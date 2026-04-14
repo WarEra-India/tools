@@ -53,7 +53,7 @@ export default function StatsDashboard({
           weapon: r(bd.weapon, roundValues),
           ...(bd.ammo > 0 ? { ammo: r(bd.ammo, roundValues) } : {}),
           ...(bd.military > 0 ? { military: r(bd.military, roundValues) } : {}),
-          ...(bd.orders > 0 ? { orders: bd.orders } : {}),
+          ...(bd.orders != 0 ? { orders: bd.orders } : {}),
           ...(bd.buff > 0 ? { buff: r(bd.buff, roundValues) } : {}),
           ...(bd.debuff > 0 ? { debuff: -r(bd.debuff, roundValues) } : {}),
         }}

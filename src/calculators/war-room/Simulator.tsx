@@ -362,7 +362,7 @@ export default function Simulator({
               label="Orders"
               value={simEquipment.orders}
               formatter={v => `${v ?? 0}%`}
-              onDecrease={() => setSimEquipment(s => ({ ...s, orders: Math.max(0, s.orders - 5) }))}
+              onDecrease={() => setSimEquipment(s => ({ ...s, orders: Math.max(-25, s.orders - 5) }))}
               onIncrease={() => setSimEquipment(s => ({ ...s, orders: Math.min(100, s.orders + 5) }))}
             />
 
