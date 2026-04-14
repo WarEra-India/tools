@@ -12,6 +12,7 @@ import {
 import { getAttackTotalAndBreakDown, getEffectiveStats, effectivePercentageValue } from "./utils";
 import { AMMO_PERCENTAGES, EQUIPEMENTS, SKILL_PROGRESSION, FOOD_MULTIPLIERS } from "./constants";
 import StatsDashboard from "./StatsDashboard";
+import BattleSimulation from "./BattleSimulation";
 import type { FullProfile } from "@/lib/wareraApi";
 
 const BATTLE_ICON = `${PUBLIC_IMAGES_BASE_URL}battle.svg`;
@@ -416,7 +417,7 @@ export default function Simulator({
               {totalSimCost > 0 && (
                 <div className="flex flex-col items-end gap-1.5">
                   <div className="flex items-center gap-3 px-4 py-2 bg-zinc-900/60 rounded-xl border border-zinc-800/60 shadow-lg">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden sm:block">Total Cost</span>
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden sm:block">Estimated Cost</span>
                     <div className="flex items-center gap-1.5">
                       <img src={COIN_ICON} className="h-4 w-4" alt="coin" />
                       <span className="text-sm text-white font-mono font-bold">{totalSimCost.toFixed(2)}</span>
@@ -444,6 +445,13 @@ export default function Simulator({
             </div>
           </div>
         </div>
+
+        {/* Battle Simulation */}
+        <BattleSimulation
+          attackData={simAttackData}
+          effectiveStats={simEffectiveStats}
+          healthRestored={healthRestored}
+        />
 
       </div>
     </div>

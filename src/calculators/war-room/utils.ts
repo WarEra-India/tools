@@ -7,7 +7,11 @@ import {
   MIL_HIGH_BONUS_MULTIPLIER,
   EFFECTIVE_STAT_DIVISOR,
   MODIFIER_PERCENTAGE,
-  SKILL_PROGRESSION
+  SKILL_PROGRESSION,
+  HIT_BASE_HEALTH_COST,
+  MISS_DAMAGE_MULTIPLIER,
+  CASE1_CHANCE_PER_LOOT_PERCENT,
+  CASE2_CHANCE_PER_LOOT_PERCENT,
 } from "./constants";
 
 export const getSimSkillValue = (profile: FullProfile, sim: any, skillName: keyof typeof SKILL_PROGRESSION) => {
@@ -20,7 +24,8 @@ export const getSimSkillValue = (profile: FullProfile, sim: any, skillName: keyo
 };
 
 export const calcMilBonus = (rank: number): number => {
-  let bonus = (rank - 1) * MIL_BASE_BONUS_MULTIPLIER + Math.floor((rank - 1) / 4) * MIL_BASE_BONUS_MULTIPLIER;
+  const localRank = Math.max(rank, MIL_RANK_TIER1_MAX);
+  let bonus = (localRank - 1) * MIL_BASE_BONUS_MULTIPLIER + Math.floor((localRank - 1) / 4) * MIL_BASE_BONUS_MULTIPLIER;
 
   // base logic
   if (rank <= MIL_RANK_TIER1_MAX) {
@@ -143,5 +148,167 @@ export const getEffectiveStats = (profile: FullProfile, sim?: any) => {
     lootChance: {
       skill: getSimSkillValue(profile, sim, 'lootChance'),
     }
+  };
+};
+
+// ─── Simulation Engine ───────────────────────────────────────────────
+
+export type HitType = 'dodged' | 'miss' | 'normal' | 'critical';
+
+export interface HitResult {
+  hitNumber: number;
+  type: HitType;
+  damageDealt: number;
+  healthUsed: number;
+  healthRemaining: number;
+  casesEarned: number; // 0 = none, 1 = case1, 2 = case2
+}
+
+export interface SimulationParams {
+  totalHealth: number;        // health skill + food restored
+  attackValue: number;        // total attack damage
+  armorEffective: number;     // effective armor % (0-100)
+  dodgeEffective: number;     // effective dodge % (0-100)
+  precisionTotal: number;     // precision % (0-100)
+  criticalChance: number;     // crit chance % (0-100)
+  criticalDamages: number;    // crit damage % (e.g. 189 means +189%)
+  lootChance: number;         // loot chance % (e.g. 15 means 15%)
+}
+
+export interface SimulationResult {
+  hits: HitResult[];
+  totalHits: number;
+  totalDamageDealt: number;
+  case1Count: number;
+  case2Count: number;
+  hitBreakdown: { dodged: number; miss: number; normal: number; critical: number };
+}
+
+/**
+ * Simulates a single independent hit.
+ * Returns null if remaining health cannot cover the hit's health cost (simulation ends).
+ */
+export const simulateHit = (
+  params: SimulationParams,
+  healthRemaining: number,
+  hitNumber: number,
+): HitResult | null => {
+  const {
+    attackValue,
+    armorEffective,
+    dodgeEffective,
+    precisionTotal,
+    criticalChance,
+    criticalDamages,
+    lootChance,
+  } = params;
+
+  // Calculate the health cost for this hit (armor reduces the base 10 HP cost)
+  const healthCostPerHit = HIT_BASE_HEALTH_COST * (1 - armorEffective / 100);
+
+  // Check if we have enough health to take this hit
+  if (healthRemaining < healthCostPerHit) {
+    return null; // Can't take the hit, simulation ends
+  }
+
+  // 1. Roll dodge — only determines if health is used, NOT damage type
+  const dodgeRoll = Math.random() * 100;
+  const isDodged = dodgeRoll < dodgeEffective;
+
+  // 2. Roll precision (determines miss vs direct hit)
+  const precisionRoll = Math.random() * 100;
+  const isMiss = precisionRoll >= precisionTotal;
+
+  let type: HitType;
+  let damageDealt: number;
+
+  if (isMiss) {
+    // Miss hit — half damage, cannot crit
+    type = 'miss';
+    damageDealt = Math.round(attackValue * MISS_DAMAGE_MULTIPLIER);
+  } else {
+    // Direct hit — roll for crit
+    const critRoll = Math.random() * 100;
+    if (critRoll < criticalChance) {
+      type = 'critical';
+      damageDealt = Math.round(attackValue * (1 + criticalDamages / 100));
+    } else {
+      type = 'normal';
+      damageDealt = attackValue;
+    }
+  }
+
+  // If dodged, override type to 'dodged' and use 0 health
+  const healthUsed = isDodged ? 0 : healthCostPerHit;
+  const newHealthRemaining = isDodged ? healthRemaining : Math.max(0, healthRemaining - healthCostPerHit);
+  if (isDodged) type = 'dodged';
+
+  // 3. Roll loot (independent of everything)
+  const casesEarned = rollLoot(lootChance);
+
+  return {
+    hitNumber,
+    type,
+    damageDealt,
+    healthUsed,
+    healthRemaining: newHealthRemaining,
+    casesEarned,
+  };
+};
+
+/**
+ * Roll for loot drops.
+ * Returns 0 (no case), 1 (case1), or 2 (case2).
+ * Case2 is checked first since it's rarer and more valuable.
+ */
+const rollLoot = (lootChance: number): number => {
+  const case2Chance = lootChance * CASE2_CHANCE_PER_LOOT_PERCENT;
+  const case2Roll = Math.random() * 100;
+  if (case2Roll < case2Chance) return 2;
+
+  const case1Chance = lootChance * CASE1_CHANCE_PER_LOOT_PERCENT;
+  const case1Roll = Math.random() * 100;
+  if (case1Roll < case1Chance) return 1;
+
+  return 0;
+};
+
+/**
+ * Runs the full simulation hit-by-hit until health cannot cover the next hit.
+ */
+export const runFullSimulation = (params: SimulationParams): SimulationResult => {
+  const hits: HitResult[] = [];
+  let healthRemaining = params.totalHealth;
+  let hitNumber = 0;
+  let totalDamageDealt = 0;
+  let case1Count = 0;
+  let case2Count = 0;
+  const hitBreakdown = { dodged: 0, miss: 0, normal: 0, critical: 0 };
+
+  while (true) {
+    hitNumber++;
+    const result = simulateHit(params, healthRemaining, hitNumber);
+
+    if (result === null) {
+      // Can't take this hit — simulation ends
+      break;
+    }
+
+    hits.push(result);
+    healthRemaining = result.healthRemaining;
+    totalDamageDealt += result.damageDealt;
+    hitBreakdown[result.type]++;
+
+    if (result.casesEarned === 1) case1Count++;
+    if (result.casesEarned === 2) case2Count++;
+  }
+
+  return {
+    hits,
+    totalHits: hits.length,
+    totalDamageDealt,
+    case1Count,
+    case2Count,
+    hitBreakdown,
   };
 };
