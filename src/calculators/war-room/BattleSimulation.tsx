@@ -12,7 +12,7 @@ import { GameItemIcon } from "@/components/GameItemIcon";
 
 const BATTLE_ICON = `${PUBLIC_IMAGES_BASE_URL}battle.svg`;
 
-const HIT_TYPE_CONFIG: Record<HitType, { label: string; color: string; bg: string; border: string; glow: string }> = {
+const HIT_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; glow: string }> = {
   dodged: {
     label: "DODGE",
     color: "text-emerald-400",
@@ -264,15 +264,16 @@ export default function BattleSimulation({
         {displayedHits.length > 0 && (
           <div
             ref={hitLogRef}
-            className="sim-hit-log flex flex-col gap-1.5 max-h-80 overflow-y-auto overflow-x-visible p-1 justify-center items-center"
+            className="sim-hit-log flex flex-col gap-1.5 max-h-80 overflow-y-auto overflow-x-visible p-1 items-center"
           >
             {displayedHits.map((hit, i) => {
-              const config = HIT_TYPE_CONFIG[hit.type];
+              const hitTypeForGlow = hit.isDodged ? "dodged" : hit.type;
+              const config = HIT_TYPE_CONFIG[hitTypeForGlow];
               const isLatest = i === displayedHits.length - 1;
               return (
                 <div
                   key={hit.hitNumber}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all duration-300 w-max min-w-[300px] ${isLatest && isAnimating
+                  className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all duration-300 w-max min-w-[22rem] ${isLatest && isAnimating
                     ? `${config.bg} ${config.border} ${config.glow}`
                     : "bg-zinc-900/30 border-zinc-800/30"
                     }`}
@@ -288,7 +289,12 @@ export default function BattleSimulation({
                   </span> */}
 
                   {/* Hit Icon */}
-                  <img src={`${PUBLIC_IMAGES_BASE_URL}${HIT_ICONS[hit.type]}.svg`} className="h-3 w-3 opacity-60" alt="hit" />
+                  <div className="flex items-center gap-2 min-w-[50px]">
+                    {hit.isDodged && (
+                      <img src={`${PUBLIC_IMAGES_BASE_URL}dodge.svg`} className="h-3 w-3 opacity-70" alt="dodge" />
+                    )}
+                    <img src={`${PUBLIC_IMAGES_BASE_URL}${HIT_ICONS[hit.type]}.svg`} className="h-3 w-3 opacity-60" alt="hit" />
+                  </div>
 
                   {/* Damage */}
                   <div className="flex items-center gap-1 min-w-[70px]">
@@ -311,9 +317,11 @@ export default function BattleSimulation({
                   </div>
 
                   {/* Loot */}
-                  {hit.casesEarned > 0 && (
-                    <div className={`flex items-center`}>
-                      <GameItemIcon itemCode={hit.casesEarned === 2 ? 'case2' : 'case1'} className="h-5 w-5" />
+                  {hit.casesEarned.length > 0 && (
+                    <div className={`flex items-center gap-2`}>
+                      {hit.casesEarned.map(c => (
+                        <GameItemIcon key={c} itemCode={c === 2 ? 'case2' : 'case1'} className="h-5 w-5" />
+                      ))}
                     </div>
                   )}
 

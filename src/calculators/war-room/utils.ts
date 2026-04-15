@@ -153,15 +153,16 @@ export const getEffectiveStats = (profile: FullProfile, sim?: any) => {
 
 // ─── Simulation Engine ───────────────────────────────────────────────
 
-export type HitType = 'dodged' | 'miss' | 'normal' | 'critical';
+export type HitType = 'miss' | 'normal' | 'critical';
 
 export interface HitResult {
   hitNumber: number;
   type: HitType;
+  isDodged: boolean;
   damageDealt: number;
   healthUsed: number;
   healthRemaining: number;
-  casesEarned: number; // 0 = none, 1 = case1, 2 = case2
+  casesEarned: number[]; // [] = none, [1] = case1, etc.
 }
 
 export interface SimulationParams {
@@ -238,10 +239,9 @@ export const simulateHit = (
     }
   }
 
-  // If dodged, override type to 'dodged' and use 0 health
+  // If dodged, use 0 health
   const healthUsed = isDodged ? 0 : healthCostPerHit;
   const newHealthRemaining = isDodged ? healthRemaining : Math.max(0, healthRemaining - healthCostPerHit);
-  if (isDodged) type = 'dodged';
 
   // 3. Roll loot (independent of everything)
   const casesEarned = rollLoot(lootChance);
@@ -249,6 +249,7 @@ export const simulateHit = (
   return {
     hitNumber,
     type,
+    isDodged,
     damageDealt,
     healthUsed,
     healthRemaining: newHealthRemaining,
@@ -258,19 +259,19 @@ export const simulateHit = (
 
 /**
  * Roll for loot drops.
- * Returns 0 (no case), 1 (case1), or 2 (case2).
- * Case2 is checked first since it's rarer and more valuable.
+ * Returns an array of case numbers earned.
  */
-const rollLoot = (lootChance: number): number => {
+const rollLoot = (lootChance: number): number[] => {
+  const cases: number[] = [];
   const case2Chance = lootChance * CASE2_CHANCE_PER_LOOT_PERCENT;
   const case2Roll = Math.random() * 100;
-  if (case2Roll < case2Chance) return 2;
+  if (case2Roll < case2Chance) cases.push(2);
 
   const case1Chance = lootChance * CASE1_CHANCE_PER_LOOT_PERCENT;
   const case1Roll = Math.random() * 100;
-  if (case1Roll < case1Chance) return 1;
+  if (case1Roll < case1Chance) cases.push(1);
 
-  return 0;
+  return cases;
 };
 
 /**
@@ -298,9 +299,10 @@ export const runFullSimulation = (params: SimulationParams): SimulationResult =>
     healthRemaining = result.healthRemaining;
     totalDamageDealt += result.damageDealt;
     hitBreakdown[result.type]++;
+    if (result.isDodged) hitBreakdown.dodged++;
 
-    if (result.casesEarned === 1) case1Count++;
-    if (result.casesEarned === 2) case2Count++;
+    if (result.casesEarned.includes(1)) case1Count++;
+    if (result.casesEarned.includes(2)) case2Count++;
   }
 
   return {
