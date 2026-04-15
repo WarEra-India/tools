@@ -62,6 +62,20 @@ interface BattleSimulationProps {
   healthRestored: number;
 }
 
+const HIT_ICONS = {
+  dodged: "dodge",
+  miss: "miss",
+  normal: "attack",
+  critical: "criticalChance",
+};
+
+const TYPE_COLORS = {
+  dodged: "#E7B098",
+  miss: "#BBC8D0",
+  normal: "#E7B098",
+  critical: "#E69494",
+}
+
 export default function BattleSimulation({
   attackData,
   effectiveStats,
@@ -250,7 +264,7 @@ export default function BattleSimulation({
         {displayedHits.length > 0 && (
           <div
             ref={hitLogRef}
-            className="sim-hit-log flex flex-col gap-1.5 max-h-80 overflow-y-auto overflow-x-visible p-1"
+            className="sim-hit-log flex flex-col gap-1.5 max-h-80 overflow-y-auto overflow-x-visible p-1 justify-center items-center"
           >
             {displayedHits.map((hit, i) => {
               const config = HIT_TYPE_CONFIG[hit.type];
@@ -258,7 +272,7 @@ export default function BattleSimulation({
               return (
                 <div
                   key={hit.hitNumber}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all duration-300 mx-8 ${isLatest && isAnimating
+                  className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-all duration-300 w-max min-w-[300px] ${isLatest && isAnimating
                     ? `${config.bg} ${config.border} ${config.glow}`
                     : "bg-zinc-900/30 border-zinc-800/30"
                     }`}
@@ -269,29 +283,31 @@ export default function BattleSimulation({
                   </span>
 
                   {/* Hit type badge */}
-                  <span className={`text-[10px] font-black uppercase tracking-wider w-12 ${config.color}`}>
+                  {/* <span className={`text-[10px] font-black uppercase tracking-wider w-12 ${config.color}`}>
                     {config.label}
-                  </span>
+                  </span> */}
+
+                  {/* Hit Icon */}
+                  <img src={`${PUBLIC_IMAGES_BASE_URL}${HIT_ICONS[hit.type]}.svg`} className="h-3 w-3 opacity-60" alt="hit" />
 
                   {/* Damage */}
                   <div className="flex items-center gap-1 min-w-[70px]">
                     <img src={`${PUBLIC_IMAGES_BASE_URL}damage.svg`} className="h-3 w-3 opacity-60" alt="dmg" />
-                    <span className={`text-[11px] font-mono font-bold ${hit.type === 'critical' ? 'text-red-400' :
-                      hit.type === 'miss' ? 'text-amber-400/70' :
-                        hit.type === 'dodged' ? 'text-zinc-300' :
-                          'text-zinc-300'
-                      }`}>
-                      {hit.damageDealt > 0 ? hit.damageDealt.toLocaleString() : "—"}
+                    <span className={`text-[11px] font-mono font-bold text-[${TYPE_COLORS[hit.type]}]`}>
+                      {hit.damageDealt}
                     </span>
                   </div>
 
                   {/* Health used */}
                   <div className="flex items-center gap-1 min-w-[60px]">
-                    <img src={`${PUBLIC_IMAGES_BASE_URL}health.svg`} className="h-3 w-3 opacity-60" alt="hp" />
-                    <span className={`text-[11px] font-mono font-bold ${hit.healthUsed > 0 ? 'text-red-400/80' : 'text-emerald-400/60'
-                      }`}>
-                      {hit.healthUsed > 0 ? `-${hit.healthUsed.toFixed(1)}` : "0"}
-                    </span>
+                    {hit.healthUsed > 0 && (
+                      <>
+                        <img src={`${PUBLIC_IMAGES_BASE_URL}health.svg`} className="h-3 w-3 opacity-50" alt="hp" />
+                        <span className={`text-[11px] font-mono font-bold text-[#DE6F6F]`}>
+                          -{hit.healthUsed.toFixed(1)}
+                        </span>
+                      </>
+                    )}
                   </div>
 
                   {/* Loot */}
@@ -302,11 +318,12 @@ export default function BattleSimulation({
                   )}
 
                   {/* Remaining health */}
-                  <div className={`flex ml-auto`}>
+                  {/* <div className={`flex ml-auto`}>
                     <span className="text-[10px] font-mono text-zinc-500">
                       {hit.healthRemaining.toFixed(1)} HP
                     </span>
-                  </div>
+                  </div> */}
+
                 </div>
               );
             })}
@@ -317,7 +334,7 @@ export default function BattleSimulation({
         {animationComplete && simulationResult && (
           <div className="mt-2 p-6 bg-zinc-900/50 rounded-2xl border border-zinc-800/50">
             {/* Big Numbers */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {/* Total Hits */}
               <div className="flex flex-col items-center gap-1 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/40">
                 <img src={BATTLE_ICON} className="h-5 w-5 opacity-60 mb-1" alt="hits" />
@@ -330,7 +347,7 @@ export default function BattleSimulation({
               {/* Total Damage */}
               <div className="flex flex-col items-center gap-1 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/40">
                 <img src={`${PUBLIC_IMAGES_BASE_URL}damage.svg`} className="h-5 w-5 opacity-60 mb-1" alt="damage" />
-                <span className="text-3xl font-black text-orange-400 font-mono leading-none">
+                <span className="text-3xl font-black text-[#E69494] font-mono leading-none">
                   {simulationResult.totalDamageDealt.toLocaleString()}
                 </span>
                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Damage</span>
@@ -339,7 +356,7 @@ export default function BattleSimulation({
               {/* Case 1 */}
               <div className="flex flex-col items-center gap-1 p-4 bg-zinc-950/50 rounded-xl border border-yellow-500/10">
                 <GameItemIcon itemCode="case1" className="h-7 w-7" />
-                <span className="text-3xl font-black text-yellow-400 font-mono leading-none">
+                <span className="text-3xl font-black text-white font-mono leading-none">
                   {simulationResult.case1Count}
                 </span>
                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Case</span>
@@ -348,7 +365,7 @@ export default function BattleSimulation({
               {/* Case 2 */}
               <div className="flex flex-col items-center gap-1 p-4 bg-zinc-950/50 rounded-xl border border-purple-500/10">
                 <GameItemIcon itemCode="case2" className="h-7 w-7" />
-                <span className="text-3xl font-black text-purple-400 font-mono leading-none">
+                <span className="text-3xl font-black text-white font-mono leading-none">
                   {simulationResult.case2Count}
                 </span>
                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Elite Case</span>
@@ -356,7 +373,7 @@ export default function BattleSimulation({
             </div>
 
             {/* Hit Breakdown Bar */}
-            <div className="flex flex-col gap-2">
+            {/* <div className="flex flex-col gap-2">
               <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Hit Breakdown</span>
               <div className="flex w-full h-6 rounded-lg overflow-hidden border border-zinc-800">
                 {(["normal", "critical", "miss", "dodged"] as HitType[]).map(type => {
@@ -407,7 +424,8 @@ export default function BattleSimulation({
                   );
                 })}
               </div>
-            </div>
+            </div> */}
+
           </div>
         )}
 
@@ -421,6 +439,6 @@ export default function BattleSimulation({
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }
