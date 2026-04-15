@@ -290,17 +290,17 @@ export default function BattleSimulation({
 
                   {/* Hit Icon */}
                   <div className="flex items-center gap-2 min-w-[50px]">
+                    <img src={`${PUBLIC_IMAGES_BASE_URL}${HIT_ICONS[hit.type]}.svg`} className="h-3 w-3 opacity-60" alt="hit" />
                     {hit.isDodged && (
                       <img src={`${PUBLIC_IMAGES_BASE_URL}dodge.svg`} className="h-3 w-3 opacity-70" alt="dodge" />
                     )}
-                    <img src={`${PUBLIC_IMAGES_BASE_URL}${HIT_ICONS[hit.type]}.svg`} className="h-3 w-3 opacity-60" alt="hit" />
                   </div>
 
                   {/* Damage */}
                   <div className="flex items-center gap-1 min-w-[70px]">
                     <img src={`${PUBLIC_IMAGES_BASE_URL}damage.svg`} className="h-3 w-3 opacity-60" alt="dmg" />
-                    <span className={`text-[11px] font-mono font-bold text-[${TYPE_COLORS[hit.type]}]`}>
-                      {hit.damageDealt}
+                    <span className={`text-[11px] font-mono font-bold text-[${TYPE_COLORS[hit.type]}] ${hit.type == "miss" ? "opacity-50" : ""}`}>
+                      {hit.damageDealt.toLocaleString()}
                     </span>
                   </div>
 
