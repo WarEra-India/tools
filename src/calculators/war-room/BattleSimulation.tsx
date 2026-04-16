@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Play, RotateCcw, Zap, FastForward } from "lucide-react";
-import { PUBLIC_IMAGES_BASE_URL } from "./components";
+import { PUBLIC_IMAGES_BASE_URL, COIN_ICON, DAMAGE_ICON } from "./components";
+import { EQUIPEMENTS, RARITY_COSTS } from "./constants";
 import {
   runFullSimulation,
   type SimulationParams,
@@ -60,6 +61,11 @@ interface BattleSimulationProps {
     lootChance: { skill: number };
   };
   healthRestored: number;
+  simEquipment?: any;
+  gameConfig?: any;
+  livePrices?: any;
+  equipPrices?: any;
+  totalHungerPoints?: number;
 }
 
 const HIT_ICONS = {
@@ -80,6 +86,11 @@ export default function BattleSimulation({
   attackData,
   effectiveStats,
   healthRestored,
+  simEquipment,
+  gameConfig,
+  livePrices,
+  equipPrices,
+  totalHungerPoints = 0,
 }: BattleSimulationProps) {
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [displayedHits, setDisplayedHits] = useState<HitResult[]>([]);
@@ -98,6 +109,99 @@ export default function BattleSimulation({
       animationRef.current = null;
     }
   }, []);
+
+  const costsIncurred = useMemo(() => {
+    if (!animationComplete || !simulationResult || !simEquipment) return null;
+
+    const weaponHits = simulationResult.totalHits;
+    const ammoUsed = simulationResult.totalHits;
+    const otherHits = simulationResult.totalHits - simulationResult.hitBreakdown.dodged;
+
+    let totalCost = 0;
+    let scrapReceived = 0;
+
+    // Pills
+    const pillPrice = simEquipment.modifier === 'buff' ? (livePrices?.prices?.cocain ?? 0) : 0;
+    totalCost += pillPrice;
+
+    // Food
+    const foodPrice = simEquipment.food ? (livePrices?.prices?.[simEquipment.food] ?? 0) * totalHungerPoints : 0;
+    totalCost += foodPrice;
+
+    // Ammo
+    if (simEquipment.ammo) {
+      const ammoPrice = livePrices?.prices?.[simEquipment.ammo] ?? 0;
+      totalCost += ammoPrice * ammoUsed;
+    }
+
+    const itemsSummary: { code: string; label: string; used: number; broken: number; price: number; scraps: number }[] = [];
+
+    // Equipment
+    EQUIPEMENTS.forEach(slot => {
+      if (slot === 'ammo') return;
+      const code = simEquipment[slot];
+      if (!code) return;
+
+      const hits = slot === 'weapon' ? weaponHits : otherHits;
+      if (hits === 0) return;
+
+      const itemsUsed = Math.ceil(hits / 100);
+      const itemsBroken = Math.floor(hits / 100);
+      const price = equipPrices?.[code] ?? 0;
+
+      totalCost += itemsUsed * price;
+
+      const equip = gameConfig?.equipments?.find((e: any) => e.code === code);
+      let yieldScraps = 0;
+      if (equip?.rarity && itemsBroken > 0) {
+        yieldScraps = (RARITY_COSTS[equip.rarity]?.scraps ?? 0) / 3;
+        scrapReceived += itemsBroken * yieldScraps;
+      }
+
+      itemsSummary.push({
+        code,
+        label: slot,
+        used: itemsUsed,
+        broken: itemsBroken,
+        price,
+        scraps: yieldScraps * itemsBroken
+      });
+    });
+
+    const scrapPrice = livePrices?.prices?.scraps ?? 0;
+    const scrapValue = scrapReceived * scrapPrice;
+
+    const case1Yield = simulationResult.case1Count;
+    const case2Yield = simulationResult.case2Count;
+    const case1Price = livePrices?.prices?.case1 ?? 0;
+    const case2Price = livePrices?.prices?.case2 ?? 0;
+    const case1Value = case1Yield * case1Price;
+    const case2Value = case2Yield * case2Price;
+
+    const totalReturnsValue = scrapValue + case1Value + case2Value;
+    const netCost = totalCost - totalReturnsValue;
+    const costPer1kDamage = simulationResult.totalDamageDealt > 0 ? (netCost / (simulationResult.totalDamageDealt / 1000)) : 0;
+
+    return {
+      weaponHits,
+      otherHits,
+      pillPrice,
+      foodPrice,
+      ammoUsed,
+      itemsSummary,
+      totalCost,
+      scrapReceived,
+      scrapValue,
+      case1Yield,
+      case2Yield,
+      case1Value,
+      case2Value,
+      totalReturnsValue,
+      netCost,
+      scrapPrice,
+      costPer1kDamage,
+    };
+  }, [animationComplete, simulationResult, simEquipment, gameConfig, livePrices, equipPrices, totalHungerPoints]);
 
   useEffect(() => {
     return cleanupAnimation;
@@ -433,6 +537,164 @@ export default function BattleSimulation({
                 })}
               </div>
             </div> */}
+
+          </div>
+        )}
+
+        {/* Cost Summary Array */}
+        {animationComplete && simulationResult && costsIncurred && (
+          <div className="flex flex-col gap-4 p-6 bg-zinc-950/50 rounded-2xl border border-zinc-800/50">
+
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest">Incurred Costs & Returns</h3>
+              <div className={`flex items-center gap-1.5`}>
+                <div className="flex items-center gap-2">
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-zinc-900/50 border-zinc-800/50 text-zinc-400`}>
+                    <img src={COIN_ICON} className="h-3 w-3 opacity-70" alt="coin" />
+                    <span className="text-xs font-mono font-bold">{costsIncurred.costPer1kDamage.toFixed(2)}</span>
+                    <span className="text-xs font-mono font-bold">/ 1k</span>
+                    <img src={DAMAGE_ICON} className="h-3 w-3 opacity-70" alt="dmg" />
+                  </div>
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-zinc-900/50 border-zinc-800/50 text-zinc-400`}>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">{costsIncurred.netCost > 0 ? "Net Cost" : "Net Profit"}</span>
+                    <img src={COIN_ICON} className="h-3 w-3" alt="coin" />
+                    <span className="text-xs font-mono font-bold">{Math.abs(costsIncurred.netCost).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-8">
+              {/* Costs Side */}
+              <div className="flex flex-col gap-2 bg-zinc-900/50 p-4 rounded-lg min-w-[350px]">
+                {costsIncurred.pillPrice > 0 && (
+                  <div className="flex items-center justify-between text-sm gap-4">
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-zinc-300">1x</span>
+                      <GameItemIcon itemCode="cocain" className="h-4 w-4 rounded-sm" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 font-mono text-zinc-300 min-w-16 justify-end">
+                        {costsIncurred.pillPrice.toFixed(2)}
+                        <img src={COIN_ICON} className="h-3 w-3 opacity-70" alt="coin" />
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {costsIncurred.foodPrice > 0 && (
+                  <div className="flex items-center justify-between text-sm gap-4">
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-zinc-300">{totalHungerPoints}x</span>
+                      <GameItemIcon itemCode={simEquipment.food} className="h-4 w-4 rounded-sm" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 font-mono text-zinc-300 min-w-16 justify-end">
+                        {costsIncurred.foodPrice.toFixed(2)}
+                        <img src={COIN_ICON} className="h-3 w-3 opacity-70" alt="coin" />
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {simEquipment?.ammo && costsIncurred.ammoUsed > 0 && (
+                  <div className="flex items-center justify-between text-sm gap-4">
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-zinc-300">{costsIncurred.ammoUsed}x</span>
+                      <GameItemIcon itemCode={simEquipment.ammo} className="h-4 w-4 rounded-sm" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 font-mono text-zinc-300 min-w-16 justify-end">
+                        {((livePrices?.prices?.[simEquipment.ammo] ?? 0) * costsIncurred.ammoUsed).toFixed(2)}
+                        <img src={COIN_ICON} className="h-3 w-3 opacity-70" alt="coin" />
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {costsIncurred.itemsSummary.map(item => (
+                  <div key={item.code} className="flex items-center justify-between text-sm gap-4">
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-zinc-300">{item.used}x</span>
+                      <GameItemIcon itemCode={item.code} className="h-4 w-4 rounded-sm" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 font-mono text-zinc-300 min-w-16 justify-end">
+                        {(item.price * item.used).toFixed(2)}
+                        <img src={COIN_ICON} className="h-3 w-3 opacity-70" alt="coin" />
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                <div className="border-t border-zinc-800/50 pt-2 mt-1 flex items-center justify-between">
+                  <span className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Est. Cost</span>
+                  <span className="flex items-center gap-1 font-mono font-bold text-red-400 ml-4">
+                    {costsIncurred.totalCost.toFixed(2)}
+                    <img src={COIN_ICON} className="h-3.5 w-3.5" alt="coin" />
+                  </span>
+                </div>
+              </div>
+
+              {/* Returns / Scraps Side */}
+              <div className="flex flex-col gap-2 bg-zinc-900/50 p-4 rounded-lg min-w-[350px]">
+                {costsIncurred.itemsSummary.map(item => item.broken > 0 ? (
+                  <div key={item.code + "-broke"} className="flex items-center justify-between text-sm gap-4">
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-zinc-300">{item.broken}x</span>
+                      <GameItemIcon itemCode={item.code} className="h-4 w-4 rounded-sm" />
+                      <span className="font-mono text-zinc-300">{"->"}</span>
+                      <span className="font-mono text-zinc-300">{item.scraps}x</span>
+                      <GameItemIcon itemCode="scraps" className="h-4 w-4 rounded-sm" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1 w-16 justify-end">
+                        <span className="font-mono text-zinc-300">{(item.scraps * livePrices?.prices["scraps"]).toFixed(2)}</span>
+                        <img src={COIN_ICON} className="h-3 w-3 opacity-70" alt="coin" />
+                      </div>
+                    </div>
+                  </div>
+                ) : null)}
+                {costsIncurred.case1Yield > 0 && (
+                  <div className="flex items-center justify-between text-sm gap-4">
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-zinc-300">{costsIncurred.case1Yield}x</span>
+                      <GameItemIcon itemCode="case1" className="h-4 w-4 rounded-sm" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 font-mono text-zinc-300 min-w-16 justify-end">
+                        {(costsIncurred.case1Value).toFixed(2)}
+                        <img src={COIN_ICON} className="h-3 w-3 opacity-70" alt="coin" />
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {costsIncurred.case2Yield > 0 && (
+                  <div className="flex items-center justify-between text-sm gap-4">
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-zinc-300">{costsIncurred.case2Yield}x</span>
+                      <GameItemIcon itemCode="case2" className="h-4 w-4 rounded-sm" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 font-mono text-zinc-300 min-w-16 justify-end">
+                        {(costsIncurred.case2Value).toFixed(2)}
+                        <img src={COIN_ICON} className="h-3 w-3 opacity-70" alt="coin" />
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {costsIncurred.scrapReceived === 0 && costsIncurred.case1Yield === 0 && costsIncurred.case2Yield === 0 && (
+                  <div className="flex items-center justify-center h-full opacity-40">
+                    <span className="text-xs text-zinc-500 uppercase tracking-widest font-bold">No Returns Generated</span>
+                  </div>
+                )}
+                {(costsIncurred.scrapReceived > 0 || costsIncurred.case1Yield > 0 || costsIncurred.case2Yield > 0) && (
+                  <div className="border-t border-zinc-800/50 pt-2 mt-auto flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Est. Yield</span>
+                    <span className="flex items-center gap-1 font-mono font-bold text-emerald-400 ml-4">
+                      {costsIncurred.totalReturnsValue.toFixed(2)}
+                      <img src={COIN_ICON} className="h-3.5 w-3.5" alt="coin" />
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
 
           </div>
         )}

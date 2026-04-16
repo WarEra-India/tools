@@ -13,6 +13,7 @@ import { FOOD_MULTIPLIERS, AMMO_PERCENTAGES, NOT_PERCENTAGE_SKILLS, SIM_MODIFIER
 
 export const PUBLIC_IMAGES_BASE_URL = `${import.meta.env.BASE_URL}images/`;
 export const COIN_ICON = `${PUBLIC_IMAGES_BASE_URL}game_coin.svg`;
+export const DAMAGE_ICON = `${PUBLIC_IMAGES_BASE_URL}damage.svg`;
 
 export const RARITY_MAP: Record<number, string> = Object.keys(RARITY_OTHER_NAMES).reduce((acc, rarity, index) => {
   acc[index + 1] = rarity;

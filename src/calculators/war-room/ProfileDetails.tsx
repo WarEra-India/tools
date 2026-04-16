@@ -108,7 +108,7 @@ export default function ProfileDetails() {
             <div className="flex items-center justify-center w-full flex-col gap-4 lg:flex-row lg:gap-12">
 
               {/* Weapons and Equipments */}
-             
+
               <div className="flex gap-4 items-start flex-wrap justify-center flex-2">
                 {profile.equipment && (
                   <>
@@ -152,12 +152,12 @@ export default function ProfileDetails() {
                   value={profile.user.skills.attack?.debuffsPercent ?? 0}
                   endAt={profile.user.buffs?.debuffEndAt}
                 />
-    
+
                 {/* Military Rank */}
-                <MilitaryRankIcon rank={profile.user.militaryRank} imgClassName="h-10 w-10 lg:h-14 lg:w-14" />
+                <MilitaryRankIcon rank={profile.user.militaryRank} imgClassName="h-8 w-8 lg:h-10 lg:w-10" />
 
               </div>
-    
+
             </div>
           </div>
 

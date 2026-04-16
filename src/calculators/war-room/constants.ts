@@ -44,3 +44,13 @@ export const HIT_BASE_HEALTH_COST = 10;
 export const MISS_DAMAGE_MULTIPLIER = 0.5;
 export const CASE1_CHANCE_PER_LOOT_PERCENT = 1;       // 1% per 1% loot chance
 export const CASE2_CHANCE_PER_LOOT_PERCENT = 0.01;    // 0.01% per 1% loot chance
+
+// Equipment rarity scrap and steel costs
+export const RARITY_COSTS: Record<string, { scraps: number; steel: number }> = {
+  common: { scraps: 6, steel: 2 },
+  uncommon: { scraps: 18, steel: 4 },
+  rare: { scraps: 54, steel: 8 },
+  epic: { scraps: 162, steel: 16 },
+  legendary: { scraps: 486, steel: 32 },
+  mythic: { scraps: 1460, steel: 64 },
+};

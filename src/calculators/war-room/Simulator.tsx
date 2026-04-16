@@ -414,22 +414,7 @@ export default function Simulator({
                 </div>
               </div>
 
-              {totalSimCost > 0 && (
-                <div className="flex flex-col items-end gap-1.5">
-                  <div className="flex items-center gap-3 px-4 py-2 bg-zinc-900/60 rounded-xl border border-zinc-800/60 shadow-lg">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden sm:block">Estimated Cost</span>
-                    <div className="flex items-center gap-1.5">
-                      <img src={COIN_ICON} className="h-4 w-4" alt="coin" />
-                      <span className="text-sm text-white font-mono font-bold">{totalSimCost.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  {(simEquipment.ammo || simEquipment.food) && (
-                    <span className="text-[9px] text-zinc-500 font-mono tracking-tighter mr-2 text-right">
-                      Includes {simEquipment.ammo ? "100x Ammo" : ""}{simEquipment.ammo && simEquipment.food ? " & " : ""}{simEquipment.food ? `${totalHungerPoints}x Food` : ""}
-                    </span>
-                  )}
-                </div>
-              )}
+
             </div>
 
             {/* Dashboard Grid */}
@@ -451,6 +436,11 @@ export default function Simulator({
           attackData={simAttackData}
           effectiveStats={simEffectiveStats}
           healthRestored={healthRestored}
+          simEquipment={simEquipment}
+          gameConfig={gameConfig}
+          livePrices={livePrices}
+          equipPrices={equipPrices}
+          totalHungerPoints={totalHungerPoints}
         />
 
       </div>
