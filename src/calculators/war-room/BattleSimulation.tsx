@@ -85,7 +85,7 @@ export default function BattleSimulation({
   const [displayedHits, setDisplayedHits] = useState<HitResult[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
-  const [speed, setSpeed] = useState<"normal" | "fast">("normal");
+  const [speed, setSpeed] = useState<"normal" | "fast">("fast");
   const hitLogRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
   const cancelledRef = useRef(false);

@@ -437,7 +437,7 @@ export default function Simulator({
               <StatsDashboard
                 attackData={simAttackData}
                 effectiveStats={simEffectiveStats}
-                roundValues={true}
+                // roundValues={true}
                 showLootChance={true}
                 showHealthAndHunger={true}
                 healthRestored={healthRestored}

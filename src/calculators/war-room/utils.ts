@@ -24,7 +24,7 @@ export const getSimSkillValue = (profile: FullProfile, sim: any, skillName: keyo
 };
 
 export const calcMilBonus = (rank: number): number => {
-  const localRank = Math.max(rank, MIL_RANK_TIER1_MAX);
+  const localRank = Math.min(rank, MIL_RANK_TIER1_MAX);
   let bonus = (localRank - 1) * MIL_BASE_BONUS_MULTIPLIER + Math.floor((localRank - 1) / 4) * MIL_BASE_BONUS_MULTIPLIER;
 
   // base logic
