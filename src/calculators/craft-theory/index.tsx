@@ -21,6 +21,7 @@ import { useGameConfig } from "@/lib/hooks/useGameConfig"
 import { useLivePrices } from "@/lib/hooks/useLivePrices"
 import { useEquipmentPrices } from "@/lib/hooks/useEquipmentPrices"
 import { GameItemIcon, RARITY_COLORS } from "@/components/GameItemIcon"
+import { RARITY_COSTS } from "../war-room/constants"
 
 const PUBLIC_IMAGES_BASE_URL = `${import.meta.env.BASE_URL}images/`
 const COIN_ICON = `${PUBLIC_IMAGES_BASE_URL}game_coin.svg`
@@ -29,15 +30,7 @@ const BASE_IMAGES_URL = "https://app.warera.io/images/items/"
 const SCRAPS_ICON = `${BASE_IMAGES_URL}scraps.png`
 const STEEL_ICON = `${BASE_IMAGES_URL}steel.png`
 
-// Rarity costs from sketch.md
-const RARITY_COSTS: Record<string, { scraps: number; steel: number }> = {
-  common: { scraps: 6, steel: 2 },
-  uncommon: { scraps: 18, steel: 4 },
-  rare: { scraps: 54, steel: 8 },
-  epic: { scraps: 162, steel: 16 },
-  legendary: { scraps: 486, steel: 32 },
-  mythic: { scraps: 1460, steel: 64 },
-}
+// Rarity costs imported from constants
 
 const CASE_CHANCES: Record<string, { types: Record<string, number>, rarity: Record<string, number> }> = {
   case1: {
