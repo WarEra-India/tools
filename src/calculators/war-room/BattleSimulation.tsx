@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Play, RotateCcw, Zap, FastForward } from "lucide-react";
+import { Play, RotateCcw, Zap, FastForward, ArrowRight } from "lucide-react";
 import { PUBLIC_IMAGES_BASE_URL, COIN_ICON, DAMAGE_ICON } from "./components";
 import { EQUIPEMENTS, RARITY_COSTS } from "./constants";
 import {
@@ -134,7 +134,7 @@ export default function BattleSimulation({
       totalCost += ammoPrice * ammoUsed;
     }
 
-    const itemsSummary: { code: string; label: string; used: number; broken: number; price: number; scraps: number }[] = [];
+    const itemsSummary: { code: string; label: string; used: number; broken: number; price: number; scraps: number; remainingHealth: number }[] = [];
 
     // Equipment
     EQUIPEMENTS.forEach(slot => {
@@ -143,13 +143,16 @@ export default function BattleSimulation({
       if (!code) return;
 
       const hits = slot === 'weapon' ? weaponHits : otherHits;
-      if (hits === 0) return;
 
       const itemsUsed = Math.ceil(hits / 100);
       const itemsBroken = Math.floor(hits / 100);
       const price = equipPrices?.[code] ?? 0;
 
-      totalCost += itemsUsed * price;
+      const remainingHealth = hits === 0 ? 100 : (hits % 100 === 0 ? 0 : 100 - (hits % 100));
+
+      if (hits > 0) {
+        totalCost += itemsUsed * price;
+      }
 
       const equip = gameConfig?.equipments?.find((e: any) => e.code === code);
       let yieldScraps = 0;
@@ -164,7 +167,8 @@ export default function BattleSimulation({
         used: itemsUsed,
         broken: itemsBroken,
         price,
-        scraps: yieldScraps * itemsBroken
+        scraps: yieldScraps * itemsBroken,
+        remainingHealth
       });
     });
 
@@ -484,60 +488,6 @@ export default function BattleSimulation({
               </div>
             </div>
 
-            {/* Hit Breakdown Bar */}
-            {/* <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Hit Breakdown</span>
-              <div className="flex w-full h-6 rounded-lg overflow-hidden border border-zinc-800">
-                {(["normal", "critical", "miss", "dodged"] as HitType[]).map(type => {
-                  const count = simulationResult.hitBreakdown[type];
-                  if (count === 0) return null;
-                  const percent = (count / simulationResult.totalHits) * 100;
-                  const colors: Record<HitType, string> = {
-                    normal: "bg-zinc-600",
-                    critical: "bg-red-500",
-                    miss: "bg-amber-500",
-                    dodged: "bg-emerald-500",
-                  };
-                  return (
-                    <div
-                      key={type}
-                      className={`${colors[type]} flex items-center justify-center transition-all duration-500`}
-                      style={{ width: `${percent}%` }}
-                      title={`${HIT_TYPE_CONFIG[type].label}: ${count} (${percent.toFixed(1)}%)`}
-                    >
-                      {percent > 8 && (
-                        <span className="text-[9px] font-black text-white/90 uppercase tracking-wider">
-                          {count}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="flex items-center gap-4 flex-wrap">
-                {(["normal", "critical", "miss", "dodged"] as HitType[]).map(type => {
-                  const count = simulationResult.hitBreakdown[type];
-                  if (count === 0) return null;
-                  const percent = ((count / simulationResult.totalHits) * 100).toFixed(1);
-                  return (
-                    <div key={type} className="flex items-center gap-1.5">
-                      <div className={`h-2 w-2 rounded-full ${type === "normal" ? "bg-zinc-500" :
-                        type === "critical" ? "bg-red-500" :
-                          type === "miss" ? "bg-amber-500" :
-                            "bg-emerald-500"
-                        }`} />
-                      <span className={`text-[10px] font-bold ${HIT_TYPE_CONFIG[type].color}`}>
-                        {HIT_TYPE_CONFIG[type].label}
-                      </span>
-                      <span className="text-[10px] font-mono text-zinc-500">
-                        {count} ({percent}%)
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div> */}
-
           </div>
         )}
 
@@ -609,7 +559,7 @@ export default function BattleSimulation({
                     </div>
                   </div>
                 )}
-                {costsIncurred.itemsSummary.map(item => (
+                {costsIncurred.itemsSummary.map(item => item.used > 0 ? (
                   <div key={item.code} className="flex items-center justify-between text-sm gap-4">
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-zinc-300">{item.used}x</span>
@@ -622,7 +572,7 @@ export default function BattleSimulation({
                       </span>
                     </div>
                   </div>
-                ))}
+                ) : null)}
                 <div className="border-t border-zinc-800/50 pt-2 mt-1 flex items-center justify-between">
                   <span className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Est. Cost</span>
                   <span className="flex items-center gap-1 font-mono font-bold text-red-400 ml-4">
@@ -639,7 +589,7 @@ export default function BattleSimulation({
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-zinc-300">{item.broken}x</span>
                       <GameItemIcon itemCode={item.code} className="h-4 w-4 rounded-sm" />
-                      <span className="font-mono text-zinc-300">{"->"}</span>
+                      <ArrowRight className="h-4 w-6" />
                       <span className="font-mono text-zinc-300">{item.scraps}x</span>
                       <GameItemIcon itemCode="scraps" className="h-4 w-4 rounded-sm" />
                     </div>
@@ -693,6 +643,34 @@ export default function BattleSimulation({
                     </span>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Remaining Health Section */}
+            <div className="flex flex-col gap-3 mt-2 pt-5 border-t border-zinc-800/50">
+              {/* <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Remaining Equipment Health</span> */}
+              <div className="flex justify-center items-center flex-wrap gap-3">
+                {costsIncurred.itemsSummary.map(item => (
+                  <div key={item.code + "-health"} className="flex flex-col gap-1.5 items-center justify-center py-2 px-3 bg-zinc-950 rounded-xl border border-zinc-800 shadow-inner">
+                    <GameItemIcon itemCode={item.code} className="h-7 w-7 rounded-md opacity-90 shadow-md" />
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[9px] font-mono font-bold text-zinc-300 leading-none">{item.remainingHealth}%</span>
+                      <div className="w-12 h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+                        <div
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${item.remainingHealth}%`,
+                            background: item.remainingHealth > 50
+                              ? "#22c55e"
+                              : item.remainingHealth > 25
+                                ? "#eab308"
+                                : "#ef4444"
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
