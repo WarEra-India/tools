@@ -15,10 +15,11 @@ import { AMMO_PERCENTAGES, EQUIPEMENTS, SKILL_PROGRESSION, FOOD_MULTIPLIERS } fr
 import StatsDashboard from "./StatsDashboard";
 import BattleSimulation from "./BattleSimulation";
 import type { FullProfile } from "@/lib/wareraApi";
+import PresetManager from "./PresetManager";
 
 const BATTLE_ICON = `${PUBLIC_IMAGES_BASE_URL}battle.svg`;
 
-const INITIAL_SIM_STATE = {
+export const INITIAL_SIM_STATE = {
   weapon: null as string | null,
   ammo: null as string | null,
   helmet: null as string | null,
@@ -31,7 +32,7 @@ const INITIAL_SIM_STATE = {
   militaryRank: 1,
   orders: 0,
   playerLevel: 1,
-  ecoSkillsPoints: 10,
+  ecoSkillsPoints: 0,
   equipmentStatsOverride: {} as Record<string, Record<string, number>>,
   skills: {
     health: 0,
@@ -45,6 +46,8 @@ const INITIAL_SIM_STATE = {
     lootChance: 0,
   },
 };
+
+export type SimEquipmentState = typeof INITIAL_SIM_STATE;
 
 export default function Simulator({
   profile,
@@ -237,6 +240,7 @@ export default function Simulator({
               Import Profile
             </button>
           )}
+          <PresetManager currentSimState={simEquipment} onLoadPreset={setSimEquipment} />
           <button
             onClick={clearSim}
             className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl text-xs font-bold transition-all border border-red-500/20"

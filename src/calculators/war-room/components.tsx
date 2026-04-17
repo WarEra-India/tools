@@ -304,7 +304,7 @@ export const ModifierToggle = ({
           )}
         >
           {type === 'no buff' ? (
-            <div className="flex items-center justify-center text-[10px] font-black text-zinc-500 uppercase">No Buff</div>
+            <GameItemIcon itemCode="cocain" className="h-11 w-11 rounded-xl" />
           ) : (
             <img src={`${PUBLIC_IMAGES_BASE_URL}${type}.svg`} className="h-7 w-7" alt={type} />
           )}
