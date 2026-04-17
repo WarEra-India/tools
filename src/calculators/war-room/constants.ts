@@ -11,7 +11,7 @@ export const MODIFIER_PERCENTAGE = 60;
 export const AMMO_PERCENTAGES = {
   lightAmmo: 10,
   ammo: 20,
-  heavyAmmo: 30,
+  heavyAmmo: 40,
 } as const;
 
 export const SIM_MODIFIER_TYPES = ['debuff', 'no buff', 'buff'] as const;
@@ -52,5 +52,5 @@ export const RARITY_COSTS: Record<string, { scraps: number; steel: number }> = {
   rare: { scraps: 54, steel: 8 },
   epic: { scraps: 162, steel: 16 },
   legendary: { scraps: 486, steel: 32 },
-  mythic: { scraps: 1460, steel: 64 },
+  mythic: { scraps: 1458, steel: 64 },
 };
