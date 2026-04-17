@@ -45,8 +45,8 @@ const HIT_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string
 };
 
 const ANIMATION_SPEEDS = {
-  normal: 150,
-  fast: 40,
+  normal: 100,
+  fast: 10,
 };
 
 interface BattleSimulationProps {

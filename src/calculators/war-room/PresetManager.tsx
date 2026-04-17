@@ -13,9 +13,11 @@ export type WarRoomPreset = {
 export default function PresetManager({
   currentSimState,
   onLoadPreset,
+  refreshKey,
 }: {
   currentSimState: SimEquipmentState;
   onLoadPreset: (presetData: SimEquipmentState) => void;
+  refreshKey?: number;
 }) {
   const [presets, setPresets] = useState<WarRoomPreset[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -31,7 +33,7 @@ export default function PresetManager({
         console.error("Failed to parse presets", e);
       }
     }
-  }, []);
+  }, [refreshKey]);
 
   const savePresetsToStorage = (newPresets: WarRoomPreset[]) => {
     setPresets(newPresets);

@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Import, Trash2, User } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Import, StampIcon, Trash2, User } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import MilitaryRankIcon from "@/components/MilitaryRankIcon";
 import {
@@ -10,7 +10,7 @@ import {
   COIN_ICON,
   PUBLIC_IMAGES_BASE_URL,
 } from "./components";
-import { getAttackTotalAndBreakDown, getEffectiveStats, effectivePercentageValue } from "./utils";
+import { getAttackTotalAndBreakDown, getEffectiveStats, effectivePercentageValue, totalSkillPointsForLevel, skillLevelToCumulativeCost } from "./utils";
 import { AMMO_PERCENTAGES, EQUIPEMENTS, SKILL_PROGRESSION, FOOD_MULTIPLIERS } from "./constants";
 import StatsDashboard from "./StatsDashboard";
 import BattleSimulation from "./BattleSimulation";
@@ -54,14 +54,48 @@ export default function Simulator({
   gameConfig,
   livePrices,
   equipPrices,
+  pendingLoad,
+  onPendingLoadConsumed,
 }: {
   profile: FullProfile | null;
   gameConfig: any;
   livePrices: any;
   equipPrices: any;
+  pendingLoad?: { state: SimEquipmentState; presetName: string } | null;
+  onPendingLoadConsumed?: () => void;
 }) {
   const [simEquipment, setSimEquipment] = useState(structuredClone(INITIAL_SIM_STATE));
   const [activeSelector, setActiveSelector] = useState<keyof typeof simEquipment | null>(null);
+  const simRef = useRef<HTMLDivElement>(null);
+  const [presetRefreshKey, setPresetRefreshKey] = useState(0);
+
+  // Handle pending load from WarBuilder
+  useEffect(() => {
+    if (pendingLoad) {
+      setSimEquipment(pendingLoad.state);
+
+      // Auto-save as preset
+      const saved = localStorage.getItem("war-room-presets");
+      let presets = [];
+      try { presets = saved ? JSON.parse(saved) : []; } catch { }
+      const newPreset = {
+        id: crypto.randomUUID(),
+        name: pendingLoad.presetName,
+        state: structuredClone(pendingLoad.state),
+        createdAt: Date.now(),
+      };
+      presets.push(newPreset);
+      localStorage.setItem("war-room-presets", JSON.stringify(presets));
+
+      onPendingLoadConsumed?.();
+      setPresetRefreshKey(k => k + 1);
+
+      // Scroll to simulator
+      setTimeout(() => {
+        simRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, [pendingLoad]);
 
   const importFromProfile = () => {
     if (!profile || !profile.equipment) return;
@@ -79,7 +113,7 @@ export default function Simulator({
         user.skills.armor?.level ?? 0,
         user.skills.dodge?.level ?? 0,
         user.skills.lootChance?.level ?? 0,
-      ].reduce((sum, level) => sum + (level * (level + 1)) / 2, 0);
+      ].reduce((sum, level) => sum + skillLevelToCumulativeCost(level), 0);
 
       const ecoPoints = Math.max(0, (user.leveling?.spentSkillPoints ?? 0) - importedWarSkillsPoints);
 
@@ -201,10 +235,10 @@ export default function Simulator({
     return Math.floor(maxHealth * mult * totalHungerPoints);
   }, [simEquipment.food, simEffectiveStats.health.skill, totalHungerPoints]);
 
-  const allowedPoints = (simEquipment.playerLevel || 1) * 4;
+  const allowedPoints = totalSkillPointsForLevel(simEquipment.playerLevel || 1);
   const ecoPoints = simEquipment.ecoSkillsPoints || 0;
   const warPoints = Object.values(simEquipment.skills).reduce((total, level) => {
-    return total + (level * (level + 1)) / 2;
+    return total + skillLevelToCumulativeCost(level);
   }, 0);
   const usedPoints = warPoints + ecoPoints;
 
@@ -223,11 +257,16 @@ export default function Simulator({
   }, [ecoPoints, warPoints, allowedPoints, usedPoints]);
 
   return (
-    <div className="flex flex-col gap-6 p-8 bg-zinc-900/10 rounded-3xl border border-zinc-800/30">
+    <div ref={simRef} className="flex flex-col gap-6 p-8 bg-zinc-900/10 rounded-3xl border border-zinc-800/30">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex flex-col">
-          <h2 className="text-xl font-bold text-white uppercase tracking-wider">Simulator</h2>
-          <p className="text-xs text-zinc-500">Plan your next attack by simulating different equipment combinations</p>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-inner">
+            <StampIcon className="h-5 w-5 text-amber-400" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-white uppercase tracking-wider">Simulator</h2>
+            <p className="text-xs text-zinc-500">Plan your next attack by simulating different equipment combinations</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -240,7 +279,7 @@ export default function Simulator({
               Import Profile
             </button>
           )}
-          <PresetManager currentSimState={simEquipment} onLoadPreset={setSimEquipment} />
+          <PresetManager currentSimState={simEquipment} onLoadPreset={setSimEquipment} refreshKey={presetRefreshKey} />
           <button
             onClick={clearSim}
             className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl text-xs font-bold transition-all border border-red-500/20"

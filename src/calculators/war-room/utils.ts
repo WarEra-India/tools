@@ -14,6 +14,23 @@ import {
   CASE2_CHANCE_PER_LOOT_PERCENT,
 } from "./constants";
 
+/** Total skill points available for a given player level (4 per level). */
+export const totalSkillPointsForLevel = (level: number): number => level * 4;
+
+/** Cumulative skill points cost to reach a given skill level: level*(level+1)/2 */
+export const skillLevelToCumulativeCost = (skillLevel: number): number =>
+  (skillLevel * (skillLevel + 1)) / 2;
+
+/**
+ * Returns the ECO "companies" skill points required for a given number of companies.
+ * Base (skill level 0) = 2 companies. Each skill level adds 1 company.
+ * So for `count` companies, skill level needed = max(0, count - 2).
+ */
+export const companiesSkillPointsCost = (companiesCount: number): number => {
+  const skillLevel = Math.max(0, companiesCount - 2);
+  return skillLevelToCumulativeCost(skillLevel);
+};
+
 export const getSimSkillValue = (profile: FullProfile, sim: any, skillName: keyof typeof SKILL_PROGRESSION) => {
   if (sim?.skills?.[skillName] !== undefined) {
     const level = sim.skills[skillName];

@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useMemo, useState, useCallback } from "react"
 import { Loader2, ArrowLeft } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useProfile } from "@/lib/ProfileContext"
@@ -8,6 +8,9 @@ import { useLivePrices } from "@/lib/hooks/useLivePrices"
 import { PUBLIC_IMAGES_BASE_URL } from "./components"
 import ProfileDetails from "./ProfileDetails"
 import Simulator from "./Simulator"
+import WarBuilder from "./WarBuilder"
+import type { SimEquipmentState } from "./Simulator"
+import type { WarRoomPreset } from "./PresetManager"
 
 const BATTLE_ICON = `${PUBLIC_IMAGES_BASE_URL}battle.svg`;
 
@@ -23,6 +26,13 @@ export default function WarRoom() {
   const { profile, loading: profileLoading } = useProfile();
 
   const loading = configLoading || equipPricesLoading || profileLoading || pricesLoading
+
+  // Lifted state: allows WarBuilder to load builds into the Simulator
+  const [pendingLoad, setPendingLoad] = useState<{ state: SimEquipmentState; presetName: string } | null>(null);
+
+  const handleLoadBuild = useCallback((state: SimEquipmentState, presetName: string) => {
+    setPendingLoad({ state, presetName });
+  }, []);
 
   if (loading) {
     return (
@@ -54,15 +64,27 @@ export default function WarRoom() {
         {/* Profile */}
         <ProfileDetails />
 
+        {/* War Builder */}
+        <WarBuilder
+          profile={profile}
+          gameConfig={gameConfig}
+          livePrices={livePrices}
+          equipPrices={equipPrices}
+          onLoadBuild={handleLoadBuild}
+        />
+
         {/* Simulator */}
         <Simulator
           profile={profile}
           gameConfig={gameConfig}
           livePrices={livePrices}
           equipPrices={equipPrices}
+          pendingLoad={pendingLoad}
+          onPendingLoadConsumed={() => setPendingLoad(null)}
         />
 
       </div>
     </div>
   )
 }
+
