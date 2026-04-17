@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Import, Trash2 } from "lucide-react";
+import { Import, Trash2, User } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import MilitaryRankIcon from "@/components/MilitaryRankIcon";
 import {
   EquipmentSelectorPopover,
@@ -29,6 +30,8 @@ const INITIAL_SIM_STATE = {
   modifier: 'no buff' as 'buff' | 'debuff' | 'no buff',
   militaryRank: 1,
   orders: 0,
+  playerLevel: 1,
+  ecoSkillsPoints: 10,
   equipmentStatsOverride: {} as Record<string, Record<string, number>>,
   skills: {
     health: 0,
@@ -62,39 +65,57 @@ export default function Simulator({
     const equipment = profile.equipment;
     const user = profile.user;
 
-    setSimEquipment(prev => ({
-      weapon: equipment.weapon?.code ?? null,
-      ammo: equipment.ammo ?? null,
-      helmet: equipment.helmet?.code ?? null,
-      chest: equipment.chest?.code ?? null,
-      gloves: equipment.gloves?.code ?? null,
-      pants: equipment.pants?.code ?? null,
-      boots: equipment.boots?.code ?? null,
-      food: prev.food,
-      modifier: (user.skills.attack?.buffsPercent ?? 0) > 0 ? 'buff' :
-        (user.skills.attack?.debuffsPercent ?? 0) > 0 ? 'debuff' : 'no buff',
-      militaryRank: user.militaryRank ?? 1,
-      orders: prev.orders,
-      equipmentStatsOverride: {
-        weapon: equipment.weapon?.skills || {},
-        helmet: equipment.helmet?.skills || {},
-        chest: equipment.chest?.skills || {},
-        gloves: equipment.gloves?.skills || {},
-        pants: equipment.pants?.skills || {},
-        boots: equipment.boots?.skills || {},
-      },
-      skills: {
-        health: user.skills.health?.level ?? 0,
-        hunger: user.skills.hunger?.level ?? 0,
-        attack: user.skills.attack?.level ?? 0,
-        precision: user.skills.precision?.level ?? 0,
-        criticalChance: user.skills.criticalChance?.level ?? 0,
-        criticalDamages: user.skills.criticalDamages?.level ?? 0,
-        armor: user.skills.armor?.level ?? 0,
-        dodge: user.skills.dodge?.level ?? 0,
-        lootChance: user.skills.lootChance?.level ?? 0,
-      }
-    }));
+    setSimEquipment(prev => {
+      const importedWarSkillsPoints = [
+        user.skills.health?.level ?? 0,
+        user.skills.hunger?.level ?? 0,
+        user.skills.attack?.level ?? 0,
+        user.skills.precision?.level ?? 0,
+        user.skills.criticalChance?.level ?? 0,
+        user.skills.criticalDamages?.level ?? 0,
+        user.skills.armor?.level ?? 0,
+        user.skills.dodge?.level ?? 0,
+        user.skills.lootChance?.level ?? 0,
+      ].reduce((sum, level) => sum + (level * (level + 1)) / 2, 0);
+
+      const ecoPoints = Math.max(0, (user.leveling?.spentSkillPoints ?? 0) - importedWarSkillsPoints);
+
+      return {
+        weapon: equipment.weapon?.code ?? null,
+        ammo: equipment.ammo ?? null,
+        helmet: equipment.helmet?.code ?? null,
+        chest: equipment.chest?.code ?? null,
+        gloves: equipment.gloves?.code ?? null,
+        pants: equipment.pants?.code ?? null,
+        boots: equipment.boots?.code ?? null,
+        food: prev.food,
+        modifier: (user.skills.attack?.buffsPercent ?? 0) > 0 ? 'buff' :
+          (user.skills.attack?.debuffsPercent ?? 0) > 0 ? 'debuff' : 'no buff',
+        militaryRank: user.militaryRank ?? 1,
+        orders: prev.orders,
+        playerLevel: user.leveling?.level ?? 1,
+        ecoSkillsPoints: ecoPoints,
+        equipmentStatsOverride: {
+          weapon: equipment.weapon?.skills || {},
+          helmet: equipment.helmet?.skills || {},
+          chest: equipment.chest?.skills || {},
+          gloves: equipment.gloves?.skills || {},
+          pants: equipment.pants?.skills || {},
+          boots: equipment.boots?.skills || {},
+        },
+        skills: {
+          health: user.skills.health?.level ?? 0,
+          hunger: user.skills.hunger?.level ?? 0,
+          attack: user.skills.attack?.level ?? 0,
+          precision: user.skills.precision?.level ?? 0,
+          criticalChance: user.skills.criticalChance?.level ?? 0,
+          criticalDamages: user.skills.criticalDamages?.level ?? 0,
+          armor: user.skills.armor?.level ?? 0,
+          dodge: user.skills.dodge?.level ?? 0,
+          lootChance: user.skills.lootChance?.level ?? 0,
+        }
+      };
+    });
   };
 
   const clearSim = () => setSimEquipment(structuredClone(INITIAL_SIM_STATE));
@@ -177,6 +198,27 @@ export default function Simulator({
     return Math.floor(maxHealth * mult * totalHungerPoints);
   }, [simEquipment.food, simEffectiveStats.health.skill, totalHungerPoints]);
 
+  const allowedPoints = (simEquipment.playerLevel || 1) * 4;
+  const ecoPoints = simEquipment.ecoSkillsPoints || 0;
+  const warPoints = Object.values(simEquipment.skills).reduce((total, level) => {
+    return total + (level * (level + 1)) / 2;
+  }, 0);
+  const usedPoints = warPoints + ecoPoints;
+
+  const pieData = useMemo(() => {
+    const data = [];
+    if (ecoPoints > 0) data.push({ name: 'Eco', value: ecoPoints, color: '#22c55e' }); // green
+    if (warPoints > 0) data.push({ name: 'War', value: warPoints, color: '#ef4444' }); // red
+    const emptyPoints = Math.max(0, allowedPoints - usedPoints);
+    if (emptyPoints > 0) {
+      data.push({ name: 'Available', value: emptyPoints, color: '#CBBAE5' });
+    }
+    if (data.length === 0) {
+      data.push({ name: 'Empty', value: 1, color: '#27272a' }); // zinc-800
+    }
+    return data;
+  }, [ecoPoints, warPoints, allowedPoints, usedPoints]);
+
   return (
     <div className="flex flex-col gap-6 p-8 bg-zinc-900/10 rounded-3xl border border-zinc-800/30">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -206,6 +248,103 @@ export default function Simulator({
       </div>
 
       <div className="flex flex-col items-center justify-center gap-6 w-full mt-4">
+
+        {/* Row 0: Player Level & Skill Points */}
+        <div className={`flex flex-col items-center gap-4 w-full rounded-3xl p-6 border relative transition-colors ${usedPoints > allowedPoints ? 'bg-red-950/20 border-red-900/50' : 'bg-zinc-900/40 border-zinc-800/40'}`}>
+          <span className={`absolute -top-2.5 left-8 px-2 text-[10px] font-black uppercase tracking-widest rounded shadow ${usedPoints > allowedPoints ? 'bg-red-950 text-red-500' : 'bg-zinc-950 text-zinc-600'}`}>Player</span>
+          <div className="flex items-center justify-center gap-12 flex-wrap w-full">
+            {/* Player Level */}
+            <div className="flex items-center gap-4">
+              <ResourceInput
+                icon="level"
+                iconNode={<User className="h-5 w-5 opacity-80" />}
+                label="Player Level"
+                value={simEquipment.playerLevel}
+                formatter={v => v}
+                onDecrease={() => setSimEquipment(s => ({ ...s, playerLevel: Math.max(1, (s.playerLevel || 1) - 1) }))}
+                onIncrease={() => setSimEquipment(s => ({ ...s, playerLevel: Math.min(200, (s.playerLevel || 1) + 1) }))}
+              />
+            </div>
+
+            {/* Eco Points Customizer */}
+            <div className="flex items-center gap-4">
+              <ResourceInput
+                icon="skills"
+                iconNode={<div className="h-5 w-5 flex items-center justify-center"><img src={`${PUBLIC_IMAGES_BASE_URL}skills.svg`} className="h-4 w-4" alt="eco" /></div>}
+                label="Eco Points"
+                value={simEquipment.ecoSkillsPoints}
+                formatter={v => v}
+                onDecrease={() => setSimEquipment(s => ({ ...s, ecoSkillsPoints: Math.max(0, (s.ecoSkillsPoints || 0) - 1) }))}
+                onIncrease={() => setSimEquipment(s => ({ ...s, ecoSkillsPoints: Math.min(1000, (s.ecoSkillsPoints || 0) + 1) }))}
+              />
+            </div>
+
+            {/* Skill Points Summary */}
+            <div className="flex items-center gap-6 ml-4">
+              {/* Circular Progress Pie Chart */}
+              <div className="relative w-20 h-20 flex items-center justify-center">
+                {/* Over limit Segment (red) */}
+                {usedPoints > allowedPoints && (
+                  <div className="absolute inset-[-4px] rounded-full border-2 border-dashed border-red-500/50 animate-spin-slow" />
+                )}
+
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={28}
+                      outerRadius={38}
+                      paddingAngle={2}
+                      dataKey="value"
+                      stroke="none"
+                      isAnimationActive={false}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+
+                {/* Center Icon */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <img src={`${PUBLIC_IMAGES_BASE_URL}skills.svg`} className="h-6 w-6 opacity-80" alt="skills" />
+                </div>
+              </div>
+
+              {/* Legend & Details */}
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <div className="w-2 h-2 rounded bg-[#CBBAE5]"></div>
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Available</span>
+                  </div>
+                  <span className={`text-xl font-mono font-black ${usedPoints > allowedPoints ? 'text-red-400' : 'text-zinc-100'}`}>
+                    {Math.max(0, allowedPoints - usedPoints)} <span className="text-xs text-zinc-600 font-medium tracking-normal">/ {allowedPoints}</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-5">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className="w-2 h-2 rounded bg-red-500"></div>
+                      <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">War</span>
+                    </div>
+                    <span className="text-sm font-mono font-bold text-zinc-300 ml-3.5 leading-none">{warPoints}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className="w-2 h-2 rounded bg-green-500"></div>
+                      <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Eco</span>
+                    </div>
+                    <span className="text-sm font-mono font-bold text-zinc-300 ml-3.5 leading-none">{simEquipment.ecoSkillsPoints}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Row 1: Weapons & Equipment */}
         <div className="flex flex-col items-center gap-4 w-full bg-zinc-900/40 rounded-3xl p-6 border border-zinc-800/40 relative">
@@ -301,8 +440,8 @@ export default function Simulator({
         </div>
 
         {/* Row 2: Skills */}
-        <div className="flex flex-col items-center gap-4 w-full bg-zinc-900/40 rounded-3xl p-6 border border-zinc-800/40 relative mt-2">
-          <span className="absolute -top-2.5 left-8 px-2 bg-zinc-950 text-[10px] font-black text-zinc-600 uppercase tracking-widest rounded shadow">Active Skills</span>
+        <div className={`flex flex-col items-center gap-4 w-full rounded-3xl p-6 border relative mt-2 transition-colors ${usedPoints > allowedPoints ? 'bg-red-950/10 border-red-900/50' : 'bg-zinc-900/40 border-zinc-800/40'}`}>
+          <span className={`absolute -top-2.5 left-8 px-2 text-[10px] font-black uppercase tracking-widest rounded shadow ${usedPoints > allowedPoints ? 'bg-red-950 text-red-500' : 'bg-zinc-950 text-zinc-600'}`}>Skills</span>
           <div className="flex items-center gap-4 flex-wrap justify-center w-full">
             {(Object.keys(SKILL_PROGRESSION) as Array<keyof typeof SKILL_PROGRESSION>).map((skillName) => (
               <ResourceInput
@@ -342,9 +481,9 @@ export default function Simulator({
           </div>
         </div>
 
-        {/* Row 3: Modifiers & Items */}
+        {/* Row 3: Modifiers */}
         <div className="flex flex-col items-center gap-4 w-full bg-zinc-900/40 rounded-3xl p-6 border border-zinc-800/40 relative mt-2">
-          <span className="absolute -top-2.5 left-8 px-2 bg-zinc-950 text-[10px] font-black text-zinc-600 uppercase tracking-widest rounded shadow">Modifiers & Items</span>
+          <span className="absolute -top-2.5 left-8 px-2 bg-zinc-950 text-[10px] font-black text-zinc-600 uppercase tracking-widest rounded shadow">Modifiers</span>
           <div className="flex items-center gap-8 flex-wrap justify-center w-full">
             {/* Military Rank */}
             <ResourceInput
