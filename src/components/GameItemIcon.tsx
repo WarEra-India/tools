@@ -38,6 +38,7 @@ interface GameItemIconProps {
   rarity?: string;
   className?: string;
   health?: number;
+  children?: ReactNode;
 }
 
 const WEAPON_ORDER = ["knife", "gun", "rifle", "sniper", "tank", "jet"];
@@ -57,7 +58,7 @@ const CASE_MAPPING: Record<string, string> = {
 };
 const ITEMS_KEYS = Object.keys(ITEM_NAMES);
 
-export function GameItemIcon({ itemCode, rarity: rarityOverride, className = "h-5 w-5 rounded-sm", health }: GameItemIconProps) {
+export function GameItemIcon({ itemCode, rarity: rarityOverride, className = "h-5 w-5 rounded-sm", health, children }: GameItemIconProps) {
   let rarity = rarityOverride;
   let baseCode = itemCode;
 
@@ -113,6 +114,7 @@ export function GameItemIcon({ itemCode, rarity: rarityOverride, className = "h-
           className="h-full w-full object-contain"
         />
       )}
+      {children}
     </div>
   );
 
