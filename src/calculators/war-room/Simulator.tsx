@@ -444,7 +444,7 @@ export default function Simulator({
         </div>
 
         {/* Row 2: Skills */}
-        <div className={`flex flex-col items-center gap-4 w-full rounded-3xl p-6 border relative mt-2 transition-colors ${usedPoints > allowedPoints ? 'bg-red-950/10 border-red-900/50' : 'bg-zinc-900/40 border-zinc-800/40'}`}>
+        <div className={`flex flex-col items-center gap-4 w-full rounded-3xl p-6 border relative transition-colors ${usedPoints > allowedPoints ? 'bg-red-950/10 border-red-900/50' : 'bg-zinc-900/40 border-zinc-800/40'}`}>
           <span className={`absolute -top-2.5 left-8 px-2 text-[10px] font-black uppercase tracking-widest rounded shadow ${usedPoints > allowedPoints ? 'bg-red-950 text-red-500' : 'bg-zinc-950 text-zinc-600'}`}>Skills</span>
           <div className="flex items-center gap-4 flex-wrap justify-center w-full">
             {(Object.keys(SKILL_PROGRESSION) as Array<keyof typeof SKILL_PROGRESSION>).map((skillName) => (
@@ -486,7 +486,7 @@ export default function Simulator({
         </div>
 
         {/* Row 3: Modifiers */}
-        <div className="flex flex-col items-center gap-4 w-full bg-zinc-900/40 rounded-3xl p-6 border border-zinc-800/40 relative mt-2">
+        <div className="flex flex-col items-center gap-4 w-full bg-zinc-900/40 rounded-3xl p-6 border border-zinc-800/40 relative">
           <span className="absolute -top-2.5 left-8 px-2 bg-zinc-950 text-[10px] font-black text-zinc-600 uppercase tracking-widest rounded shadow">Modifiers</span>
           <div className="flex items-center gap-8 flex-wrap justify-center w-full">
             {/* Military Rank */}
@@ -542,7 +542,7 @@ export default function Simulator({
         </div>
 
         {/* Final Simulator Dashboard */}
-        <div className="w-full mt-6 bg-black/30 rounded-3xl p-8 border border-zinc-500/10 shadow-[inset_0_0_80px_rgba(0,0,0,0.5)]">
+        <div className="w-full bg-black/30 rounded-3xl p-8 border border-zinc-500/10 shadow-[inset_0_0_80px_rgba(0,0,0,0.5)]">
           <div className="max-w-5xl mx-auto flex flex-col gap-6">
 
             {/* Header */}

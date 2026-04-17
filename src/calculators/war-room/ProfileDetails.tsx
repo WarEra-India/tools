@@ -102,7 +102,7 @@ export default function ProfileDetails() {
       {!isProfileCollapsed && (
         <>
           {/* Row 2: Loadout */}
-          <div className="flex flex-col items-center gap-4 w-full bg-zinc-900/40 rounded-3xl p-6 border border-zinc-800/40 relative mt-2">
+          <div className="flex flex-col items-center gap-4 w-full bg-zinc-900/40 rounded-3xl p-6 border border-zinc-800/40 relative">
             <span className="absolute -top-2.5 left-8 px-2 bg-zinc-950 text-[10px] font-black text-zinc-600 uppercase tracking-widest rounded shadow">Loadout</span>
 
             <div className="flex items-center justify-center w-full flex-col gap-4 lg:flex-row lg:gap-12">
@@ -162,7 +162,7 @@ export default function ProfileDetails() {
           </div>
 
           {/* Row 3: Final Stats */}
-          <div className="w-full mt-4 bg-black/30 rounded-3xl p-8 border border-zinc-500/10 shadow-[inset_0_0_80px_rgba(0,0,0,0.5)]">
+          <div className="w-full bg-black/30 rounded-3xl p-8 border border-zinc-500/10 shadow-[inset_0_0_80px_rgba(0,0,0,0.5)]">
             <div className="flex flex-col gap-6 w-full">
               {/* Header */}
               <div className="flex items-center gap-3">

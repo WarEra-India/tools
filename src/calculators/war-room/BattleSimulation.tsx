@@ -279,7 +279,7 @@ export default function BattleSimulation({
   const currentHealth = lastHit ? lastHit.healthRemaining : totalHealth;
 
   return (
-    <div className="w-full mt-6 bg-black/30 rounded-3xl p-8 border border-zinc-500/10 shadow-[inset_0_0_80px_rgba(0,0,0,0.5)]">
+    <div className="w-full bg-black/30 rounded-3xl p-8 border border-zinc-500/10 shadow-[inset_0_0_80px_rgba(0,0,0,0.5)]">
       <div className="max-w-5xl mx-auto flex flex-col gap-6">
 
         {/* Header */}
