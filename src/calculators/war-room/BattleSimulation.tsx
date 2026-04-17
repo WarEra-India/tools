@@ -157,7 +157,7 @@ export default function BattleSimulation({
       const equip = gameConfig?.equipments?.find((e: any) => e.code === code);
       let yieldScraps = 0;
       if (equip?.rarity && itemsBroken > 0) {
-        yieldScraps = (RARITY_COSTS[equip.rarity]?.scraps ?? 0) / 3;
+        yieldScraps = Math.round((RARITY_COSTS[equip.rarity]?.scraps ?? 0) / 3);
         scrapReceived += itemsBroken * yieldScraps;
       }
 
@@ -498,7 +498,7 @@ export default function BattleSimulation({
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest">Incurred Costs & Returns</h3>
               <div className={`flex items-center gap-1.5`}>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-4">
                   <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-zinc-900/50 border-zinc-800/50 text-zinc-400`}>
                     <img src={COIN_ICON} className="h-3 w-3 opacity-70" alt="coin" />
                     <span className="text-xs font-mono font-bold">{costsIncurred.costPer1kDamage.toFixed(2)}</span>
@@ -521,7 +521,7 @@ export default function BattleSimulation({
                   <div className="flex items-center justify-between text-sm gap-4">
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-zinc-300">1x</span>
-                      <GameItemIcon itemCode="cocain" className="h-4 w-4 rounded-sm" />
+                      <GameItemIcon itemCode="cocain" className="h-5 w-5 rounded-sm" />
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="flex items-center gap-1 font-mono text-zinc-300 min-w-16 justify-end">
@@ -535,7 +535,7 @@ export default function BattleSimulation({
                   <div className="flex items-center justify-between text-sm gap-4">
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-zinc-300">{totalHungerPoints}x</span>
-                      <GameItemIcon itemCode={simEquipment.food} className="h-4 w-4 rounded-sm" />
+                      <GameItemIcon itemCode={simEquipment.food} className="h-5 w-5 rounded-sm" />
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="flex items-center gap-1 font-mono text-zinc-300 min-w-16 justify-end">
@@ -549,7 +549,7 @@ export default function BattleSimulation({
                   <div className="flex items-center justify-between text-sm gap-4">
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-zinc-300">{costsIncurred.ammoUsed}x</span>
-                      <GameItemIcon itemCode={simEquipment.ammo} className="h-4 w-4 rounded-sm" />
+                      <GameItemIcon itemCode={simEquipment.ammo} className="h-5 w-5 rounded-sm" />
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="flex items-center gap-1 font-mono text-zinc-300 min-w-16 justify-end">
@@ -563,7 +563,7 @@ export default function BattleSimulation({
                   <div key={item.code} className="flex items-center justify-between text-sm gap-4">
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-zinc-300">{item.used}x</span>
-                      <GameItemIcon itemCode={item.code} className="h-4 w-4 rounded-sm" />
+                      <GameItemIcon itemCode={item.code} className="h-5 w-5 rounded-sm" />
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="flex items-center gap-1 font-mono text-zinc-300 min-w-16 justify-end">
@@ -573,13 +573,19 @@ export default function BattleSimulation({
                     </div>
                   </div>
                 ) : null)}
-                <div className="border-t border-zinc-800/50 pt-2 mt-1 flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Est. Cost</span>
-                  <span className="flex items-center gap-1 font-mono font-bold text-red-400 ml-4">
-                    {costsIncurred.totalCost.toFixed(2)}
-                    <img src={COIN_ICON} className="h-3.5 w-3.5" alt="coin" />
-                  </span>
-                </div>
+                {costsIncurred.totalCost == 0 ? (
+                  <div className="flex items-center justify-center h-full opacity-40">
+                    <span className="text-xs text-zinc-500 uppercase tracking-widest font-bold">No Costs Incurred</span>
+                  </div>
+                ) : (
+                  <div className="border-t border-zinc-800/50 pt-2 mt-1 flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Est. Cost</span>
+                    <span className="flex items-center gap-1 font-mono font-bold text-red-400 ml-4">
+                      {costsIncurred.totalCost.toFixed(2)}
+                      <img src={COIN_ICON} className="h-3.5 w-3.5" alt="coin" />
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Returns / Scraps Side */}
@@ -588,10 +594,10 @@ export default function BattleSimulation({
                   <div key={item.code + "-broke"} className="flex items-center justify-between text-sm gap-4">
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-zinc-300">{item.broken}x</span>
-                      <GameItemIcon itemCode={item.code} className="h-4 w-4 rounded-sm" />
+                      <GameItemIcon itemCode={item.code} className="h-5 w-5 rounded-sm" />
                       <ArrowRight className="h-4 w-6" />
                       <span className="font-mono text-zinc-300">{item.scraps}x</span>
-                      <GameItemIcon itemCode="scraps" className="h-4 w-4 rounded-sm" />
+                      <GameItemIcon itemCode="scraps" className="h-5 w-5 rounded-sm" />
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1 w-16 justify-end">
@@ -605,7 +611,7 @@ export default function BattleSimulation({
                   <div className="flex items-center justify-between text-sm gap-4">
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-zinc-300">{costsIncurred.case1Yield}x</span>
-                      <GameItemIcon itemCode="case1" className="h-4 w-4 rounded-sm" />
+                      <GameItemIcon itemCode="case1" className="h-5 w-5 rounded-sm" />
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="flex items-center gap-1 font-mono text-zinc-300 min-w-16 justify-end">
@@ -619,7 +625,7 @@ export default function BattleSimulation({
                   <div className="flex items-center justify-between text-sm gap-4">
                     <div className="flex items-center gap-1">
                       <span className="font-mono text-zinc-300">{costsIncurred.case2Yield}x</span>
-                      <GameItemIcon itemCode="case2" className="h-4 w-4 rounded-sm" />
+                      <GameItemIcon itemCode="case2" className="h-5 w-5 rounded-sm" />
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="flex items-center gap-1 font-mono text-zinc-300 min-w-16 justify-end">
@@ -647,14 +653,16 @@ export default function BattleSimulation({
             </div>
 
             {/* Remaining Health Section */}
-            <div className="flex flex-col gap-3 mt-2 pt-5 border-t border-zinc-800/50">
-              {/* <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Remaining Equipment Health</span> */}
-              <div className="flex justify-center items-center flex-wrap gap-3">
-                {costsIncurred.itemsSummary.map(item => (
-                  <GameItemIcon itemCode={item.code} health={item.remainingHealth} className="h-10 w-10 rounded-md" />
-                ))}
+            {costsIncurred.itemsSummary.length > 0 && (
+              <div className="flex flex-col gap-3 mt-2 pt-5 border-t border-zinc-800/50">
+                {/* <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Remaining Equipment Health</span> */}
+                <div className="flex justify-center items-center flex-wrap gap-3">
+                  {costsIncurred.itemsSummary.map(item => (
+                    <GameItemIcon itemCode={item.code} health={item.remainingHealth} className="h-16 w-16 rounded-md" />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
           </div>
         )}
