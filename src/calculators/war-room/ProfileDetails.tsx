@@ -35,7 +35,7 @@ export default function ProfileDetails() {
   }
 
   return (
-    <div className="relative flex flex-col gap-4 outline-1 outline-zinc-800 bg-zinc-900/20 backdrop-blur-sm rounded-2xl border border-zinc-800/50 p-6 shadow-2xl transition-all duration-300">
+    <div className="relative flex flex-col gap-4 bg-zinc-900/20 backdrop-blur-sm rounded-2xl border border-zinc-800/50 p-6 shadow-2xl transition-all duration-300">
       {/* Toggle Button */}
       <button
         onClick={() => setIsProfileCollapsed(!isProfileCollapsed)}
@@ -161,10 +161,11 @@ export default function ProfileDetails() {
             </div>
           </div>
 
+
           {/* Row 3: Final Stats */}
-          <div className="w-full bg-black/30 rounded-3xl p-8 border border-zinc-500/10 shadow-[inset_0_0_80px_rgba(0,0,0,0.5)]">
+          {/* <div className="w-full bg-black/30 rounded-3xl p-8 border border-zinc-500/10 shadow-[inset_0_0_80px_rgba(0,0,0,0.5)]">
             <div className="flex flex-col gap-6 w-full">
-              {/* Header */}
+              Header
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20 shadow-inner">
                   <img src={`${PUBLIC_IMAGES_BASE_URL}attack.svg`} className="h-5 w-5 opacity-80" alt="results" />
@@ -175,14 +176,14 @@ export default function ProfileDetails() {
                 </div>
               </div>
 
-              {/* Total Effective Stats */}
+              Total Effective Stats
               <div className="flex flex-wrap justify-center gap-4 w-full">
                 {attackData && effectiveStats && (
                   <StatsDashboard attackData={attackData} effectiveStats={effectiveStats} showHealthAndHunger={true} />
                 )}
               </div>
             </div>
-          </div>
+          </div> */}
         </>
       )}
     </div>
