@@ -428,7 +428,7 @@ export default function BattleSimulation({
                   {hit.casesEarned.length > 0 && (
                     <div className={`flex items-center gap-2`}>
                       {hit.casesEarned.map(c => (
-                        <GameItemIcon key={c} itemCode={c === 2 ? 'case2' : 'case1'} className="h-5 w-5" />
+                        <GameItemIcon key={c} itemCode={c === 2 ? 'case2' : 'case1'} className="h-6 w-6 rounded-sm" />
                       ))}
                     </div>
                   )}
@@ -471,7 +471,7 @@ export default function BattleSimulation({
 
               {/* Case 1 */}
               <div className="flex flex-col items-center gap-1 p-4 bg-zinc-950/50 rounded-xl border border-yellow-500/10">
-                <GameItemIcon itemCode="case1" className="h-7 w-7" />
+                <GameItemIcon itemCode="case1" className="h-8 w-8 rounded-sm" />
                 <span className="text-3xl font-black text-white font-mono leading-none">
                   {simulationResult.case1Count}
                 </span>
@@ -480,7 +480,7 @@ export default function BattleSimulation({
 
               {/* Case 2 */}
               <div className="flex flex-col items-center gap-1 p-4 bg-zinc-950/50 rounded-xl border border-purple-500/10">
-                <GameItemIcon itemCode="case2" className="h-7 w-7" />
+                <GameItemIcon itemCode="case2" className="h-8 w-8 rounded-sm" />
                 <span className="text-3xl font-black text-white font-mono leading-none">
                   {simulationResult.case2Count}
                 </span>
@@ -636,7 +636,7 @@ export default function BattleSimulation({
                 )}
                 {(costsIncurred.scrapReceived > 0 || costsIncurred.case1Yield > 0 || costsIncurred.case2Yield > 0) && (
                   <div className="border-t border-zinc-800/50 pt-2 mt-auto flex items-center justify-between">
-                    <span className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Est. Yield</span>
+                    <span className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Est. Return</span>
                     <span className="flex items-center gap-1 font-mono font-bold text-emerald-400 ml-4">
                       {costsIncurred.totalReturnsValue.toFixed(2)}
                       <img src={COIN_ICON} className="h-3.5 w-3.5" alt="coin" />
@@ -651,25 +651,7 @@ export default function BattleSimulation({
               {/* <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Remaining Equipment Health</span> */}
               <div className="flex justify-center items-center flex-wrap gap-3">
                 {costsIncurred.itemsSummary.map(item => (
-                  <div key={item.code + "-health"} className="flex flex-col gap-1.5 items-center justify-center py-2 px-3 bg-zinc-950 rounded-xl border border-zinc-800 shadow-inner">
-                    <GameItemIcon itemCode={item.code} className="h-7 w-7 rounded-md opacity-90 shadow-md" />
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-[9px] font-mono font-bold text-zinc-300 leading-none">{item.remainingHealth}%</span>
-                      <div className="w-12 h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
-                        <div
-                          className="h-full rounded-full transition-all duration-300"
-                          style={{
-                            width: `${item.remainingHealth}%`,
-                            background: item.remainingHealth > 50
-                              ? "#22c55e"
-                              : item.remainingHealth > 25
-                                ? "#eab308"
-                                : "#ef4444"
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <GameItemIcon itemCode={item.code} health={item.remainingHealth} className="h-10 w-10 rounded-md" />
                 ))}
               </div>
             </div>
