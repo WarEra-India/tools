@@ -28,7 +28,7 @@ export const SKILL_PROGRESSION = {
   attack: { base: 100, inc: 25, maxLevel: 10 },
   precision: { base: 50, inc: 5, maxLevel: 10 },
   criticalChance: { base: 10, inc: 5, maxLevel: 10 },
-  criticalDamages: { base: 120, inc: 20, maxLevel: 10 },
+  criticalDamages: { base: 100, inc: 20, maxLevel: 10 },
   armor: { base: 0, inc: 6, maxLevel: 10 },
   dodge: { base: 0, inc: 4, maxLevel: 10 },
   lootChance: { base: 5, inc: 2, maxLevel: 10 },
