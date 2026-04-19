@@ -66,12 +66,15 @@ export interface Country {
   flag: string;
 }
 
+let countriesData: Record<string, Country> | null = null;
 export async function getAllCountries(): Promise<Record<string, Country>> {
+  if (countriesData) return countriesData;
   const data = await post<Country[]>("country.getAllCountries", {});
   const map: Record<string, Country> = {};
   for (const c of data) {
     if (c._id) map[c._id] = c;
   }
+  countriesData = map;
   return map;
 }
 
@@ -118,22 +121,22 @@ export async function getActiveBattles(): Promise<Battle[]> {
 }
 
 export async function getLiveBattleData(battleId: string): Promise<any> {
-    return post<any>("battle.getLiveBattleData", { battleId });
+  return post<any>("battle.getLiveBattleData", { battleId });
 }
 
 export async function getLastHits(roundId: string): Promise<any> {
-    const data = await post<any>("round.getLastHits", { roundId });
-    return data;
+  const data = await post<any>("round.getLastHits", { roundId });
+  return data;
 }
 
 export async function getBattleRanking(battleId: string, side: "attacker" | "defender"): Promise<any[]> {
-    const data = await post<any>("battleRanking.getRanking", {
-        battleId,
-        dataType: "damage",
-        type: "user",
-        side
-    });
-    return data.rankings || data.items || [];
+  const data = await post<any>("battleRanking.getRanking", {
+    battleId,
+    dataType: "damage",
+    type: "user",
+    side
+  });
+  return data.rankings || data.items || [];
 }
 
 export interface Transaction {
@@ -143,12 +146,12 @@ export interface Transaction {
 }
 
 export async function getTransactions(itemCode: string, limit: number = 50): Promise<Transaction[]> {
-    const data = await post<{ items: Transaction[] }>("transaction.getPaginatedTransactions", {
-        itemCode,
-        transactionType: ["itemMarket", "trading"],
-        limit
-    });
-    return data.items;
+  const data = await post<{ items: Transaction[] }>("transaction.getPaginatedTransactions", {
+    itemCode,
+    transactionType: ["itemMarket", "trading"],
+    limit
+  });
+  return data.items;
 }
 
 export interface Event {
@@ -158,17 +161,17 @@ export interface Event {
 }
 
 export async function getEvents(): Promise<Event[]> {
-    const data = await post<{ items: Event[] }>("event.getEventsPaginated", {
-        eventTypes: ["warDeclared", "battleOpened", "battleEnded", "peace_agreement", "allianceFormed", "allianceBroken"],
-        limit: 50
-    });
-    return data.items;
+  const data = await post<{ items: Event[] }>("event.getEventsPaginated", {
+    eventTypes: ["warDeclared", "battleOpened", "battleEnded", "peace_agreement", "allianceFormed", "allianceBroken"],
+    limit: 50
+  });
+  return data.items;
 }
 
 export async function getItemPrices(): Promise<Record<string, number>> {
-    return post<Record<string, number>>("itemTrading.getPrices", {});
+  return post<Record<string, number>>("itemTrading.getPrices", {});
 }
 
 export async function getTopOrders(itemCode: string): Promise<any> {
-    return post<any>("tradingOrder.getTopOrders", { itemCode, limit: 10 });
+  return post<any>("tradingOrder.getTopOrders", { itemCode, limit: 10 });
 }
