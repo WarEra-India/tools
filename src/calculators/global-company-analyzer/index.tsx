@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from "react"
 import { CountryFlag } from "@/components/CountryFlag"
-import { Loader2, ArrowLeft, Search, Users, Eye, EyeOff, Map as MapIcon, ChevronRight, Calculator, TrendingUp, X, Building, Building2Icon } from "lucide-react"
+import { ArrowLeft, Search, Users, Eye, EyeOff, Map as MapIcon, ChevronRight, Calculator, TrendingUp, X } from "lucide-react"
 import { Link } from "react-router-dom"
 import * as topojson from "topojson-client"
 import maplibregl from "maplibre-gl"
@@ -112,7 +112,6 @@ export default function GlobalCompanyAnalyzer() {
   // Indexing
   const [allCompanyIds, setAllCompanyIds] = useState<string[]>([])
   const companyOwnerMap = useRef<Record<string, string>>({})
-  const ownerCountryToCompanyIds = useRef<Record<string, string[]>>({})
 
   // UI State
   const [showDisabled, setShowDisabled] = useState(false)
@@ -135,96 +134,65 @@ export default function GlobalCompanyAnalyzer() {
   async function startInitialization() {
     try {
       setLoading(true)
+      setProgress(p => ({ ...p, stage: "Mapping Industrial Grid", current: 0, total: 2 }))
 
-      // 1. Fetch Metadata first
-      setProgress(p => ({ ...p, stage: "Loading Regions", current: 0, total: 4 }))
-
-      const [mapRes, countriesRes, regionsRes, vaultRes] = await Promise.all([
+      // 1. Fetch Map TopoJSON and Aggregated Industrial Data
+      const [mapRes, aggRes] = await Promise.all([
         fetch(`${API_BASE}/map.getMapData`).then(r => {
           setProgress(p => ({ ...p, current: p.current + 1 }))
           return r.json()
         }),
-        fetch(`${API_BASE}/country.getAllCountries`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: "{}"
-        }).then(r => {
-          setProgress(p => ({ ...p, current: p.current + 1 }))
-          return r.json()
-        }),
-        fetch(`${API_BASE}/region.getRegionsObject`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: "{}"
-        }).then(r => {
-          setProgress(p => ({ ...p, current: p.current + 1 }))
-          return r.json()
-        }),
-        fetch("https://warvault.shadoooow.workers.dev/api/companies").then(r => {
+        fetch("https://warvault.shadoooow.workers.dev/api/companies/aggregated").then(r => {
           setProgress(p => ({ ...p, current: p.current + 1 }))
           return r.json()
         })
       ])
 
       const topoData = mapRes.result.data.map
-      const countryList: CountryInfo[] = countriesRes.result.data
-      const regionsObj: Record<string, RegionInfo> = regionsRes.result.data
+      const aggregatedData = aggRes.data
 
       const countryMap: Record<string, CountryInfo> = {}
-      const initialAgg: Record<string, AggregatedCountry> = {}
+      const regionsMap: Record<string, RegionInfo> = {}
+      const ids: string[] = []
 
-      countryList.forEach(c => {
-        countryMap[c._id] = c
-        initialAgg[c._id] = {
-          countryId: c._id,
+      // 2. Process Aggregated Data
+      Object.values(aggregatedData).forEach((c: any) => {
+        countryMap[c.countryId] = {
+          _id: c.countryId,
           name: c.name,
           code: c.code,
-          regions: [],
-          totalCompanies: 0,
-          activeCompanies: 0,
-          disabledCompanies: 0,
-          totalWorkers: 0,
-          totalInternalWorkers: 0,
-          totalInternationalWorkers: 0,
-          totalValue: 0,
-          incomeTax: c.taxes.income,
-          companyBreakdown: {}
+          taxes: { income: c.incomeTax, market: 0, selfWork: 0 }
         }
-      })
 
-      Object.entries(regionsObj).forEach(([regionId, regionData]) => {
-        const countryId = regionData.country
-        if (initialAgg[countryId]) {
-          initialAgg[countryId].regions.push({
-            regionId,
-            name: regionData.name,
-            countryId,
-            companies: [],
-            totalWorkers: 0,
-            totalValue: 0,
-            activeCount: 0,
-            disabledCount: 0,
-            totalInternalWorkers: 0,
-            totalInternationalWorkers: 0
+        c.regions.forEach((r: any) => {
+          regionsMap[r.regionId] = {
+            _id: r.regionId,
+            name: r.name,
+            country: r.countryId
+          }
+          r.companies.forEach((comp: any) => {
+            ids.push(comp._id)
+            fetchedCompanyCache.current[comp._id] = comp
+            companyOwnerMap.current[comp._id] = c.countryId
           })
-        }
+        })
       })
 
       setMapData(topoData)
       setCountries(countryMap)
-      setRegions(regionsObj)
-      setAggregated(initialAgg)
+      setRegions(regionsMap)
+      setAggregated(aggregatedData)
+      setAllCompanyIds(ids)
 
-      // Convert to GeoJSON for MapLibre
+      // 3. Convert to GeoJSON for MapLibre
       const regionsFeature = topojson.feature(topoData, topoData.objects.regions) as any
-      // MapLibre setFeatureState requires numeric IDs
       regionsFeature.features.forEach((f: any, i: number) => {
         f.id = i
       })
 
       const nationsMesh = topojson.mesh(topoData, topoData.objects.regions, (a: any, b: any) => {
-        const cA = regionsObj[a.properties.regionId]?.country
-        const cB = regionsObj[b.properties.regionId]?.country
+        const cA = regionsMap[a.properties.regionId]?.country
+        const cB = regionsMap[b.properties.regionId]?.country
         return a === b || cA !== cB
       })
 
@@ -233,34 +201,10 @@ export default function GlobalCompanyAnalyzer() {
       geojsonRegionsRef.current = regionsFeature
       geojsonBordersRef.current = nationsMesh
 
-      // Rapid Indexing via WarVault
-      const mapping: Record<string, string> = {}
-      const ownerMap: Record<string, string[]> = {}
-      const ids: string[] = []
-
-      vaultRes.forEach((owner: any) => {
-        mapping[owner.owner_id] = owner.owner_country_id
-        ownerMap[owner.owner_country_id] = [...(ownerMap[owner.owner_country_id] || []), ...owner.companies_id]
-        owner.companies_id.forEach((cid: string) => {
-          companyOwnerMap.current[cid] = owner.owner_country_id
-          ids.push(cid)
-        })
-
-        // Initial sidebar counts
-        if (initialAgg[owner.owner_country_id]) {
-          initialAgg[owner.owner_country_id].totalCompanies += owner.companies_id.length
-          initialAgg[owner.owner_country_id].activeCompanies += owner.companies_id.length // Assume active until scanned
-        }
-      })
-
-      ownerCountryToCompanyIds.current = ownerMap
-      setAllCompanyIds(ids)
-      setAggregated({ ...initialAgg })
-
       setLoading(false)
     } catch (err: any) {
       console.error(err)
-      setError(err.message || "Failed to initialize regional map")
+      setError(err.message || "Failed to initialize tactical map")
       setLoading(false)
     }
   }
@@ -453,128 +397,8 @@ export default function GlobalCompanyAnalyzer() {
     }
   }, [aggregated, showDisabled, mapLoaded, viewMode, selectedSector])
 
-  async function fetchBatchedDetails(idsToFetch: string[]) {
-    if (idsToFetch.length === 0) return
-
-    const BATCH_SIZE = 100
-    setDataLoading(true)
-    const startTime = Date.now()
-    setProgress({ stage: "Analyzing Units", current: 0, total: idsToFetch.length, startTime })
-
-    const headers: any = { "Content-Type": "application/json" }
-    if (token) headers["X-API-Key"] = token
-
-    for (let i = 0; i < idsToFetch.length; i += BATCH_SIZE) {
-      const batchIds = idsToFetch.slice(i, i + BATCH_SIZE).filter(id => !fetchedCompanyCache.current[id])
-      if (batchIds.length === 0) {
-        setProgress(p => ({ ...p, current: i + Math.min(BATCH_SIZE, idsToFetch.length - i) }))
-        continue
-      }
-
-      const batchUrl = API_BASE + "/" + batchIds.map(() => "company.getById").join(",") + "?batch=1"
-      const batchBody: any = {}
-      batchIds.forEach((id, idx) => { batchBody[idx] = { companyId: id } })
-
-      try {
-        const response = await fetch(batchUrl, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(batchBody)
-        })
-
-        if (response.status === 429) {
-          setProgress(p => ({ ...p, stage: "Rate Limited" }))
-          await sleep(5000)
-          i -= BATCH_SIZE
-          continue
-        }
-
-        const res = await response.json()
-        const batchData: CompanyInfo[] = (res as any[]).map(r => r.result.data)
-
-        setAggregated(prev => {
-          const next = { ...prev }
-          batchData.forEach(comp => {
-            fetchedCompanyCache.current[comp._id] = comp
-            const regData = regions[comp.region]
-            if (!regData) return
-
-            const countryAgg = next[regData.country]
-            if (!countryAgg) return
-
-            const regionAgg = countryAgg.regions.find(r => r.regionId === comp.region)
-            if (!regionAgg) return
-
-            // Prevent duplicates
-            if (regionAgg.companies.some(c => c._id === comp._id)) return
-
-            regionAgg.companies.push(comp)
-            regionAgg.totalWorkers += comp.workerCount || 0
-            regionAgg.totalValue += comp.estimatedValue || 0
-            if (comp.disabledAt) regionAgg.disabledCount++
-            else regionAgg.activeCount++
-
-            // International vs Internal Logic
-            const ownerCountryId = companyOwnerMap.current[comp._id]
-            const isInternational = ownerCountryId && ownerCountryId !== regData.country
-
-            if (isInternational) {
-              regionAgg.totalInternationalWorkers += comp.workerCount || 0
-              countryAgg.totalInternationalWorkers += comp.workerCount || 0
-            } else {
-              regionAgg.totalInternalWorkers += comp.workerCount || 0
-              countryAgg.totalInternalWorkers += comp.workerCount || 0
-            }
-
-            countryAgg.totalWorkers += comp.workerCount || 0
-            countryAgg.totalValue += comp.estimatedValue || 0
-
-            const itemCode = comp.itemCode
-            countryAgg.companyBreakdown[itemCode] = (countryAgg.companyBreakdown[itemCode] || 0) + 1
-          })
-          return next
-        })
-
-        setProgress(p => ({ ...p, stage: "Analyzing Units", current: i + batchData.length }))
-        if (!token) await sleep(400)
-      } catch (err) {
-        console.error("Batch fetch failed:", err)
-      }
-    }
-
-    setDataLoading(false)
-  }
-
-  const startGlobalScan = () => {
-    const unfetched = allCompanyIds.filter(id => !fetchedCompanyCache.current[id])
-    fetchBatchedDetails(unfetched)
-  }
-
   const selectCountry = (id: string) => {
     setSelectedCountryId(id)
-    const ownerCompanies = ownerCountryToCompanyIds.current[id] || []
-    const unfetched = ownerCompanies.filter(cid => !fetchedCompanyCache.current[cid])
-    if (unfetched.length > 0) {
-      fetchBatchedDetails(unfetched)
-    }
-  }
-
-  // Sync ref with state for MapLibre listeners
-  useEffect(() => {
-    hoveredRegionRef.current = hoveredRegion
-  }, [hoveredRegion])
-
-  const getETA = () => {
-    if (!dataLoading || progress.current === 0 || progress.total <= 0) return null
-    const elapsed = Date.now() - progress.startTime
-    const remaining = progress.total - progress.current
-    const msPerItem = elapsed / progress.current
-    const etaMs = remaining * msPerItem
-
-    if (etaMs < 1000) return "Few seconds"
-    const seconds = Math.floor((etaMs / 1000) % 60)
-    const minutes = Math.floor(etaMs / 60000)
-    return `${minutes}m ${seconds}s`
   }
 
   const sortedCountries = useMemo(() => {
@@ -664,34 +488,15 @@ export default function GlobalCompanyAnalyzer() {
 
           <div className="h-4 w-px bg-zinc-800" />
 
-          <button
-            onClick={startGlobalScan}
-            disabled={dataLoading}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-black transition-all border w-38 h-8 ${dataLoading
-              ? "bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-500 border-blue-400/30 text-white shadow-[0_0_15px_-5px_rgba(37,99,235,0.4)]"
-              }`}
-          >
-            {dataLoading ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-2.5 h-2.5 animate-spin text-blue-500" />
-                  <span className="text-[10px] text-zinc-300 font-mono font-bold">
-                    {Math.round((progress.current / progress.total) * 100)}%
-                  </span>
-                </div>
-                <div className="h-3 w-px bg-zinc-800" />
-                <span className="text-[9px] text-zinc-500 font-mono uppercase tracking-tighter">
-                  {getETA() || "Calculating..."}
-                </span>
-              </>
-            ) : (
-              <>
-                <TrendingUp className="w-3 h-3" />
-                Scan All {allCompanyIds.length.toLocaleString()}
-              </>
-            )}
-          </button>
+          <div className="flex flex-col items-end justify-center">
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-black text-white">
+                {Object.values(aggregated).reduce((acc, c) => acc + (showDisabled ? c.totalCompanies : c.activeCompanies), 0).toLocaleString()}
+              </span>
+              <img src={PUBLIC_IMAGES_BASE_URL + "companies.svg"} className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Companies</span>
+          </div>
 
           <button
             onClick={() => setShowDisabled(!showDisabled)}
@@ -962,16 +767,16 @@ export default function GlobalCompanyAnalyzer() {
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-1">
-                            <Users className="w-3 h-3 text-zinc-500" />
+                            <img src={PUBLIC_IMAGES_BASE_URL + "worker.svg"} className="w-3 h-3" />
                             <span className="text-[10px] font-mono text-zinc-400">{formatNumber(r.totalWorkers)}</span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Building2Icon className="w-3 h-3 text-zinc-500" />
+                            <img src={PUBLIC_IMAGES_BASE_URL + "companies.svg"} className="w-3 h-3" />
                             <span className="text-[10px] font-mono text-zinc-400">{r.activeCount}</span>
                           </div>
                           {showDisabled && r.disabledCount > 0 && (
                             <div className="flex items-center gap-1">
-                              <Building2Icon className="w-3 h-3 text-zinc-600" />
+                              <img src={PUBLIC_IMAGES_BASE_URL + "companies.svg"} className="w-3 h-3" />
                               <span className="text-[10px] font-mono text-zinc-600">{r.disabledCount}</span>
                             </div>
                           )}
