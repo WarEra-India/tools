@@ -4,14 +4,8 @@ import { CountryFlag } from "@/components/CountryFlag"
 import { Loader2, ArrowLeft, Filter, Search, Info, Users, Wallet, Eye, EyeOff, Map as MapIcon, ChevronRight, Calculator, TrendingUp } from "lucide-react"
 import { Link } from "react-router-dom"
 import * as topojson from "topojson-client"
-import {
-  ComposableMap,
-  Geographies,
-  Geography,
-  ZoomableGroup,
-  Sphere,
-  Graticule
-} from "react-simple-maps"
+import maplibregl from "maplibre-gl"
+import "maplibre-gl/dist/maplibre-gl.css"
 import { API_BASE } from "@/lib/wareraApi"
 
 // --- Types ---
@@ -111,6 +105,9 @@ export default function GlobalCompanyAnalyzer() {
   const [regions, setRegions] = useState<Record<string, RegionInfo>>({})
   const fetchedCompanyCache = useRef<Record<string, CompanyInfo>>({})
   const [aggregated, setAggregated] = useState<Record<string, AggregatedCountry>>({})
+  const [geojsonRegions, setGeojsonRegions] = useState<any>(null)
+  const [geojsonBorders, setGeojsonBorders] = useState<any>(null)
+  const [mapLoaded, setMapLoaded] = useState(false)
 
   // Indexing
   const [allCompanyIds, setAllCompanyIds] = useState<string[]>([])
@@ -121,9 +118,15 @@ export default function GlobalCompanyAnalyzer() {
   const [showDisabled, setShowDisabled] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null)
-  const [zoom, setZoom] = useState(1)
   const [hoveredRegion, setHoveredRegion] = useState<any>(null)
+  const hoveredRegionRef = useRef<any>(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+
+  // MapLibre Refs
+  const mapContainerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<maplibregl.Map | null>(null)
+  const geojsonRegionsRef = useRef<any>(null)
+  const geojsonBordersRef = useRef<any>(null)
 
 
   async function startInitialization() {
@@ -195,6 +198,24 @@ export default function GlobalCompanyAnalyzer() {
       setRegions(regionsObj)
       setAggregated(initialAgg)
 
+      // Convert to GeoJSON for MapLibre
+      const regionsFeature = topojson.feature(topoData, topoData.objects.regions) as any
+      // MapLibre setFeatureState requires numeric IDs
+      regionsFeature.features.forEach((f: any, i: number) => {
+        f.id = i
+      })
+
+      const nationsMesh = topojson.mesh(topoData, topoData.objects.regions, (a: any, b: any) => {
+        const cA = regionsObj[a.properties.regionId]?.country
+        const cB = regionsObj[b.properties.regionId]?.country
+        return a === b || cA !== cB
+      })
+
+      setGeojsonRegions(regionsFeature)
+      setGeojsonBorders(nationsMesh)
+      geojsonRegionsRef.current = regionsFeature
+      geojsonBordersRef.current = nationsMesh
+
       // Rapid Indexing via WarVault
       setProgress(p => ({ ...p, stage: "Rapid Indexing", current: 1, total: 2 }))
       const vaultRes = await fetch("https://warvault.shadoooow.workers.dev/api/companies").then(r => r.json())
@@ -235,6 +256,163 @@ export default function GlobalCompanyAnalyzer() {
     initialized.current = true
     startInitialization()
   }, [])
+
+  // --- MapLibre Instance Effect ---
+  useEffect(() => {
+    if (!mapContainerRef.current || !geojsonRegions || mapRef.current) return
+
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: {
+        version: 8,
+        sources: {
+          'regions': { type: 'geojson', data: geojsonRegions },
+          'borders': {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: [{ type: 'Feature', geometry: geojsonBorders, properties: {} }]
+            }
+          }
+        },
+        layers: [
+          {
+            id: 'background',
+            type: 'background',
+            paint: { 'background-color': '#000000' }
+          },
+          {
+            id: 'regions-fill',
+            type: 'fill',
+            source: 'regions',
+            paint: {
+              'fill-color': '#18181b',
+              'fill-opacity': 1
+            }
+          },
+          {
+            id: 'regions-outline',
+            type: 'line',
+            source: 'regions',
+            paint: {
+              'line-color': '#09090b',
+              'line-width': 0.5
+            }
+          },
+          {
+            id: 'nations-outline',
+            type: 'line',
+            source: 'borders',
+            paint: {
+              'line-color': '#3f3f46',
+              'line-width': 0.8
+            }
+          },
+          {
+            id: 'regions-highlight',
+            type: 'fill',
+            source: 'regions',
+            paint: {
+              'fill-color': '#3b82f6',
+              'fill-opacity': [
+                'case',
+                ['boolean', ['feature-state', 'hover'], false],
+                0.8,
+                0
+              ]
+            }
+          }
+        ]
+      },
+      center: [0, 20],
+      zoom: 1,
+      attributionControl: false
+    })
+
+    map.on('load', () => {
+      mapRef.current = map
+      setMapLoaded(true)
+    })
+
+    map.on('mousemove', 'regions-fill', (e) => {
+      if (e.features && e.features.length > 0) {
+        map.getCanvas().style.cursor = 'pointer'
+        const feature = e.features[0]
+        const regionId = feature.properties.regionId
+
+        const prevHover = hoveredRegionRef.current
+        if (prevHover?.properties?.regionId !== regionId) {
+          // Robustly clear all states for this source to prevent "sticky blue"
+          map.removeFeatureState({ source: 'regions' })
+          map.setFeatureState({ source: 'regions', id: feature.id }, { hover: true })
+          
+          hoveredRegionRef.current = feature // Atomic update
+          setHoveredRegion(feature)
+        }
+        setMousePos({ x: e.originalEvent.clientX, y: e.originalEvent.clientY })
+      }
+    })
+
+    map.on('mouseleave', 'regions-fill', () => {
+      map.getCanvas().style.cursor = ''
+      // Clear all hover states when leaving the layer
+      map.removeFeatureState({ source: 'regions' })
+      hoveredRegionRef.current = null // Atomic update
+      setHoveredRegion(null)
+    })
+
+    map.on('click', 'regions-fill', (e) => {
+      if (e.features && e.features.length > 0) {
+        const regionId = e.features[0].properties.regionId
+        const regionData = regions[regionId]
+        if (regionData) {
+          selectCountry(regionData.country)
+        }
+      }
+    })
+
+    return () => {
+      map.remove()
+      mapRef.current = null
+    }
+  }, [geojsonRegions, loading])
+
+  // --- Data Driven Styling Effect ---
+  useEffect(() => {
+    if (!mapRef.current || Object.keys(aggregated).length === 0) return
+    const map = mapRef.current
+
+    // Wait until map is truly ready
+    if (!map.isStyleLoaded()) return
+
+    const matchExpression: any[] = ['match', ['get', 'regionId']]
+    let hasData = false
+
+    Object.values(aggregated).forEach(country => {
+      country.regions.forEach(r => {
+        const compCount = showDisabled ? r.activeCount + r.disabledCount : r.activeCount
+        if (compCount > 0) {
+          hasData = true
+          let color = '#18181b'
+          if (compCount >= 50) color = '#f4f4f5'
+          else if (compCount >= 20) color = '#a1a1aa'
+          else if (compCount >= 5) color = '#71717a'
+          else if (compCount > 0) color = '#3f3f46'
+          matchExpression.push(r.regionId, color)
+        }
+      })
+    })
+
+    matchExpression.push('#18181b') // fallback
+
+    try {
+      if (map.getLayer('regions-fill')) {
+        map.setPaintProperty('regions-fill', 'fill-color', hasData ? matchExpression : '#18181b')
+      }
+    } catch (e) {
+      console.warn("Failed to update map paint properties", e)
+    }
+  }, [aggregated, showDisabled, mapLoaded])
 
   async function fetchBatchedDetails(idsToFetch: string[]) {
     if (idsToFetch.length === 0) return
@@ -341,6 +519,11 @@ export default function GlobalCompanyAnalyzer() {
       fetchBatchedDetails(unfetched)
     }
   }
+
+  // Sync ref with state for MapLibre listeners
+  useEffect(() => {
+    hoveredRegionRef.current = hoveredRegion
+  }, [hoveredRegion])
 
   const getETA = () => {
     if (!dataLoading || progress.current === 0 || progress.total <= 0) return null
@@ -518,72 +701,18 @@ export default function GlobalCompanyAnalyzer() {
           </div>
         </aside>
 
-        <section className="flex-1 relative bg-black">
-          <ComposableMap 
-            projection="geoMercator"
-            projectionConfig={{ scale: 150 }}
-            className="w-full h-full outline-none"
-          >
-            <ZoomableGroup zoom={zoom} onMoveEnd={({ zoom }) => setZoom(zoom)} center={[0, 20]}>
-              {mapData && (
-                <>
-                  <Geographies geography={topojson.feature(mapData, mapData.objects.regions)}>
-                    {({ geographies }) => 
-                      (geographies || []).map((geo) => (
-                        <Geography
-                          key={geo.rsmKey}
-                          geography={geo}
-                          onMouseEnter={() => setHoveredRegion(geo)}
-                          onMouseLeave={() => setHoveredRegion(null)}
-                          style={{
-                            default: getRegionStyle(geo),
-                            hover: { fill: "#3b82f6", outline: "none", cursor: "pointer" },
-                            pressed: { fill: "#2563eb", outline: "none" },
-                          }}
-                        />
-                      ))
-                    }
-                  </Geographies>
-                  {/* Country Outlines */}
-                  <Geographies 
-                    geography={{
-                      type: "FeatureCollection",
-                      features: [
-                        {
-                          type: "Feature",
-                          properties: {},
-                          geometry: topojson.mesh(mapData, mapData.objects.regions, (a: any, b: any) => {
-                            const cA = a?.properties?.regionId ? regions[a.properties.regionId]?.country : null
-                            const cB = b?.properties?.regionId ? regions[b.properties.regionId]?.country : null
-                            return a === b || cA !== cB
-                          })
-                        }
-                      ] as any[]
-                    }}
-                  >
-                    {({ geographies }) => 
-                      (geographies || []).map((geo, idx) => (
-                        <Geography
-                          key={`nation-${idx}`}
-                          geography={geo}
-                          fill="none"
-                          stroke="#52525b"
-                          strokeWidth={0.8}
-                          style={{ default: { outline: "none" }, hover: { outline: "none" }, pressed: { outline: "none" } }}
-                          pointerEvents="none"
-                        />
-                      ))
-                    }
-                  </Geographies>
-                </>
-              )}
-            </ZoomableGroup>
-          </ComposableMap>
-
-          <div className="absolute right-6 bottom-6 flex flex-col gap-2">
-            <button onClick={() => setZoom(z => z * 1.5)} className="w-10 h-10 bg-zinc-900/80 backdrop-blur border border-zinc-800 rounded-lg flex items-center justify-center hover:bg-zinc-800 transition-all">+</button>
-            <button onClick={() => setZoom(z => z / 1.5)} className="w-10 h-10 bg-zinc-900/80 backdrop-blur border border-zinc-800 rounded-lg flex items-center justify-center hover:bg-zinc-800 transition-all">−</button>
+        <section className="flex-1 relative bg-black overflow-hidden" ref={mapContainerRef}>
+          <div className="absolute right-6 bottom-6 flex flex-col gap-2 z-10">
+            <button
+              onClick={() => mapRef.current?.zoomIn()}
+              className="w-10 h-10 bg-zinc-900/80 backdrop-blur border border-zinc-800 rounded-lg flex items-center justify-center hover:bg-zinc-800 transition-all"
+            >+</button>
+            <button
+              onClick={() => mapRef.current?.zoomOut()}
+              className="w-10 h-10 bg-zinc-900/80 backdrop-blur border border-zinc-800 rounded-lg flex items-center justify-center hover:bg-zinc-800 transition-all"
+            >−</button>
           </div>
+
           {hoveredRegion && (
             <div
               className="fixed pointer-events-none z-50 bg-zinc-950/90 backdrop-blur-xl border border-zinc-800 p-4 rounded-xl shadow-2xl min-w-[200px]"
@@ -599,9 +728,9 @@ export default function GlobalCompanyAnalyzer() {
                     {regions[hoveredRegion.properties.regionId]?.name || hoveredRegion.properties.name}
                   </p>
                 </div>
-                <div className="px-2 py-0.5 bg-zinc-900 text-zinc-500 text-[9px] font-bold rounded uppercase shrink-0 border border-zinc-800">
+                {/* <div className="px-2 py-0.5 bg-zinc-900 text-zinc-500 text-[9px] font-bold rounded uppercase shrink-0 border border-zinc-800">
                   {countries[regions[hoveredRegion.properties.regionId]?.country]?.name || "Unoccupied"}
-                </div>
+                </div> */}
               </div>
 
               {(() => {
