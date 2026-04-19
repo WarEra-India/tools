@@ -293,7 +293,7 @@ export default function ArchetypeAnalysis() {
       });
     });
 
-    // skippiong last day
+    // skipping last day
     return Object.values(map).sort((a, b) => a.date.localeCompare(b.date)).slice(0, -1);
   }, [data]);
 

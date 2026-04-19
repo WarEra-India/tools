@@ -6,7 +6,7 @@ import { useProfile } from "@/lib/ProfileContext";
 import ProfileSearchBar from "@/components/ProfileSearchBar";
 import { CountryFlag } from "@/components/CountryFlag";
 import { getAllCountries, type Country } from "@/lib/api/warera";
-import MilitaryRankIcon from "./MilitaryRankIcon";
+// import MilitaryRankIcon from "./MilitaryRankIcon";
 
 export default function ProfileWidget() {
   const { profile, clearProfile } = useProfile();

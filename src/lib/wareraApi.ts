@@ -118,7 +118,7 @@ interface CompaniesResult {
 export async function getCompanyIds(userId: string): Promise<string[]> {
   const data = await post<CompaniesResult>("company.getCompanies", {
     userId,
-    // perPage: 50,
+    perPage: 100,
   });
   return data.items;
 }
