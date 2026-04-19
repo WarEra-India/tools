@@ -158,6 +158,31 @@ function getModeSegments(history: {
   return segments;
 }
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-zinc-950/90 border border-zinc-800 p-3 rounded-xl shadow-2xl backdrop-blur-md">
+        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 border-b border-zinc-900 pb-1.5">{label}</p>
+        <div className="space-y-1.5">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center justify-between gap-6">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: entry.stroke }}
+                />
+                <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-tight">{entry.name}</span>
+              </div>
+              <span className="text-[10px] font-black text-white font-mono">{entry.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function ArchetypeAnalysis() {
   const { profile } = useProfile();
   const [loading, setLoading] = useState(false);
@@ -185,16 +210,16 @@ export default function ArchetypeAnalysis() {
   const fetchAnalysis = async () => {
     if (!selectedCountry) return;
     setLoading(true);
-  
+
     try {
       const res = await fetch(`${API_BASE}/user-skills-history?country=${selectedCountry}&days=365`);
       const rawData: UserRecord[] = await res.json();
-  
+
       const analyzed: AnalyzedUser[] = rawData.map(u => {
         const parsed = u.current.skills;
-  
+
         const { archetype, warSum, ecoSum, warFocus } = getArchetype(parsed);
-  
+
         return {
           ...u,
           parsedSkills: parsed,
@@ -204,7 +229,7 @@ export default function ArchetypeAnalysis() {
           archetype
         };
       });
-  
+
       setData(analyzed);
     } catch (err) {
       console.error(err);
@@ -252,7 +277,7 @@ export default function ArchetypeAnalysis() {
 
   const countryTimeline = useMemo(() => {
     const map: Record<string, { date: string, Vanguard: number, Industrialist: number, Sentinel: number }> = {};
-  
+
     data.forEach(user => {
       user.history.forEach(day => {
         if (!map[day.date]) {
@@ -263,12 +288,13 @@ export default function ArchetypeAnalysis() {
             Sentinel: 0,
           };
         }
-  
+
         map[day.date][day.archetype]++;
       });
     });
-  
-    return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
+
+    // skippiong last day
+    return Object.values(map).sort((a, b) => a.date.localeCompare(b.date)).slice(0, -1);
   }, [data]);
 
   return (
@@ -325,7 +351,9 @@ export default function ArchetypeAnalysis() {
         </div>
       ) : data.length > 0 ? (
         <>
-           <Card className="bg-zinc-950/50 border-zinc-800 shadow-2xl overflow-hidden">
+
+          {/* Evolution Timeline */}
+          <Card className="bg-zinc-950/50 border-zinc-800 shadow-2xl overflow-hidden">
             <CardHeader className="border-b border-zinc-900 pb-4">
               <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">
                 Evolution Timeline
@@ -338,7 +366,7 @@ export default function ArchetypeAnalysis() {
                   <LineChart data={countryTimeline}>
                     <XAxis dataKey="date" hide />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip content={<CustomTooltip />} />
                     {/* <Legend /> */}
 
                     <Line dataKey="Vanguard" stroke="#ef4444" strokeWidth={2} dot={false} />
@@ -481,7 +509,7 @@ export default function ArchetypeAnalysis() {
                       </div>
 
                       <div className="flex items-center gap-4 relative z-10">
-                        <div className="relative">
+                        <div className="relative self-start">
                           <img src={u.avatar_url} className="w-14 h-14 rounded-xl border border-zinc-800 shadow-xl" alt="" />
                           {/* <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-zinc-950`} style={{ backgroundColor: COLORS[u.archetype] }} /> */}
                         </div>
@@ -490,7 +518,7 @@ export default function ArchetypeAnalysis() {
                           <div className="flex items-center gap-2 mb-2">
                             <p className="text-sm font-black text-white truncate">{u.username}</p>
                             <span className="text-[10px] font-bold text-blue-500 uppercase font-mono">Lvl {u.level}</span>
-                            
+
                             <div className="flex items-center gap-2 ml-auto">
                               <div className="flex flex-col items-end">
                                 <span className="text-[9px] font-black text-red-500 font-mono leading-none">
@@ -521,7 +549,7 @@ export default function ArchetypeAnalysis() {
                                   <div className="flex flex-wrap gap-1">
                                     {SKILL_GROUPS[key].map(s =>
                                       Array.from({ length: u.parsedSkills[s].l }).map((_, i) => (
-                                        <img src={`${SKILLS_BASE_IMAGE_URL}${s}.svg`} alt={s} className="w-2 h-2" key={s + i} />
+                                        <img src={`${SKILLS_BASE_IMAGE_URL}${s}.svg`} alt={s} className="w-3 h-3" key={s + i} />
                                       ))
                                     )}
                                   </div>
@@ -531,7 +559,7 @@ export default function ArchetypeAnalysis() {
                           </div>
 
                           <div className="mt-3 pt-3 border-t border-zinc-900/50">
-                            <div className="flex h-5 w-full overflow-hidden rounded-lg bg-zinc-900 text-[8px] font-bold">
+                            <div className="flex h-4 w-full overflow-hidden rounded-lg bg-zinc-900 text-[8px] font-bold">
                               {segments.map((seg, i) => {
                                 const width = (seg.count / totalDays) * 100;
                                 return (
@@ -554,7 +582,7 @@ export default function ArchetypeAnalysis() {
                               })}
                             </div>
 
-                            <div className="flex justify-between mt-1 text-[8px] text-zinc-600 font-mono">
+                            <div className="flex justify-between mt-1 text-[8px] text-zinc-300 font-mono">
                               <span>{u.history[0]?.date}</span>
                               <span>{u.history[u.history.length - 1]?.date}</span>
                             </div>
@@ -565,7 +593,7 @@ export default function ArchetypeAnalysis() {
                     </div>
                   );
                 })}
-           
+
               </div>
             </div>
           </div>
