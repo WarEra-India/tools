@@ -416,10 +416,10 @@ export default function GlobalCompanyAnalyzer() {
           else if (val > 0) color = '#3f3f46'
         } else if (viewMode === 'valuation') {
           val = r.totalValue
-          if (val >= 1000000) color = '#86efac' // 1M+ (Greenish)
-          else if (val >= 100000) color = '#4ade80'
-          else if (val >= 10000) color = '#22c55e'
-          else if (val > 0) color = '#166534'
+          if (val >= 1000000) color = '#166534'
+          else if (val >= 100000) color = '#22c55e'
+          else if (val >= 10000) color = '#4ade80'
+          else if (val > 0) color = '#86efac'
         } else if (viewMode === 'tax') {
           // Tax is usually per country
           const tax = country.incomeTax
@@ -449,6 +449,9 @@ export default function GlobalCompanyAnalyzer() {
     try {
       if (map.getLayer('regions-fill')) {
         map.setPaintProperty('regions-fill', 'fill-color', hasData ? matchExpression : '#18181b')
+      }
+      if (map.getLayer('regions-outline')) {
+        map.setLayoutProperty('regions-outline', 'visibility', viewMode === 'tax' ? 'none' : 'visible')
       }
     } catch (e) {
       console.warn("Failed to update map paint properties", e)
@@ -528,7 +531,7 @@ export default function GlobalCompanyAnalyzer() {
 
         <div className="flex items-center gap-4">
           <div className="flex bg-zinc-900/50 p-1 rounded-xl border border-zinc-800/50 gap-1 backdrop-blur-sm">
-            {(['density', 'valuation', 'tax', 'sector'] as const).map((m) => (
+            {(['density', 'valuation', 'sector', 'tax'] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setViewMode(m)}
@@ -539,7 +542,7 @@ export default function GlobalCompanyAnalyzer() {
               >
                 {m === 'density' ? 'Units' :
                   m === 'valuation' ? 'Value' :
-                    m === 'tax' ? 'Tax %' : 'Sector'}
+                    m === 'tax' ? 'Tax' : 'Sector'}
               </button>
             ))}
           </div>
