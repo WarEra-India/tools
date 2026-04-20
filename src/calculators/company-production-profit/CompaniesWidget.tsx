@@ -2,12 +2,14 @@ import { Building2, ChevronDown, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProfile } from "@/lib/ProfileContext";
-import { type LocationBonus, getEthicsBonus, calcBonus } from "@/lib/hooks/useLocationBonus";
+import { type LocationBonus, getEthicsBonus, calcBonus, type RegionInfo } from "@/lib/hooks/useLocationBonus";
 import { itemName } from "@/lib/items";
 import { itemImageUrl } from "@/lib/images";
 import type { CompanyInfo } from "@/lib/wareraApi";
 import { CountryFlag } from "@/components/CountryFlag";
 import { getAllCountries, type Country } from "@/lib/api/warera";
+import { useLivePrices } from "@/lib/hooks/useLivePrices";
+import { COIN_ICON } from "../war-room/components";
 
 function calcCompanyBonus(company: CompanyInfo, locationBonus: LocationBonus | null): any | null {
   if (!locationBonus) return null;
@@ -31,19 +33,75 @@ function calcCompanyBonus(company: CompanyInfo, locationBonus: LocationBonus | n
   };
 }
 
+const UPGRADES_CONFIG: Record<string, { productionIncrement: number, maxLevel: number, upgradeBase: number }> = {
+  automatedEngine: {
+    productionIncrement: 24, maxLevel: 7, upgradeBase: 20,
+  },
+  storage: {
+    productionIncrement: 200, maxLevel: 7, upgradeBase: 10,
+  }
+}
+
+function getCompanyCalculations(company: CompanyInfo, locationBonus: LocationBonus | null): {
+  bonus: number | null;
+  depositMatch: number;
+  ethics: number;
+  industrialism: number;
+  stratBonus: number;
+  storage: number;
+  ae: number;
+  aePerHour: string;
+  regionInfo: RegionInfo | undefined;
+  production: number;
+  productionPercentage: number;
+  storageLevel: number;
+  aeLevel: number;
+  workerCount: number;
+  aeUpgradeCost: number | null;
+  storageUpgradeCost: number | null;
+} {
+  const regionInfo = locationBonus?.regionById[company.region];
+  const { totalBonus, depositMatch, ethics, industrialism, stratBonus } = (calcCompanyBonus(company, locationBonus) ?? {});
+  const bonus = locationBonus ? totalBonus : null;
+
+  const storageLevel = company.activeUpgradeLevels.storage;
+  const aeLevel = company.activeUpgradeLevels.automatedEngine;
+  const workerCount = company.workerCount;
+
+  const storage = storageLevel * UPGRADES_CONFIG.storage.productionIncrement;
+  const ae = aeLevel * UPGRADES_CONFIG.automatedEngine.productionIncrement;
+  const aePerHour = ((ae / 24) * (1 + (bonus ?? 0) / 100)).toFixed(2);
+
+  const production = company.production;
+  const productionPercentage = Number((production / storage * 100).toFixed(2));
+
+  const aeUpgradeCost = aeLevel < UPGRADES_CONFIG.automatedEngine.maxLevel ? UPGRADES_CONFIG.automatedEngine.upgradeBase * (2 ** (aeLevel - 1)) : null;
+  const storageUpgradeCost = storageLevel < UPGRADES_CONFIG.storage.maxLevel ? UPGRADES_CONFIG.storage.upgradeBase * (2 ** (storageLevel - 1)) : null;
+
+  return {
+    bonus,
+    depositMatch,
+    ethics,
+    industrialism,
+    stratBonus,
+    storage,
+    ae,
+    aePerHour,
+    regionInfo,
+    production,
+    productionPercentage,
+    storageLevel,
+    aeLevel,
+    workerCount,
+    aeUpgradeCost,
+    storageUpgradeCost,
+  }
+}
+
 const WORKER_ICON = `${import.meta.env.BASE_URL}images/worker.svg`;
 const STORAGE_ICON = `${import.meta.env.BASE_URL}images/storage.svg`;
 const AUTOMATED_ENGINE_ICON = `${import.meta.env.BASE_URL}images/ae.svg`;
 const INCREMENT_ICON = `${import.meta.env.BASE_URL}images/increment.svg`;
-
-const UPGRADES_CONFIG: Record<string, { base: number, increment: number, maxLevel: number }> = {
-  automatedEngine: {
-    base: 0, increment: 24, maxLevel: 7
-  },
-  storage: {
-    base: 0, increment: 200, maxLevel: 7
-  }
-}
 
 interface Props {
   locationBonus: LocationBonus | null;
@@ -51,6 +109,7 @@ interface Props {
 
 export default function CompaniesWidget({ locationBonus }: Props) {
   const { profile } = useProfile();
+  const { data: livePrices } = useLivePrices();
   const [open, setOpen] = useState(true);
   const [countries, setCountries] = useState<Record<string, Country>>({});
 
@@ -82,73 +141,29 @@ export default function CompaniesWidget({ locationBonus }: Props) {
         {open && (
           <div className="flex gap-2 flex-col">
             {profile.companies.map((company) => {
-              const regionInfo = locationBonus?.regionById[company.region];
-              const { totalBonus, depositMatch, ethics, industrialism, stratBonus } = (calcCompanyBonus(company, locationBonus) ?? {});
-              const bonus = locationBonus ? totalBonus : null;
-              const storage = UPGRADES_CONFIG.storage.base + (company.activeUpgradeLevels.storage * UPGRADES_CONFIG.storage.increment);
-              const ae = UPGRADES_CONFIG.automatedEngine.base + (company.activeUpgradeLevels.automatedEngine * UPGRADES_CONFIG.automatedEngine.increment);
-              const aePerHour = ((ae / 24) * (1 + (bonus ?? 0) / 100)).toFixed(2);
+              const {
+                bonus, regionInfo, depositMatch, ethics,
+                industrialism, stratBonus, storage, ae, aePerHour,
+                production, productionPercentage, aeLevel, storageLevel,
+                workerCount, aeUpgradeCost, storageUpgradeCost
+              } = getCompanyCalculations(company, locationBonus);
 
               return (
                 <div
                   key={company._id}
                   className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-2.5"
                 >
+                  {/* Company Info */}
                   <div className="flex items-center gap-2">
                     <img
                       src={itemImageUrl(company.itemCode)}
                       alt={itemName(company.itemCode)}
-                      className="h-6 w-6 shrink-0 object-contain"
+                      className="h-8 w-8"
                     />
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium text-zinc-200 truncate">{company.name}</p>
-                        {/* Income Tax badge */}
-                        {regionInfo?.incomeTax && regionInfo.incomeTax > 0 && (
-                          <span
-                            className="shrink-0 rounded-full bg-yellow-900/50 px-2 py-0.5 text-xs text-yellow-400"
-                          >
-                            {regionInfo.incomeTax}%
-                          </span>
-                        )}
-
-                        {/* Bonus badge */}
-                        {bonus !== null && (
-                          <span
-                            title={`Deposit: ${depositMatch}%\nStrat: ${stratBonus}%\nEthics: ${ethics}%`}
-                            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${bonus > 0
-                              ? "bg-emerald-900/50 text-emerald-400"
-                              : "bg-zinc-800 text-zinc-500"
-                              }`}
-                          >
-                            +{bonus}%
-                          </span>
-                        )}
-
-                        {/* Comapny Levels */}
-                        {!!company.activeUpgradeLevels.automatedEngine && (
-                          <div className="flex items-center gap-1 text-xs text-zinc-400 shrink-0">
-                            <span className="font-bold">{company.activeUpgradeLevels.automatedEngine}</span>
-                            <img src={AUTOMATED_ENGINE_ICON} alt="Automated Engine" className="h-3.5 w-3.5" />
-                          </div>
-                        )}
-
-                        {!!company.activeUpgradeLevels.storage && (
-                          <div className="flex items-center gap-1 text-xs text-zinc-400 shrink-0">
-                            <span className="font-bold">{company.activeUpgradeLevels.storage}</span>
-                            <img src={STORAGE_ICON} alt="Storage" className="h-3.5 w-3.5" />
-                          </div>
-                        )}
-
-                        {/* Workers */}
-                        {!!company.workerCount && (
-                          <div className="flex items-center gap-1 text-xs text-zinc-400 shrink-0">
-                            <span className="font-bold">{company.workerCount}</span>
-                            <img src={WORKER_ICON} alt="PP" className="h-3.5 w-3.5" />
-                          </div>
-                        )}
-
                       </div>
                       <p className="text-xs text-zinc-500 truncate">
                         {regionInfo?.countryId && <CountryFlag countryCode={countries[regionInfo?.countryId]?.code} className="mr-1 rounded-sm h-3 w-3" />}
@@ -159,15 +174,89 @@ export default function CompaniesWidget({ locationBonus }: Props) {
                     </div>
                   </div>
 
+                  {/* Tags */}
+                  <div className="flex items-center gap-2">
+                    {/* Income Tax badge */}
+                    {regionInfo?.incomeTax && regionInfo.incomeTax > 0 && (
+                      <span
+                        className="shrink-0 rounded-full bg-yellow-900/50 px-2 py-0.5 text-xs text-yellow-400"
+                      >
+                        Tax: {regionInfo.incomeTax}%
+                      </span>
+                    )}
+
+                    {/* Bonus badge */}
+                    {bonus !== null && (
+                      <span
+                        title={`Deposit: ${depositMatch}%\nStrat: ${stratBonus}%\nEthics: ${ethics}%`}
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${bonus > 0
+                          ? "bg-emerald-900/50 text-emerald-400"
+                          : "bg-zinc-800 text-zinc-500"
+                          }`}
+                      >
+                        Bonus: +{bonus}%
+                      </span>
+                    )}
+
+                    {/* Comapny Levels */}
+                    <div className="flex items-center gap-1 text-xs text-zinc-400 outline outline-1 outline-zinc-800 rounded-full px-2 py-0.5">
+                      <span className="font-bold">{aeLevel}</span>
+                      <img src={AUTOMATED_ENGINE_ICON} alt="Automated Engine" className="h-4 w-4" />
+                    </div>
+
+                    <div className="flex items-center gap-1 text-xs text-zinc-400 outline outline-1 outline-zinc-800 rounded-full px-2 py-0.5">
+                      <span className="font-bold">{storageLevel}</span>
+                      <img src={STORAGE_ICON} alt="Storage" className="h-4 w-4" />
+                    </div>
+
+                    {/* Workers */}
+                    {!!workerCount && (
+                      <div className="flex items-center gap-1 text-xs text-zinc-400 outline outline-1 outline-zinc-800 rounded-full px-2 py-0.5">
+                        <span className="font-bold">{workerCount}</span>
+                        <img src={WORKER_ICON} alt="PP" className="h-4 w-4" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Production Bar */}
                   <div className="flex items-center gap-2">
                     <div className="rounded-sm w-full h-4 flex items-center justify-center bg-[#1A2126] relative">
-                      <div className="rounded-sm h-full absolute left-0 z-0" style={{ width: `${(company.production / storage * 100).toFixed(2)}%`, background: "linear-gradient(45deg,#5E4B23,#806730)" }}></div>
-                      <span className="text-center text-xs text-[#E1C997] z-10">{company.production.toFixed(2)} / {storage}</span>
+                      <div className="rounded-sm h-full absolute left-0 z-0" style={{ width: `${productionPercentage}%`, background: "linear-gradient(45deg,#5E4B23,#806730)" }}></div>
+                      <span className="text-center text-xs text-[#E1C997] z-10">{production.toFixed(2)} / {storage}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <img src={INCREMENT_ICON} alt="Automated Engine" className="h-3.5 w-3.5" />
                       <span className="text-center text-xs text-[#E1C997]">{aePerHour}</span>
                     </div>
+                  </div>
+
+                  {/* Upgrades */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-400">Upgrades:</span>
+                    {aeUpgradeCost && (
+                      <div className="flex items-center gap-1 text-xs text-zinc-400 outline outline-1 outline-zinc-800 rounded-full px-2 py-0.5">
+                        <span className="font-bold">{aeLevel + 1}</span>
+                        <img src={AUTOMATED_ENGINE_ICON} alt="Automated Engine" className="h-4 w-4" />
+                        =
+                        <span className="font-bold">{aeUpgradeCost}</span>
+                        <img src={itemImageUrl("steel")} className="h-5 w-5" />
+                        =
+                        <span className="font-bold">{(aeUpgradeCost * (livePrices?.prices.steel ?? 0)).toFixed(2)}</span>
+                        <img src={COIN_ICON} className="h-4 w-4" />
+                      </div>
+                    )}
+                    {storageUpgradeCost && (
+                      <div className="flex items-center gap-1 text-xs text-zinc-400 outline outline-1 outline-zinc-800 rounded-full px-2 py-0.5">
+                        <span className="font-bold">{storageLevel + 1}</span>
+                        <img src={STORAGE_ICON} alt="Automated Engine" className="h-4 w-4" />
+                        =
+                        <span className="font-bold">{storageUpgradeCost}</span>
+                        <img src={itemImageUrl("steel")} className="h-5 w-5" />
+                        =
+                        <span className="font-bold">{(storageUpgradeCost * (livePrices?.prices.steel ?? 0)).toFixed(2)}</span>
+                        <img src={COIN_ICON} className="h-4 w-4" />
+                      </div>
+                    )}
                   </div>
 
                 </div>
