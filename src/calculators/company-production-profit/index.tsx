@@ -208,7 +208,6 @@ export default function CompanyProductionProfit() {
 
   const rawItems = data ? Object.keys(data.rawPP) : []
   const processedItems = data ? Object.keys(data.recipes) : []
-
   const processedRows = useMemo(() => rows.filter((r) => r.type === "Processed"), [rows])
 
   const rawRowMap = useMemo(
@@ -326,7 +325,7 @@ export default function CompanyProductionProfit() {
         {!isLoading && (
           <>
             <RecommendationsWidget locationBonus={locationBonus} profitRows={rows} concretePrice={data?.prices.concrete ?? 0} />
-            <CompaniesWidget locationBonus={locationBonus} />
+            <CompaniesWidget locationBonus={locationBonus} profitRows={rows} />
           </>
         )}
 

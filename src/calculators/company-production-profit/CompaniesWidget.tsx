@@ -1,5 +1,5 @@
 import { Building2, ChevronDown, ChevronRight } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProfile } from "@/lib/ProfileContext";
 import { type LocationBonus, getEthicsBonus, calcBonus, type RegionInfo } from "@/lib/hooks/useLocationBonus";
@@ -10,6 +10,7 @@ import { CountryFlag } from "@/components/CountryFlag";
 import { getAllCountries, type Country } from "@/lib/api/warera";
 import { useLivePrices, type LivePrices } from "@/lib/hooks/useLivePrices";
 import { COIN_ICON } from "../war-room/components";
+import { type ProfitRow } from "@/lib/hooks/useGameConfig";
 
 function calcCompanyBonus(company: CompanyInfo, locationBonus: LocationBonus | null): any | null {
   if (!locationBonus) return null;
@@ -42,7 +43,7 @@ const UPGRADES_CONFIG: Record<string, { productionIncrement: number, maxLevel: n
   }
 }
 
-function getCompanyCalculations(company: CompanyInfo, locationBonus: LocationBonus | null, livePrices: LivePrices | null): {
+function getCompanyCalculations(company: CompanyInfo, locationBonus: LocationBonus | null, livePrices: LivePrices | null, profitRows: ProfitRow[]): {
   bonus: number | null;
   depositMatch: number;
   ethics: number;
@@ -85,7 +86,9 @@ function getCompanyCalculations(company: CompanyInfo, locationBonus: LocationBon
   const storageUpgradeRaw = storageLevel < UPGRADES_CONFIG.storage.maxLevel ? UPGRADES_CONFIG.storage.upgradeBase * (2 ** (storageLevel - 1)) : null;
   const storageUpgradeCost = storageUpgradeRaw ? Number((storageUpgradeRaw * (livePrices?.prices.steel ?? 0)).toFixed(2)) : null;
 
-  const profits = Number((aeWithBonus * (livePrices?.prices[company.itemCode] ?? 0)).toFixed(2));
+  const profitRow = profitRows.find(r => r.item === company.itemCode);
+  const baseProfitPerPP = profitRow ? (profitRow.profit / profitRow.pp) : 0;
+  const profits = Number((aeWithBonus * baseProfitPerPP).toFixed(2));
   const profitsPerHour = Number((profits / 24).toFixed(2));
 
   return {
@@ -119,9 +122,10 @@ const INCREMENT_ICON = `${import.meta.env.BASE_URL}images/increment.svg`;
 
 interface Props {
   locationBonus: LocationBonus | null;
+  profitRows: ProfitRow[];
 }
 
-export default function CompaniesWidget({ locationBonus }: Props) {
+export default function CompaniesWidget({ locationBonus, profitRows }: Props) {
   const { profile } = useProfile();
   const { data: livePrices } = useLivePrices();
   const [open, setOpen] = useState(true);
@@ -131,37 +135,60 @@ export default function CompaniesWidget({ locationBonus }: Props) {
     getAllCountries().then(setCountries).catch(() => { });
   }, []);
 
+  const calculatedCompanies = useMemo(() => {
+    if (!profile) return [];
+    return profile.companies.map((company: CompanyInfo) => ({
+      company,
+      calcs: getCompanyCalculations(company, locationBonus, livePrices, profitRows)
+    }));
+  }, [profile, locationBonus, livePrices, profitRows]);
+
+  const totalProfit = useMemo(() => {
+    return (calculatedCompanies as any[]).reduce((sum: number, item) => sum + item.calcs.profits, 0);
+  }, [calculatedCompanies]);
+
   if (!profile || profile.companies.length === 0) return null;
 
   return (
     <Card className="mb-6">
       <CardContent className="p-5">
-        <button
-          className={'flex items-center gap-2 ' + (open ? 'mb-3' : '') + ' text-xs font-semibold uppercase tracking-wider text-zinc-500 w-full focus:outline-none'}
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-        >
-          {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          <Building2 className="h-3.5 w-3.5" />
-          Companies of
-          <img
-            src={profile.user.avatarUrl}
-            alt={profile.user.username}
-            className="h-5 w-5 rounded-full border border-zinc-700 object-cover"
-          />
-          <span className="text-zinc-300">{profile.user.username}</span>
-        </button>
+        <div className="flex items-center justify-between gap-4">
+          <button
+            className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 focus:outline-none"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+          >
+            {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            <Building2 className="h-3.5 w-3.5" />
+            Companies of
+            <img
+              src={profile.user.avatarUrl}
+              alt={profile.user.username}
+              className="h-5 w-5 rounded-full border border-zinc-700 object-cover"
+            />
+            <span className="text-zinc-300">{profile.user.username}</span>
+          </button>
+
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="text-zinc-500 uppercase tracking-wider font-semibold">Profit</span>
+            <div className="flex items-center gap-1 rounded-full bg-emerald-950/30 px-2.5 py-1 text-emerald-400 border border-emerald-900/50">
+              <span className="font-bold tabular-nums">{totalProfit.toFixed(2)}</span>
+              <img src={COIN_ICON} className="h-3.5 w-3.5" />
+              <span className="text-[11px] opacity-70">/ day</span>
+            </div>
+          </div>
+        </div>
 
         {open && (
-          <div className="flex gap-2 flex-col">
-            {profile.companies.map((company) => {
+          <div className="flex gap-2 flex-col mt-3">
+            {calculatedCompanies.map(({ company, calcs }: { company: CompanyInfo, calcs: any }) => {
               const {
                 bonus, regionInfo, depositMatch, ethics,
                 industrialism, stratBonus, storage, ae, aePerHour,
                 production, productionPercentage, aeLevel, storageLevel,
                 workerCount, aeUpgradeCost, storageUpgradeCost, aeUpgradeRaw,
                 storageUpgradeRaw, profits, profitsPerHour
-              } = getCompanyCalculations(company, locationBonus, livePrices);
+              } = calcs;
 
               return (
                 <div
@@ -276,7 +303,7 @@ export default function CompaniesWidget({ locationBonus }: Props) {
 
                   {/* Profits */}
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-400">Revenue:</span>
+                    <span className="text-xs text-zinc-400">Profits:</span>
                     <div className="flex items-center gap-1 text-xs text-zinc-400 outline outline-1 outline-zinc-800 rounded-full px-2 py-0.5">
                       <span className="font-bold">{profits}</span>
                       <img src={COIN_ICON} className="h-4 w-4" />
