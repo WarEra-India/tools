@@ -8,7 +8,7 @@ import { itemImageUrl } from "@/lib/images";
 import type { CompanyInfo } from "@/lib/wareraApi";
 import { CountryFlag } from "@/components/CountryFlag";
 import { getAllCountries, type Country } from "@/lib/api/warera";
-import { useLivePrices } from "@/lib/hooks/useLivePrices";
+import { useLivePrices, type LivePrices } from "@/lib/hooks/useLivePrices";
 import { COIN_ICON } from "../war-room/components";
 
 function calcCompanyBonus(company: CompanyInfo, locationBonus: LocationBonus | null): any | null {
@@ -42,7 +42,7 @@ const UPGRADES_CONFIG: Record<string, { productionIncrement: number, maxLevel: n
   }
 }
 
-function getCompanyCalculations(company: CompanyInfo, locationBonus: LocationBonus | null): {
+function getCompanyCalculations(company: CompanyInfo, locationBonus: LocationBonus | null, livePrices: LivePrices | null): {
   bonus: number | null;
   depositMatch: number;
   ethics: number;
@@ -57,8 +57,12 @@ function getCompanyCalculations(company: CompanyInfo, locationBonus: LocationBon
   storageLevel: number;
   aeLevel: number;
   workerCount: number;
+  aeUpgradeRaw: number | null;
+  storageUpgradeRaw: number | null;
   aeUpgradeCost: number | null;
   storageUpgradeCost: number | null;
+  profits: number;
+  profitsPerHour: number;
 } {
   const regionInfo = locationBonus?.regionById[company.region];
   const { totalBonus, depositMatch, ethics, industrialism, stratBonus } = (calcCompanyBonus(company, locationBonus) ?? {});
@@ -70,13 +74,19 @@ function getCompanyCalculations(company: CompanyInfo, locationBonus: LocationBon
 
   const storage = storageLevel * UPGRADES_CONFIG.storage.productionIncrement;
   const ae = aeLevel * UPGRADES_CONFIG.automatedEngine.productionIncrement;
-  const aePerHour = ((ae / 24) * (1 + (bonus ?? 0) / 100)).toFixed(2);
+  const aeWithBonus = ae * (1 + (bonus ?? 0) / 100);
+  const aePerHour = (aeWithBonus / 24).toFixed(2);
 
   const production = company.production;
   const productionPercentage = Number((production / storage * 100).toFixed(2));
 
-  const aeUpgradeCost = aeLevel < UPGRADES_CONFIG.automatedEngine.maxLevel ? UPGRADES_CONFIG.automatedEngine.upgradeBase * (2 ** (aeLevel - 1)) : null;
-  const storageUpgradeCost = storageLevel < UPGRADES_CONFIG.storage.maxLevel ? UPGRADES_CONFIG.storage.upgradeBase * (2 ** (storageLevel - 1)) : null;
+  const aeUpgradeRaw = aeLevel < UPGRADES_CONFIG.automatedEngine.maxLevel ? UPGRADES_CONFIG.automatedEngine.upgradeBase * (2 ** (aeLevel - 1)) : null;
+  const aeUpgradeCost = aeUpgradeRaw ? Number((aeUpgradeRaw * (livePrices?.prices.steel ?? 0)).toFixed(2)) : null
+  const storageUpgradeRaw = storageLevel < UPGRADES_CONFIG.storage.maxLevel ? UPGRADES_CONFIG.storage.upgradeBase * (2 ** (storageLevel - 1)) : null;
+  const storageUpgradeCost = storageUpgradeRaw ? Number((storageUpgradeRaw * (livePrices?.prices.steel ?? 0)).toFixed(2)) : null;
+
+  const profits = Number((aeWithBonus * (livePrices?.prices[company.itemCode] ?? 0)).toFixed(2));
+  const profitsPerHour = Number((profits / 24).toFixed(2));
 
   return {
     bonus,
@@ -93,8 +103,12 @@ function getCompanyCalculations(company: CompanyInfo, locationBonus: LocationBon
     storageLevel,
     aeLevel,
     workerCount,
+    aeUpgradeRaw,
+    storageUpgradeRaw,
     aeUpgradeCost,
     storageUpgradeCost,
+    profits,
+    profitsPerHour,
   }
 }
 
@@ -145,8 +159,9 @@ export default function CompaniesWidget({ locationBonus }: Props) {
                 bonus, regionInfo, depositMatch, ethics,
                 industrialism, stratBonus, storage, ae, aePerHour,
                 production, productionPercentage, aeLevel, storageLevel,
-                workerCount, aeUpgradeCost, storageUpgradeCost
-              } = getCompanyCalculations(company, locationBonus);
+                workerCount, aeUpgradeCost, storageUpgradeCost, aeUpgradeRaw,
+                storageUpgradeRaw, profits, profitsPerHour
+              } = getCompanyCalculations(company, locationBonus, livePrices);
 
               return (
                 <div
@@ -181,7 +196,7 @@ export default function CompaniesWidget({ locationBonus }: Props) {
                       <span
                         className="shrink-0 rounded-full bg-yellow-900/50 px-2 py-0.5 text-xs text-yellow-400"
                       >
-                        Tax: {regionInfo.incomeTax}%
+                        {regionInfo.incomeTax}%
                       </span>
                     )}
 
@@ -194,7 +209,7 @@ export default function CompaniesWidget({ locationBonus }: Props) {
                           : "bg-zinc-800 text-zinc-500"
                           }`}
                       >
-                        Bonus: +{bonus}%
+                        +{bonus}%
                       </span>
                     )}
 
@@ -238,10 +253,10 @@ export default function CompaniesWidget({ locationBonus }: Props) {
                         <span className="font-bold">{aeLevel + 1}</span>
                         <img src={AUTOMATED_ENGINE_ICON} alt="Automated Engine" className="h-4 w-4" />
                         =
-                        <span className="font-bold">{aeUpgradeCost}</span>
+                        <span className="font-bold">{aeUpgradeRaw}</span>
                         <img src={itemImageUrl("steel")} className="h-5 w-5" />
                         =
-                        <span className="font-bold">{(aeUpgradeCost * (livePrices?.prices.steel ?? 0)).toFixed(2)}</span>
+                        <span className="font-bold">{aeUpgradeCost}</span>
                         <img src={COIN_ICON} className="h-4 w-4" />
                       </div>
                     )}
@@ -250,13 +265,28 @@ export default function CompaniesWidget({ locationBonus }: Props) {
                         <span className="font-bold">{storageLevel + 1}</span>
                         <img src={STORAGE_ICON} alt="Automated Engine" className="h-4 w-4" />
                         =
-                        <span className="font-bold">{storageUpgradeCost}</span>
+                        <span className="font-bold">{storageUpgradeRaw}</span>
                         <img src={itemImageUrl("steel")} className="h-5 w-5" />
                         =
-                        <span className="font-bold">{(storageUpgradeCost * (livePrices?.prices.steel ?? 0)).toFixed(2)}</span>
+                        <span className="font-bold">{storageUpgradeCost}</span>
                         <img src={COIN_ICON} className="h-4 w-4" />
                       </div>
                     )}
+                  </div>
+
+                  {/* Profits */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-400">Revenue:</span>
+                    <div className="flex items-center gap-1 text-xs text-zinc-400 outline outline-1 outline-zinc-800 rounded-full px-2 py-0.5">
+                      <span className="font-bold">{profits}</span>
+                      <img src={COIN_ICON} className="h-4 w-4" />
+                      <span>/ day</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-zinc-400 outline outline-1 outline-zinc-800 rounded-full px-2 py-0.5">
+                      <span className="font-bold">{profitsPerHour}</span>
+                      <img src={COIN_ICON} className="h-4 w-4" />
+                      <span>/ hr</span>
+                    </div>
                   </div>
 
                 </div>
