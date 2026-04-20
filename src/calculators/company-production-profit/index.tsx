@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Link } from "react-router-dom"
 import { ArrowLeft, Coins } from "lucide-react"
 import {
@@ -37,8 +37,8 @@ import { itemImageUrl } from "@/lib/images"
 import { itemName } from "@/lib/items"
 import { useLivePrices } from "@/lib/hooks/useLivePrices"
 import { useLocationBonus } from "@/lib/hooks/useLocationBonus"
-import RecommendationsWidget from "@/components/RecommendationsWidget"
-import CompaniesWidget from "@/components/CompaniesWidget"
+import RecommendationsWidget from "@/calculators/company-production-profit/RecommendationsWidget"
+import CompaniesWidget from "@/calculators/company-production-profit/CompaniesWidget"
 
 const PP_ICON = `${import.meta.env.BASE_URL}images/production.svg`
 const COIN_ICON = `${import.meta.env.BASE_URL}images/game_coin.svg`
@@ -155,20 +155,6 @@ function TableSkeleton() {
             </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function RecommendationsSkeleton() {
-  return (
-    <Card className="mb-6">
-      <CardContent className="pt-5">
-        <div className="flex items-center gap-2 mb-3">
-          <SkeletonBar className="h-3.5 w-3.5 rounded" />
-          <SkeletonBar className="h-3 w-52" />
-        </div>
-        <SkeletonBar className="h-9 w-full rounded-md" />
       </CardContent>
     </Card>
   )
