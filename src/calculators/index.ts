@@ -80,11 +80,11 @@ export const calculators: CalculatorMeta[] = [
     component: lazy(() => import("./war-room/index")),
   },
   {
-    id: "global-company-analyzer",
-    name: "Global Company Analyzer",
+    id: "industrial-atlas",
+    name: "Industrial Atlas",
     description: "Analyze world-wide company distribution, regional taxes, worker counts, and production bonuses on a global map.",
-    path: "/global-company-analyzer",
+    path: "/industrial-atlas",
     icon: "globe",
-    component: lazy(() => import("./global-company-analyzer/index")),
+    component: lazy(() => import("./industrial-atlas/index")),
   },
 ];

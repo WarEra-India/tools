@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from "react"
 import { CountryFlag } from "@/components/CountryFlag"
-import { ArrowLeft, Search, Users, Eye, EyeOff, Map as MapIcon, ChevronRight, Calculator, TrendingUp, X } from "lucide-react"
+import { ArrowLeft, Search, Eye, EyeOff, Map as MapIcon, ChevronRight, Calculator, TrendingUp, X, Globe2Icon } from "lucide-react"
 import { Link } from "react-router-dom"
 import * as topojson from "topojson-client"
 import maplibregl from "maplibre-gl"
@@ -89,14 +89,62 @@ function formatNumber(n: number) {
   return n.toLocaleString()
 }
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// --- IndexedDB Cache Logic ---
+
+const DB_NAME = "WareraTacticalCache"
+const STORE_NAME = "tactical_data"
+const CACHE_DURATION = 60 * 60 * 1000 // 1 hour
+
+const openDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1)
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(STORE_NAME)) {
+        request.result.createObjectStore(STORE_NAME)
+      }
+    }
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+}
+
+const getCache = async (key: string) => {
+  try {
+    const db = await openDB()
+    return new Promise((resolve) => {
+      const transaction = db.transaction(STORE_NAME, "readonly")
+      const store = transaction.objectStore(STORE_NAME)
+      const request = store.get(key)
+      request.onsuccess = () => {
+        const result = request.result
+        if (result && Date.now() - result.timestamp < CACHE_DURATION) {
+          resolve(result.data)
+        } else {
+          resolve(null)
+        }
+      }
+      request.onerror = () => resolve(null)
+    })
+  } catch (e) {
+    return null
+  }
+}
+
+const setCache = async (key: string, data: any) => {
+  try {
+    const db = await openDB()
+    const transaction = db.transaction(STORE_NAME, "readwrite")
+    const store = transaction.objectStore(STORE_NAME)
+    store.put({ data, timestamp: Date.now() }, key)
+  } catch (e) {
+    console.warn("Failed to save to IndexedDB", e)
+  }
+}
 
 export default function GlobalCompanyAnalyzer() {
   const [loading, setLoading] = useState(true)
-  const [dataLoading, setDataLoading] = useState(false)
   const [progress, setProgress] = useState({ stage: "Map", current: 0, total: 0, startTime: 0 })
   const [error, setError] = useState<string | null>(null)
-  const [token, _] = useState<string>(localStorage.getItem("warera-api-token") || "");
   const initialized = useRef(false)
 
   // Data
@@ -136,20 +184,30 @@ export default function GlobalCompanyAnalyzer() {
       setLoading(true)
       setProgress(p => ({ ...p, stage: "Mapping Industrial Grid", current: 0, total: 2 }))
 
-      // 1. Fetch Map TopoJSON and Aggregated Industrial Data
-      const [mapRes, aggRes] = await Promise.all([
-        fetch(`${API_BASE}/map.getMapData`).then(r => {
-          setProgress(p => ({ ...p, current: p.current + 1 }))
-          return r.json()
-        }),
-        fetch("https://warvault.shadoooow.workers.dev/api/companies/aggregated").then(r => {
-          setProgress(p => ({ ...p, current: p.current + 1 }))
-          return r.json()
-        })
-      ])
+      const CACHE_KEY_MAP = "warera_map_data_v2"
+      const CACHE_KEY_AGGREGATED = "warera_aggregated_data_v2"
 
-      const topoData = mapRes.result.data.map
-      const aggregatedData = aggRes.data
+      let mapDataResult = await getCache(CACHE_KEY_MAP) as any
+      let aggDataResult = await getCache(CACHE_KEY_AGGREGATED) as any
+
+      if (!mapDataResult || !aggDataResult) {
+        const [mapRes, aggRes] = await Promise.all([
+          mapDataResult ? Promise.resolve({ result: { data: { map: mapDataResult } } }) : fetch(`${API_BASE}/map.getMapData`).then(r => r.json()),
+          aggDataResult ? Promise.resolve({ data: aggDataResult }) : fetch("https://warvault.shadoooow.workers.dev/api/companies/aggregated").then(r => r.json())
+        ])
+
+        if (!mapDataResult) {
+          mapDataResult = mapRes.result.data.map
+          await setCache(CACHE_KEY_MAP, mapDataResult)
+        }
+        if (!aggDataResult) {
+          aggDataResult = aggRes.data
+          await setCache(CACHE_KEY_AGGREGATED, aggDataResult)
+        }
+      }
+
+      const topoData = mapDataResult
+      const aggregatedData = aggDataResult as Record<string, AggregatedCountry>
 
       const countryMap: Record<string, CountryInfo> = {}
       const regionsMap: Record<string, RegionInfo> = {}
@@ -184,7 +242,7 @@ export default function GlobalCompanyAnalyzer() {
       setAggregated(aggregatedData)
       setAllCompanyIds(ids)
 
-      // 3. Convert to GeoJSON for MapLibre
+      // 4. Convert to GeoJSON for MapLibre
       const regionsFeature = topojson.feature(topoData, topoData.objects.regions) as any
       regionsFeature.features.forEach((f: any, i: number) => {
         f.id = i
@@ -365,11 +423,11 @@ export default function GlobalCompanyAnalyzer() {
         } else if (viewMode === 'tax') {
           // Tax is usually per country
           const tax = country.incomeTax
-          if (tax >= 20) color = '#ef4444' // High Tax (Red)
-          else if (tax >= 15) color = '#f97316'
-          else if (tax >= 10) color = '#facc15'
-          else if (tax > 0) color = '#84cc16'
-          else color = '#10b981' // 0% Tax (Emerald)
+          if (tax >= 20) color = '#7f1d1d' // red-900
+          else if (tax >= 15) color = '#b91c1c' // red-700
+          else if (tax >= 10) color = '#ef4444' // red-500
+          else if (tax > 0) color = '#fca5a5' // red-300
+          else color = '#fee2e2' // red-100
           val = 1 // Flag to show it's "filled"
         } else if (viewMode === 'sector' && selectedSector) {
           val = r.companies.filter(c => c.itemCode === selectedSector && (!c.disabledAt || showDisabled)).length
@@ -459,12 +517,12 @@ export default function GlobalCompanyAnalyzer() {
           </Link>
           <div>
             <h1 className="text-lg font-bold flex items-center gap-2">
-              <MapIcon className="w-4 h-4 text-blue-500" />
-              Global Company Analyzer
+              <Globe2Icon className="w-4 h-4 text-blue-500" />
+              Industrial Atlas
             </h1>
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
               <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Industrial Intelligence Network</p>
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -565,9 +623,9 @@ export default function GlobalCompanyAnalyzer() {
                   }`}
               >
                 <div className="flex items-center gap-3">
-                  <CountryFlag countryCode={c.code} className="w-4 h-3 rounded-sm opacity-50 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
+                  <CountryFlag countryCode={c.code} className="w-4 h-3 rounded-sm" />
                   <div className="text-left">
-                    <p className={`text-sm font-bold ${selectedCountryId === c.countryId ? "text-blue-400" : "text-zinc-400 group-hover:text-zinc-100"}`}>
+                    <p className={`text-sm font-bold ${selectedCountryId === c.countryId ? "text-blue-400" : "text-zinc-100"}`}>
                       {c.name}
                     </p>
                     <p className="text-[10px] text-zinc-600 font-mono">
