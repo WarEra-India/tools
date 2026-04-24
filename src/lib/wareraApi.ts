@@ -109,6 +109,22 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
   return post<UserProfile>("user.getUserById", { userId });
 }
 
+export async function getUserProfilesBatch(userIds: string[]): Promise<UserProfile[]> {
+  if (userIds.length === 0) return [];
+  const url =
+    API_BASE + "/" + userIds.map(() => "user.getUserById").join(",") + "?batch=1";
+  const body: Record<string, { userId: string }> = {};
+  userIds.forEach((id, i) => { body[i] = { userId: id }; });
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "*/*" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  const json = await res.json();
+  return (json as { result: { data: UserProfile } }[]).map((r) => r.result.data);
+}
+
 /* ---------- companies ---------- */
 
 interface CompaniesResult {

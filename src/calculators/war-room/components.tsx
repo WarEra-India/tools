@@ -282,7 +282,7 @@ export const ModifierToggle = ({
   onChange,
   livePrices,
 }: {
-  modifier: 'buff' | 'debuff' | 'no buff';
+  modifier: 'buff' | 'debuff' | 'no buff' | 'none';
   onChange: (mod: 'buff' | 'debuff' | 'no buff') => void;
   livePrices: any;
 }) => (
@@ -318,13 +318,15 @@ export const ModifierToggle = ({
         </button>
       ))}
     </div>
-    <div className="flex items-center justify-center gap-2">
-      <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest text-center">Pill</span>
-      <div className="flex items-center gap-1">
-        <img src={COIN_ICON} className="h-3 w-3" />
-        <span className="text-[10px] font-mono font-bold text-zinc-200">{livePrices?.prices?.cocain?.toFixed(2) ?? 0}</span>
+    {livePrices && (
+      <div className="flex items-center justify-center gap-2">
+        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest text-center">Pill</span>
+        <div className="flex items-center gap-1">
+          <img src={COIN_ICON} className="h-3 w-3" />
+          <span className="text-[10px] font-mono font-bold text-zinc-200">{livePrices?.prices?.cocain?.toFixed(2) ?? 0}</span>
+        </div>
       </div>
-    </div>
+    )}
   </div>
 );
 

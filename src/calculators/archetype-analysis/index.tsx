@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, ArrowLeft, Radar, Shield, Swords, Coins, PieChart as PieChartIcon, Target, Info } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Legend, Tooltip, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar as ReRadar } from "recharts";
 import { useProfile } from "@/lib/ProfileContext";
+import { getUserProfilesBatch, type UserProfile } from "@/lib/wareraApi";
+import { BuffSlot, ModifierToggle } from "../war-room/components";
 
 const API_BASE = "https://warvault.shadoooow.workers.dev/api";
 const SKILLS_BASE_IMAGE_URL = `${import.meta.env.BASE_URL}images/`;
@@ -191,6 +193,10 @@ export default function ArchetypeAnalysis() {
   const [data, setData] = useState<AnalyzedUser[]>([]);
   const [filter, setFilter] = useState<Archetype | "All">("All");
 
+  const [statusMap, setStatusMap] = useState<Record<string, UserProfile>>({});
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'buff' | 'debuff' | 'no buff' | 'all'>('all');
+
   useEffect(() => {
     async function fetchCountries() {
       const res = await fetch(`${API_BASE}/countries`);
@@ -238,8 +244,30 @@ export default function ArchetypeAnalysis() {
     }
   };
 
+  const fetchStatus = async () => {
+    if (data.length === 0) return;
+    setStatusLoading(true);
+    try {
+      const userIds = data.map(u => u.user_id);
+      // tRPC batch might have limit, but let's try with all first
+      // If data is very large, we might need to chunk this
+      const profiles = await getUserProfilesBatch(userIds);
+      const map: Record<string, UserProfile> = {};
+      profiles.forEach(p => {
+        if (p) map[p._id] = p;
+      });
+      setStatusMap(map);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchAnalysis();
+    setStatusMap({});
+    setStatusFilter('all');
   }, [selectedCountry]);
 
   const stats = useMemo(() => {
@@ -272,8 +300,25 @@ export default function ArchetypeAnalysis() {
   }, [data]);
 
   const filteredData = useMemo(() => {
-    return filter === "All" ? data : data.filter(u => u.archetype === filter);
-  }, [data, filter]);
+    let result = filter === "All" ? data : data.filter(u => u.archetype === filter);
+
+    if (statusFilter !== 'all') {
+      result = result.filter(u => {
+        const profile = statusMap[u.user_id];
+        if (!profile) return true; // Keep if not fetched yet? or hide? let's keep.
+
+        const hasBuff = (profile.buffs?.buffCodes?.length || 0) > 0;
+        const hasDebuff = (profile.buffs?.debuffCodes?.length || 0) > 0;
+
+        if (statusFilter === 'buff') return hasBuff;
+        if (statusFilter === 'debuff') return hasDebuff;
+        if (statusFilter === 'no buff') return !hasBuff && !hasDebuff;
+        return true;
+      });
+    }
+
+    return result;
+  }, [data, filter, statusMap, statusFilter]);
 
   const countryTimeline = useMemo(() => {
     const map: Record<string, { date: string, Vanguard: number, Industrialist: number, Sentinel: number }> = {};
@@ -474,10 +519,43 @@ export default function ArchetypeAnalysis() {
 
             {/* RIGHT: Personnel List */}
             <div className="lg:col-span-12 xl:col-span-7 space-y-4">
+
+              <h3 className="text-sm font-black uppercase tracking-widest text-white">Personnel Dossier</h3>
+
+              <div className="flex items-center justify-between">
+                {Object.keys(statusMap).length == 0 ? (
+                  <button
+                    onClick={fetchStatus}
+                    disabled={statusLoading || data.length === 0}
+                    className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-xl border border-purple-400/30 transition-all shadow-[0_0_20px_rgba(168,85,247,0.2)] flex items-center gap-2 h-[42px]"
+                  >
+                    {statusLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Radar className="w-3 h-3" />}
+                    Get Current Status
+                  </button>
+                ) : (
+                  <div className="flex justify-center">
+                    <div className="flex items-center gap-6">
+                      {/* <span className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em]">Filter Status</span> */}
+                      <div className="flex gap-2 p-1">
+                        <button
+                          onClick={() => setStatusFilter('all')}
+                          className={`text-[9px] font-black uppercase px-4 py-2 rounded-xl transition-all ${statusFilter === 'all' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                        >
+                          All
+                        </button>
+                        <ModifierToggle
+                          modifier={statusFilter === 'all' ? 'none' : statusFilter}
+                          onChange={(m) => setStatusFilter(m === 'no buff' && statusFilter === 'no buff' ? 'all' : m as any)}
+                          livePrices={null}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-4">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-white">Personnel Dossier</h3>
-                  <div className="h-4 w-px bg-zinc-800" />
                   <div className="flex gap-2">
                     {["All", "Vanguard", "Industrialist", "Sentinel"].map(a => (
                       <button
@@ -511,7 +589,20 @@ export default function ArchetypeAnalysis() {
                       <div className="flex items-center gap-4 relative z-10">
                         <div className="relative self-start">
                           <img src={u.avatar_url} className="w-14 h-14 rounded-xl border border-zinc-800 shadow-xl" alt="" />
-                          {/* <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-zinc-950`} style={{ backgroundColor: COLORS[u.archetype] }} /> */}
+                          {statusMap[u.user_id] && (
+                            <div className="mt-2 flex flex-col items-center gap-1 scale-75 -mx-4">
+                              <BuffSlot
+                                type="buff"
+                                value={statusMap[u.user_id].skills.attack?.buffsPercent ?? 0}
+                                endAt={statusMap[u.user_id].buffs?.buffEndAt}
+                              />
+                              <BuffSlot
+                                type="debuff"
+                                value={statusMap[u.user_id].skills.attack?.debuffsPercent ?? 0}
+                                endAt={statusMap[u.user_id].buffs?.debuffEndAt}
+                              />
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex-1 min-w-0">
