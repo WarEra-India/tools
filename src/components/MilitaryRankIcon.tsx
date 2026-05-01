@@ -1,5 +1,12 @@
 import React from "react";
-import MilitaryRanks from "../config/military-ranks.json"
+import { useLocalConfig } from "../lib/hooks/useLocalConfig";
+
+export interface MilitaryRank {
+  rank: number;
+  name: string;
+  dmg: number;
+  bonus: number;
+}
 
 const formatUrl = (rank: number) => `https://app.warera.io/images/ranks/rank${rank}.svg`;
 const BASE_IMAGES_URL = `${import.meta.env.BASE_URL}images/`;
@@ -49,9 +56,10 @@ const formatter = new Intl.NumberFormat("en", {
 });
 
 export default function MilitaryRankIcon({ rank, imgClassName = "h-5 w-5", className = "p-2 rounded-md" }: { rank: number, className?: string, imgClassName?: string }) {
-  if (rank > 120 || rank < 1) return null;
+  const { data: ranks, loading } = useLocalConfig<MilitaryRank[]>("military-ranks");
+  if (rank > 120 || rank < 1 || loading || !ranks) return null;
 
-  const rankDetails = MilitaryRanks.find((r) => r.rank === rank);
+  const rankDetails = ranks.find((r) => r.rank === rank);
   const division = Object.keys(RankColorMap).find((key) => rank <= Number(key));
   if (!division || !rankDetails) return null;
   const { color, bg, secondaryColor } = RankColorMap[Number(division)];
