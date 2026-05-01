@@ -386,11 +386,11 @@ export default function CraftTheory() {
                 </div>
                 <div className="flex gap-4 text-right">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Standard (C1)</span>
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Standard</span>
                     <span className="text-sm font-mono font-bold text-zinc-300">{analysis.summary.cases_by_itemCode.case1.toLocaleString()}</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Elite (C2)</span>
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Elite</span>
                     <span className="text-sm font-mono font-bold text-zinc-300">{analysis.summary.cases_by_itemCode.case2.toLocaleString()}</span>
                   </div>
                 </div>
@@ -398,61 +398,37 @@ export default function CraftTheory() {
             </CardHeader>
             <CardContent className="space-y-8">
               {/* Top Level Stats */}
-              <div className="grid gap-6 md:grid-cols-4">
-                <div className="p-4 rounded-xl bg-zinc-950/50 border border-zinc-800/50">
-                  <h5 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">Item Type Ratio</h5>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 space-y-1">
-                      <div className="flex justify-between text-[10px] font-bold">
-                        <span className="text-zinc-400">EQUIPMENT</span>
-                        <span className="text-zinc-200">{((analysis.item_type_distribution.equipment / analysis.summary.total_cases_opened) * 100).toFixed(1)}%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden flex">
-                        <div
-                          className="h-full bg-emerald-500"
-                          style={{ width: `${(analysis.item_type_distribution.equipment / analysis.summary.total_cases_opened) * 100}%` }}
-                        />
-                        <div
-                          className="h-full bg-amber-500 opacity-50"
-                          style={{ width: `${(analysis.item_type_distribution.weapon / analysis.summary.total_cases_opened) * 100}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-[10px] font-bold pt-1">
-                        <span className="text-zinc-400">WEAPONS</span>
-                        <span className="text-zinc-200">{((analysis.item_type_distribution.weapon / analysis.summary.total_cases_opened) * 100).toFixed(1)}%</span>
-                      </div>
+              <div className="p-4 rounded-xl bg-zinc-950/50 border border-zinc-800/50">
+                <h5 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">Item Type Ratio</h5>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 space-y-1">
+                    <div className="flex justify-between text-[10px] font-bold">
+                      <span className="text-zinc-400">EQUIPMENT</span>
+                      <span className="text-zinc-200">{((analysis.item_type_distribution.equipment / analysis.summary.total_cases_opened) * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden flex">
+                      <div
+                        className="h-full bg-emerald-500"
+                        style={{ width: `${(analysis.item_type_distribution.equipment / analysis.summary.total_cases_opened) * 100}%` }}
+                      />
+                      <div
+                        className="h-full bg-amber-500 opacity-50"
+                        style={{ width: `${(analysis.item_type_distribution.weapon / analysis.summary.total_cases_opened) * 100}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] font-bold pt-1">
+                      <span className="text-zinc-400">WEAPONS</span>
+                      <span className="text-zinc-200">{((analysis.item_type_distribution.weapon / analysis.summary.total_cases_opened) * 100).toFixed(1)}%</span>
                     </div>
                   </div>
                 </div>
-
-                {/* Average Stats - More Detailed */}
-                {/* {SKILL_GROUPS.WAR.map(stat => {
-                  const values = Object.values(analysis.average_skills_per_code)
-                    .map(skills => skills[stat])
-                    .filter(v => v !== undefined);
-                  const avg = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
-
-                  if (avg == 0) return null;
-
-                  return (
-                    <div key={stat} className="p-4 rounded-xl bg-zinc-950/50 border border-zinc-800/50 flex flex-col justify-center">
-                      <div className="flex items-center gap-2 mb-1">
-                        <img src={`${PUBLIC_IMAGES_BASE_URL}${stat}.svg`} className="h-4 w-4 opacity-70" alt={stat} />
-                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{stat}</span>
-                      </div>
-                      <div className="text-xl font-mono font-black text-zinc-100">
-                        {avg.toFixed(2)}
-                        <span className="text-[10px] font-bold text-zinc-600 ml-1">avg</span>
-                      </div>
-                    </div>
-                  );
-                })} */}
               </div>
+
 
               {/* Rarity Grouped Drop Analysis */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-                  <h4 className="text-xs font-black text-zinc-300 uppercase tracking-widest">Empirical Rarity Distribution (vs Theoretical)</h4>
+                  <h4 className="text-xs font-black text-zinc-300 uppercase tracking-widest">Empirical Rarity Distribution</h4>
                   <span className="text-[10px] font-bold text-zinc-500 italic">Comparing actual drops with official case rates</span>
                 </div>
 
@@ -485,13 +461,13 @@ export default function CraftTheory() {
                                 <div className="flex justify-between text-[10px] font-bold items-center">
                                   <span className="w-16 uppercase tracking-tight" style={{ color: RARITY_COLORS[rarity].color }}>{rarity}</span>
                                   <div className="flex gap-3 font-mono">
-                                    <span className="text-zinc-500">TH: {theoretical.toFixed(2)}%</span>
-                                    <span className="text-zinc-200">AC: {actual.toFixed(2)}%</span>
-                                    {theoretical > 0 && (
+                                    {/* <span className="text-zinc-500">TH: {theoretical.toFixed(2)}%</span> */}
+                                    <span className="text-zinc-300">{actual.toFixed(2)}%</span>
+                                    {/* {theoretical > 0 && (
                                       <span className={diff >= 0 ? "text-emerald-500" : "text-red-500"}>
                                         {diff >= 0 ? "+" : ""}{diff.toFixed(2)}%
                                       </span>
-                                    )}
+                                    )} */}
                                   </div>
                                 </div>
                                 <div className="h-1 w-full bg-zinc-900 rounded-full overflow-hidden flex">
@@ -518,69 +494,73 @@ export default function CraftTheory() {
                 <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
                   <h4 className="text-xs font-black text-zinc-300 uppercase tracking-widest">Full Empirical Drop Inventory</h4>
                   <div className="text-[10px] text-zinc-500 font-bold uppercase flex gap-4">
-                    <span className="flex items-center gap-1"><div className="h-1.5 w-1.5 rounded-full bg-zinc-500" /> Case 1 Rate</span>
-                    <span className="flex items-center gap-1"><div className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Case 2 Rate</span>
+                    <span className="flex items-center gap-1"><div className="h-1.5 w-1.5 rounded-full bg-zinc-500" />Standard Case Rate</span>
+                    <span className="flex items-center gap-1"><div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Elite Case Rate</span>
                   </div>
                 </div>
 
-                <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {Object.entries(analysis.item_code_distribution)
-                      .sort((a, b) => {
-                        const itemA = gameConfig?.equipments.find(e => e.code === a[0]);
-                        const itemB = gameConfig?.equipments.find(e => e.code === b[0]);
-                        // Sort by rarity first, then by code
-                        const rarities = Object.keys(RARITY_COSTS);
-                        const rDiff = rarities.indexOf(itemB?.rarity || "") - rarities.indexOf(itemA?.rarity || "");
-                        return rDiff !== 0 ? rDiff : a[0].localeCompare(b[0]);
-                      })
-                      .map(([code, totalCount]) => {
-                        const item = gameConfig?.equipments.find(e => e.code === code);
-                        const c1Rate = (analysis.case_drop_rates.case1?.[code] || 0) * 100;
-                        const c2Rate = (analysis.case_drop_rates.case2?.[code] || 0) * 100;
-                        const avgStats = analysis.average_skills_per_code[code] || {};
+                {/* <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar"> */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {Object.entries(analysis.item_code_distribution)
+                    .sort((a, b) => {
+                      const itemA = gameConfig?.equipments.find(e => e.code === a[0]);
+                      const itemB = gameConfig?.equipments.find(e => e.code === b[0]);
+                      // Sort by rarity first, then by code
+                      const rarities = Object.keys(RARITY_COSTS);
+                      const rDiff = rarities.indexOf(itemB?.rarity || "") - rarities.indexOf(itemA?.rarity || "");
+                      return rDiff !== 0 ? rDiff : a[0].localeCompare(b[0]);
+                    })
+                    .map(([code, totalCount]) => {
+                      const item = gameConfig?.equipments.find(e => e.code === code);
+                      const c1Rate = (analysis.case_drop_rates.case1?.[code] || 0) * 100;
+                      const c2Rate = (analysis.case_drop_rates.case2?.[code] || 0) * 100;
+                      const avgStats = analysis.average_skills_per_code[code] || {};
 
-                        return (
-                          <div key={code} className="group relative p-3 rounded-xl bg-zinc-950/40 border border-zinc-800/40 hover:border-zinc-700/60 transition-all">
-                            <div className="flex gap-3 items-start">
-                              <GameItemIcon itemCode={code} rarity={item?.rarity} className="h-10 w-10 shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start">
-                                  <span className="text-[11px] font-black text-zinc-100 truncate uppercase leading-tight">
-                                    {item?.type === "weapon" ? "" : RARITY_OTHER_NAMES[item?.rarity || ""]} {code.replace(/[0-9]/g, '')}
-                                  </span>
-                                  <span className="text-[9px] font-mono text-zinc-500">{(totalCount / analysis.summary.total_cases_opened * 100).toFixed(2)}%</span>
-                                </div>
+                      return (
+                        <div key={code} className="group relative p-3 rounded-xl bg-zinc-950/40 border border-zinc-800/40 hover:border-zinc-700/60 transition-all">
+                          <div className="flex gap-3 items-start">
+                            <GameItemIcon itemCode={code} rarity={item?.rarity} className="h-10 w-10 rounded-md" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start">
+                                <span className="text-[11px] font-black text-zinc-100 truncate uppercase leading-tight">
+                                  {item?.type === "weapon" ? "" : RARITY_OTHER_NAMES[item?.rarity || ""]} {code.replace(/[0-9]/g, '')}
+                                </span>
+                                <span className="text-[9px] font-mono text-zinc-500">{(totalCount / analysis.summary.total_cases_opened * 100).toFixed(2)}%</span>
+                              </div>
 
-                                <div className="mt-2 flex gap-1.5 flex-wrap">
-                                  {Object.entries(avgStats).map(([s, v]) => (
-                                    <div key={s} className="flex items-center gap-0.5 px-1 rounded bg-black/40 border border-zinc-800/50">
-                                      <img src={`${PUBLIC_IMAGES_BASE_URL}${s}.svg`} className="h-2.5 w-2.5 opacity-60" alt={s} />
-                                      <span className="text-[8px] font-mono text-zinc-400">{v.toFixed(1)}</span>
-                                    </div>
-                                  ))}
-                                </div>
-
-                                <div className="mt-3 flex gap-2 items-center">
-                                  <div className="flex-1 h-1 bg-zinc-900 rounded-full overflow-hidden flex">
-                                    <div className="h-full bg-zinc-600" style={{ width: `${c1Rate * 5}%` }} />
-                                    <div className="h-full bg-emerald-500" style={{ width: `${c2Rate * 5}%` }} />
+                              <div className="mt-2 flex gap-1.5 items-center flex-wrap">
+                                {Object.entries(avgStats).map(([s, v]) => (
+                                  <div key={s} className="flex items-center gap-0.5 px-1 rounded bg-black/40 border border-zinc-800/50">
+                                    <img src={`${PUBLIC_IMAGES_BASE_URL}${s}.svg`} className="h-3 w-3" alt={s} />
+                                    <span className="text-[8px] font-mono text-zinc-300">{v.toFixed(1)}</span>
                                   </div>
-                                  <div className="flex gap-2 text-[9px] font-mono font-bold leading-none">
-                                    <span className="text-zinc-500">C1:{c1Rate.toFixed(1)}%</span>
-                                    <span className="text-emerald-500">C2:{c2Rate.toFixed(1)}%</span>
-                                  </div>
+                                ))}
+                                <div className="flex items-centre gap-2 text-[10px] font-mono font-bold leading-none">
+                                  <span className="text-zinc-500">{c1Rate.toFixed(1)}%</span>
+                                  <span className="text-emerald-500">{c2Rate.toFixed(1)}%</span>
                                 </div>
                               </div>
+
+                              {/* <div className="mt-3 flex gap-2 items-center">
+                                <div className="flex-1 h-1 bg-zinc-900 rounded-full overflow-hidden flex">
+                                  <div className="h-full bg-zinc-600" style={{ width: `${c1Rate * 5}%` }} />
+                                  <div className="h-full bg-emerald-500" style={{ width: `${c2Rate * 5}%` }} />
+                                </div>
+                                <div className="flex gap-2 text-[9px] font-mono font-bold leading-none">
+                                  <span className="text-zinc-500">C1:{c1Rate.toFixed(1)}%</span>
+                                  <span className="text-emerald-500">C2:{c2Rate.toFixed(1)}%</span>
+                                </div>
+                              </div> */}
                             </div>
                           </div>
-                        );
-                      })}
-                  </div>
+                        </div>
+                      );
+                    })}
                 </div>
+                {/* </div> */}
               </div>
 
-              <div className="mt-6 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex gap-4 items-start">
+              {/* <div className="mt-6 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex gap-4 items-start">
                 <div className="h-5 w-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
                   <span className="text-[10px] font-black text-emerald-400">!</span>
                 </div>
@@ -590,7 +570,7 @@ export default function CraftTheory() {
                   The variance indicator (AC vs TH) helps identify items that are potentially dropping more or less frequently
                   than official rates suggest, providing a significant edge for bulk crate investors.
                 </div>
-              </div>
+              </div> */}
             </CardContent>
           </Card>
         )}
