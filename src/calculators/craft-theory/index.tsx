@@ -20,8 +20,21 @@ import { Badge } from "@/components/ui/badge"
 import { useGameConfig } from "@/lib/hooks/useGameConfig"
 import { useLivePrices } from "@/lib/hooks/useLivePrices"
 import { useEquipmentPrices } from "@/lib/hooks/useEquipmentPrices"
+import { useLocalConfig } from "@/lib/hooks/useLocalConfig"
 import { GameItemIcon, RARITY_COLORS } from "@/components/GameItemIcon"
 import { RARITY_COSTS } from "../war-room/constants"
+import { SKILL_GROUPS } from "../archetype-analysis"
+
+interface AnalysisData {
+  summary: {
+    total_cases_opened: number
+    cases_by_itemCode: Record<string, number>
+  }
+  item_type_distribution: Record<string, number>
+  item_code_distribution: Record<string, number>
+  average_skills_per_code: Record<string, Record<string, number>>
+  case_drop_rates: Record<string, Record<string, number>>
+}
 
 const PUBLIC_IMAGES_BASE_URL = `${import.meta.env.BASE_URL}images/`
 const COIN_ICON = `${PUBLIC_IMAGES_BASE_URL}game_coin.svg`
@@ -76,6 +89,7 @@ export const RARITY_OTHER_NAMES: Record<string, string> = {
 export default function CraftTheory() {
   const { data: gameConfig, loading: configLoading } = useGameConfig()
   const { data: livePrices, loading: pricesLoading } = useLivePrices()
+  const { data: analysis, loading: analysisLoading } = useLocalConfig<AnalysisData>("transactions_analysis")
 
   const equipmentCodes = useMemo(() => {
     return gameConfig?.equipments.map(e => e.code) ?? []
@@ -83,7 +97,7 @@ export default function CraftTheory() {
 
   const { data: equipPrices, loading: equipPricesLoading } = useEquipmentPrices(equipmentCodes)
 
-  const isLoading = configLoading || pricesLoading || equipPricesLoading
+  const isLoading = configLoading || pricesLoading || equipPricesLoading || analysisLoading
 
   const rows = useMemo(() => {
     if (!gameConfig || !livePrices || !equipPrices) return []
@@ -355,6 +369,231 @@ export default function CraftTheory() {
             </Card>
           ))}
         </div>
+
+        {analysis && (
+          <Card className="mb-6 border-zinc-800/60 bg-zinc-900/10 backdrop-blur-sm overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500/20 via-emerald-500 to-emerald-500/20" />
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Community Data Insights
+                  </CardTitle>
+                  <CardDescription>
+                    Empirical analysis of {analysis.summary.total_cases_opened.toLocaleString()} verified case openings.
+                  </CardDescription>
+                </div>
+                <div className="flex gap-4 text-right">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Standard (C1)</span>
+                    <span className="text-sm font-mono font-bold text-zinc-300">{analysis.summary.cases_by_itemCode.case1.toLocaleString()}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Elite (C2)</span>
+                    <span className="text-sm font-mono font-bold text-zinc-300">{analysis.summary.cases_by_itemCode.case2.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {/* Top Level Stats */}
+              <div className="grid gap-6 md:grid-cols-4">
+                <div className="p-4 rounded-xl bg-zinc-950/50 border border-zinc-800/50">
+                  <h5 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">Item Type Ratio</h5>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 space-y-1">
+                      <div className="flex justify-between text-[10px] font-bold">
+                        <span className="text-zinc-400">EQUIPMENT</span>
+                        <span className="text-zinc-200">{((analysis.item_type_distribution.equipment / analysis.summary.total_cases_opened) * 100).toFixed(1)}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden flex">
+                        <div
+                          className="h-full bg-emerald-500"
+                          style={{ width: `${(analysis.item_type_distribution.equipment / analysis.summary.total_cases_opened) * 100}%` }}
+                        />
+                        <div
+                          className="h-full bg-amber-500 opacity-50"
+                          style={{ width: `${(analysis.item_type_distribution.weapon / analysis.summary.total_cases_opened) * 100}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[10px] font-bold pt-1">
+                        <span className="text-zinc-400">WEAPONS</span>
+                        <span className="text-zinc-200">{((analysis.item_type_distribution.weapon / analysis.summary.total_cases_opened) * 100).toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Average Stats - More Detailed */}
+                {/* {SKILL_GROUPS.WAR.map(stat => {
+                  const values = Object.values(analysis.average_skills_per_code)
+                    .map(skills => skills[stat])
+                    .filter(v => v !== undefined);
+                  const avg = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+
+                  if (avg == 0) return null;
+
+                  return (
+                    <div key={stat} className="p-4 rounded-xl bg-zinc-950/50 border border-zinc-800/50 flex flex-col justify-center">
+                      <div className="flex items-center gap-2 mb-1">
+                        <img src={`${PUBLIC_IMAGES_BASE_URL}${stat}.svg`} className="h-4 w-4 opacity-70" alt={stat} />
+                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{stat}</span>
+                      </div>
+                      <div className="text-xl font-mono font-black text-zinc-100">
+                        {avg.toFixed(2)}
+                        <span className="text-[10px] font-bold text-zinc-600 ml-1">avg</span>
+                      </div>
+                    </div>
+                  );
+                })} */}
+              </div>
+
+              {/* Rarity Grouped Drop Analysis */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                  <h4 className="text-xs font-black text-zinc-300 uppercase tracking-widest">Empirical Rarity Distribution (vs Theoretical)</h4>
+                  <span className="text-[10px] font-bold text-zinc-500 italic">Comparing actual drops with official case rates</span>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {["case1", "case2"].map(caseCode => {
+                    const rates = analysis.case_drop_rates[caseCode] || {};
+                    // Group by rarity using gameConfig
+                    const rarityTotals: Record<string, number> = {};
+                    Object.entries(rates).forEach(([code, rate]) => {
+                      const item = gameConfig?.equipments.find(e => e.code === code);
+                      if (item) {
+                        rarityTotals[item.rarity] = (rarityTotals[item.rarity] || 0) + rate;
+                      }
+                    });
+
+                    return (
+                      <div key={caseCode} className="space-y-4 p-4 rounded-xl bg-zinc-950/30 border border-zinc-800/40">
+                        <div className="flex items-center gap-3">
+                          <GameItemIcon itemCode={caseCode} className="h-8 w-8" />
+                          <h5 className="text-sm font-bold text-zinc-200">{caseCode === "case1" ? "Standard Case" : "Elite Case"}</h5>
+                        </div>
+                        <div className="space-y-3">
+                          {Object.keys(RARITY_COSTS).reverse().map(rarity => {
+                            const actual = (rarityTotals[rarity] || 0) * 100;
+                            const theoretical = CASE_CHANCES[caseCode].rarity[rarity] || 0;
+                            const diff = actual - theoretical;
+
+                            return (
+                              <div key={rarity} className="space-y-1">
+                                <div className="flex justify-between text-[10px] font-bold items-center">
+                                  <span className="w-16 uppercase tracking-tight" style={{ color: RARITY_COLORS[rarity].color }}>{rarity}</span>
+                                  <div className="flex gap-3 font-mono">
+                                    <span className="text-zinc-500">TH: {theoretical.toFixed(2)}%</span>
+                                    <span className="text-zinc-200">AC: {actual.toFixed(2)}%</span>
+                                    {theoretical > 0 && (
+                                      <span className={diff >= 0 ? "text-emerald-500" : "text-red-500"}>
+                                        {diff >= 0 ? "+" : ""}{diff.toFixed(2)}%
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="h-1 w-full bg-zinc-900 rounded-full overflow-hidden flex">
+                                  <div
+                                    className="h-full transition-all duration-1000"
+                                    style={{
+                                      width: `${actual}%`,
+                                      backgroundColor: RARITY_COLORS[rarity].color
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Full Item Drop Table */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                  <h4 className="text-xs font-black text-zinc-300 uppercase tracking-widest">Full Empirical Drop Inventory</h4>
+                  <div className="text-[10px] text-zinc-500 font-bold uppercase flex gap-4">
+                    <span className="flex items-center gap-1"><div className="h-1.5 w-1.5 rounded-full bg-zinc-500" /> Case 1 Rate</span>
+                    <span className="flex items-center gap-1"><div className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Case 2 Rate</span>
+                  </div>
+                </div>
+
+                <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {Object.entries(analysis.item_code_distribution)
+                      .sort((a, b) => {
+                        const itemA = gameConfig?.equipments.find(e => e.code === a[0]);
+                        const itemB = gameConfig?.equipments.find(e => e.code === b[0]);
+                        // Sort by rarity first, then by code
+                        const rarities = Object.keys(RARITY_COSTS);
+                        const rDiff = rarities.indexOf(itemB?.rarity || "") - rarities.indexOf(itemA?.rarity || "");
+                        return rDiff !== 0 ? rDiff : a[0].localeCompare(b[0]);
+                      })
+                      .map(([code, totalCount]) => {
+                        const item = gameConfig?.equipments.find(e => e.code === code);
+                        const c1Rate = (analysis.case_drop_rates.case1?.[code] || 0) * 100;
+                        const c2Rate = (analysis.case_drop_rates.case2?.[code] || 0) * 100;
+                        const avgStats = analysis.average_skills_per_code[code] || {};
+
+                        return (
+                          <div key={code} className="group relative p-3 rounded-xl bg-zinc-950/40 border border-zinc-800/40 hover:border-zinc-700/60 transition-all">
+                            <div className="flex gap-3 items-start">
+                              <GameItemIcon itemCode={code} rarity={item?.rarity} className="h-10 w-10 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start">
+                                  <span className="text-[11px] font-black text-zinc-100 truncate uppercase leading-tight">
+                                    {item?.type === "weapon" ? "" : RARITY_OTHER_NAMES[item?.rarity || ""]} {code.replace(/[0-9]/g, '')}
+                                  </span>
+                                  <span className="text-[9px] font-mono text-zinc-500">{(totalCount / analysis.summary.total_cases_opened * 100).toFixed(2)}%</span>
+                                </div>
+
+                                <div className="mt-2 flex gap-1.5 flex-wrap">
+                                  {Object.entries(avgStats).map(([s, v]) => (
+                                    <div key={s} className="flex items-center gap-0.5 px-1 rounded bg-black/40 border border-zinc-800/50">
+                                      <img src={`${PUBLIC_IMAGES_BASE_URL}${s}.svg`} className="h-2.5 w-2.5 opacity-60" alt={s} />
+                                      <span className="text-[8px] font-mono text-zinc-400">{v.toFixed(1)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                <div className="mt-3 flex gap-2 items-center">
+                                  <div className="flex-1 h-1 bg-zinc-900 rounded-full overflow-hidden flex">
+                                    <div className="h-full bg-zinc-600" style={{ width: `${c1Rate * 5}%` }} />
+                                    <div className="h-full bg-emerald-500" style={{ width: `${c2Rate * 5}%` }} />
+                                  </div>
+                                  <div className="flex gap-2 text-[9px] font-mono font-bold leading-none">
+                                    <span className="text-zinc-500">C1:{c1Rate.toFixed(1)}%</span>
+                                    <span className="text-emerald-500">C2:{c2Rate.toFixed(1)}%</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex gap-4 items-start">
+                <div className="h-5 w-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-[10px] font-black text-emerald-400">!</span>
+                </div>
+                <div className="text-[10px] text-zinc-500 leading-relaxed">
+                  <strong>Analysis Methodology:</strong> This data utilizes all 239 recorded item codes and their associated metadata.
+                  Drop rates are calculated independently for each case type by aggregating individual transaction logs.
+                  The variance indicator (AC vs TH) helps identify items that are potentially dropping more or less frequently
+                  than official rates suggest, providing a significant edge for bulk crate investors.
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="mb-6 border-zinc-800 bg-zinc-900/20">
           <CardContent className="py-4 px-6 flex flex-wrap gap-8 items-center">
