@@ -5,7 +5,7 @@ import { Loader2, ArrowLeft, ChevronUp, ChevronDown, Minus } from "lucide-react"
 import { Link } from "react-router-dom"
 import * as topojson from "topojson-client"
 
-const API_BASE = "https://api5.warera.io/trpc"
+const API_BASE = "https://api2.warera.io/trpc"
 const EARTH_RADIUS_KM = 6371
 const EARTH_AREA_KM2 = 4 * Math.PI * EARTH_RADIUS_KM * EARTH_RADIUS_KM  // ~510M km²
 const LAND_ICON = `${import.meta.env.BASE_URL}images/ground.svg`;

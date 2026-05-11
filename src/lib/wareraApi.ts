@@ -1,4 +1,4 @@
-export const API_BASE = "https://api5.warera.io/trpc";
+export const API_BASE = "https://api2.warera.io/trpc";
 
 async function post<T>(endpoint: string, body: Record<string, unknown>): Promise<T> {
   const token = localStorage.getItem("warera-api-token");
@@ -109,20 +109,39 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
   return post<UserProfile>("user.getUserById", { userId });
 }
 
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
 export async function getUserProfilesBatch(userIds: string[]): Promise<UserProfile[]> {
   if (userIds.length === 0) return [];
-  const url =
-    API_BASE + "/" + userIds.map(() => "user.getUserById").join(",") + "?batch=1";
-  const body: Record<string, { userId: string }> = {};
-  userIds.forEach((id, i) => { body[i] = { userId: id }; });
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "*/*" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  const json = await res.json();
-  return (json as { result: { data: UserProfile } }[]).map((r) => r.result.data);
+  
+  const chunks = chunkArray(userIds, 50);
+  const allProfiles: UserProfile[] = [];
+
+  for (const chunk of chunks) {
+    const url =
+      API_BASE + "/" + chunk.map(() => "user.getUserById").join(",") + "?batch=1";
+    const body: Record<string, { userId: string }> = {};
+    chunk.forEach((id, i) => { body[i] = { userId: id }; });
+    
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "*/*" },
+      body: JSON.stringify(body),
+    });
+    
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const json = await res.json();
+    const batchData = (json as { result: { data: UserProfile } }[]).map((r) => r.result.data);
+    allProfiles.push(...batchData);
+  }
+
+  return allProfiles;
 }
 
 /* ---------- companies ---------- */
@@ -184,18 +203,29 @@ export async function getCompanyById(companyId: string): Promise<CompanyInfo> {
 
 async function getCompaniesBatch(companyIds: string[]): Promise<CompanyInfo[]> {
   if (companyIds.length === 0) return [];
-  const url =
-    API_BASE + "/" + companyIds.map(() => "company.getById").join(",") + "?batch=1";
-  const body: Record<string, { companyId: string }> = {};
-  companyIds.forEach((id, i) => { body[i] = { companyId: id }; });
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "*/*" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  const json = await res.json();
-  return (json as { result: { data: CompanyInfo } }[]).map((r) => r.result.data);
+
+  const chunks = chunkArray(companyIds, 50);
+  const allCompanies: CompanyInfo[] = [];
+
+  for (const chunk of chunks) {
+    const url =
+      API_BASE + "/" + chunk.map(() => "company.getById").join(",") + "?batch=1";
+    const body: Record<string, { companyId: string }> = {};
+    chunk.forEach((id, i) => { body[i] = { companyId: id }; });
+    
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "*/*" },
+      body: JSON.stringify(body),
+    });
+    
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const json = await res.json();
+    const batchData = (json as { result: { data: CompanyInfo } }[]).map((r) => r.result.data);
+    allCompanies.push(...batchData);
+  }
+
+  return allCompanies;
 }
 
 /* ---------- aggregated fetch ---------- */

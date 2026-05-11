@@ -20,33 +20,35 @@ export function useEquipmentPrices(itemCodes: string[]) {
 
     async function fetchPrices() {
       try {
-        const batchParams: Record<string, { itemCode: string }> = {};
-        itemCodes.forEach((code, index) => {
-          batchParams[index.toString()] = { itemCode: code };
-        });
-
-        const url = `${API_BASE}/` + `gameStat.getEquipmentAvgByCode,`.repeat(itemCodes.length).slice(0, -1) + "?batch=1";
-        const res = await fetch(url, {
-          method: "POST", // The batch API usually uses GET or POST, but based on sketch.md it's a batch=1 query. However, TRPC batch usually sends parameters.
-          // Re-reading sketch.md: it uses a query string with batch=1 but the data is in the body or params?
-          // Sketch says: --data-raw '{"0":{"itemCode":"tank"},...}' which implies POST.
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(batchParams),
-        });
-
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        const json = await res.json();
-
         const priceMap: Record<string, number> = {};
-        itemCodes.forEach((code, index) => {
-          // Response structure from sketch: [{"result":{"data":54.78}}, ...]
-          const result = json[index];
-          if (result?.result?.data) {
-            priceMap[code] = result.result.data;
-          } else {
-            priceMap[code] = 0;
-          }
-        });
+        const chunkSize = 50;
+
+        for (let i = 0; i < itemCodes.length; i += chunkSize) {
+          const chunk = itemCodes.slice(i, i + chunkSize);
+          const batchParams: Record<string, { itemCode: string }> = {};
+          chunk.forEach((code, index) => {
+            batchParams[index.toString()] = { itemCode: code };
+          });
+
+          const url = `${API_BASE}/` + `gameStat.getEquipmentAvgByCode,`.repeat(chunk.length).slice(0, -1) + "?batch=1";
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(batchParams),
+          });
+
+          if (!res.ok) throw new Error(`API error: ${res.status}`);
+          const json = await res.json();
+
+          chunk.forEach((code, index) => {
+            const result = json[index];
+            if (result?.result?.data) {
+              priceMap[code] = result.result.data;
+            } else {
+              priceMap[code] = 0;
+            }
+          });
+        }
 
         if (mountedRef.current) {
           setData(priceMap);

@@ -157,29 +157,36 @@ export function useLocationBonus() {
           regionsJson?.result?.data ?? {};
 
         // Get parties data
-        const rulingParties: Record<string, any> = {};
-        let i = 0;
-        let customPartyUrl = PARTY_URL;
-        for (const c of countries) {
-          if (c.rulingParty) {
-            rulingParties[i++] = {
-              partyId: c.rulingParty
-            };
-            customPartyUrl += "party.getById,";
-          }
-        }
-        customPartyUrl += "?batch=1";
-        const partiesRes = await fetch(customPartyUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(rulingParties),
-        });
-        const partiesJson = await partiesRes.json();
-
-        // Build parties ID -> ethics
+        const countriesWithRulingParty = countries.filter(c => c.rulingParty);
         const partyById: Record<string, any> = {};
-        for (const p of partiesJson ?? []) {
-          partyById[p.result?.data._id] = p.result?.data?.ethics ?? {};
+        const partyChunkSize = 50;
+
+        for (let i = 0; i < countriesWithRulingParty.length; i += partyChunkSize) {
+          const chunk = countriesWithRulingParty.slice(i, i + partyChunkSize);
+          const rulingParties: Record<string, { partyId: string }> = {};
+          let customPartyUrl = PARTY_URL;
+          
+          chunk.forEach((c, index) => {
+            rulingParties[index] = { partyId: c.rulingParty! };
+            customPartyUrl += "party.getById,";
+          });
+          
+          customPartyUrl = customPartyUrl.slice(0, -1) + "?batch=1";
+          
+          const partiesRes = await fetch(customPartyUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(rulingParties),
+          });
+          
+          if (!partiesRes.ok) throw new Error("API error fetching parties");
+          const partiesJson = await partiesRes.json();
+
+          for (const p of partiesJson ?? []) {
+            if (p.result?.data?._id) {
+              partyById[p.result.data._id] = p.result.data.ethics ?? {};
+            }
+          }
         }
 
         // Build country ID → strategic production bonus, name, and ruling party ethics

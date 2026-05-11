@@ -1,4 +1,4 @@
-export const API_BASE = "https://api5.warera.io/trpc";
+export const API_BASE = "https://api2.warera.io/trpc";
 
 async function post<T>(endpoint: string, body: Record<string, unknown>): Promise<T> {
   const token = localStorage.getItem("warera-api-token");
