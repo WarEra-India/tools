@@ -152,7 +152,7 @@ export default function CompaniesWidget({ locationBonus, profitRows }: Props) {
   return (
     <Card className="mb-6">
       <CardContent className="p-5">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <button
             className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 focus:outline-none"
             onClick={() => setOpen((v) => !v)}
@@ -273,7 +273,7 @@ export default function CompaniesWidget({ locationBonus, profitRows }: Props) {
                   </div>
 
                   {/* Upgrades */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-zinc-400">Upgrades:</span>
                     {aeUpgradeCost && (
                       <div className="flex items-center gap-1 text-xs text-zinc-400 outline outline-1 outline-zinc-800 rounded-full px-2 py-0.5">
@@ -302,17 +302,21 @@ export default function CompaniesWidget({ locationBonus, profitRows }: Props) {
                   </div>
 
                   {/* Profits */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-zinc-400">Profits:</span>
-                    <div className="flex items-center gap-1 text-xs text-zinc-400 outline outline-1 outline-zinc-800 rounded-full px-2 py-0.5">
-                      <span className="font-bold">{profits}</span>
-                      <img src={COIN_ICON} className="h-4 w-4" />
-                      <span>/ day</span>
-                    </div>
                     <div className="flex items-center gap-1 text-xs text-zinc-400 outline outline-1 outline-zinc-800 rounded-full px-2 py-0.5">
                       <span className="font-bold">{profitsPerHour}</span>
                       <img src={COIN_ICON} className="h-4 w-4" />
                       <span>/ hr</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-zinc-400 outline outline-1 outline-zinc-800 rounded-full px-2 py-0.5">
+                      <span className="font-bold">{profitsPerHour}</span>
+                      x
+                      <span className="font-bold">24</span>
+                      =
+                      <span className="font-bold">{profits}</span>
+                      <img src={COIN_ICON} className="h-4 w-4" />
+                      <span>/ day</span>
                     </div>
                   </div>
 

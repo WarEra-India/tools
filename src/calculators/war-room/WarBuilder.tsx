@@ -69,9 +69,9 @@ const fmtCompact = (n: number) =>
 type TargetMode = "damage" | "budget" | "costPer1k";
 
 const TARGET_MODES: { value: TargetMode; label: string; placeholder: string; icon: string }[] = [
-  { value: "damage", label: "Damage", placeholder: "Target Damage", icon: "damage" },
-  { value: "budget", label: "Budget", placeholder: "Total Budget", icon: "game_coin" },
-  { value: "costPer1k", label: "Cost / 1k", placeholder: "Cost per 1k DMG", icon: "game_coin" },
+  { value: "damage", label: "Damage", placeholder: "Damage", icon: "damage" },
+  { value: "budget", label: "Budget", placeholder: "Budget", icon: "game_coin" },
+  { value: "costPer1k", label: "Cost / 1k", placeholder: "Cost per 1K", icon: "game_coin" },
 ];
 
 // ─── Skill Distribution Strategies ──────────────────────────────────────
@@ -518,38 +518,42 @@ export default function WarBuilder({
             <span className="text-xl font-mono font-black text-zinc-300 leading-none">50%</span>
             <span className="text-[9px] text-zinc-600 font-mono">fixed</span>
           </div>
+
+          {/* Target */}
+          <div className="flex flex-col gap-2">
+            <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-wider">Optional Targets</span>
+            <div className="flex items-center gap-0 bg-zinc-900/40 rounded-xl border border-zinc-800/40 overflow-hidden">
+              <div className="flex flex-col border-r border-zinc-800/40">
+                {TARGET_MODES.map(mode => (
+                  <button key={mode.value} onClick={() => setTargetMode(mode.value)}
+                    className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all ${targetMode === mode.value ? "bg-amber-500/10 text-amber-400 border-l-2 border-amber-500" : "text-zinc-600 hover:text-zinc-400 border-l-2 border-transparent"}`}
+                  >{mode.label}</button>
+                ))}
+              </div>
+              <div className="flex flex-col gap-0.5 p-3">
+                <div className="flex items-center gap-3">
+                  <img src={`${PUBLIC_IMAGES_BASE_URL}${activeTargetMode.icon}.svg`} className="h-4 w-4 opacity-50" alt="target" />
+                  <input type="text" placeholder={`${activeTargetMode.placeholder}`} value={targetValue}
+                    onChange={(e) => setTargetValue(e.target.value.replace(/[^0-9,.]/g, ""))}
+                    className="bg-transparent border-none text-sm font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none w-32" />
+                </div>
+                {targetValue && parseFloat(targetValue.replace(/,/g, "")) > 0 && (
+                  <span className="text-[9px] font-mono font-bold text-amber-500/60 pl-7">
+                    {fmtCompact(parseFloat(targetValue.replace(/,/g, ""))).toLowerCase()}
+                    {targetMode === "damage" ? " dmg" : targetMode === "budget" ? " coins" : " coins / 1k dmg"}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Target & Build */}
+      {/* Build */}
       <div className="flex items-center justify-center gap-4 flex-wrap">
-        <div className="flex items-center gap-0 bg-zinc-900/40 rounded-xl border border-zinc-800/40 overflow-hidden">
-          <div className="flex flex-col border-r border-zinc-800/40">
-            {TARGET_MODES.map(mode => (
-              <button key={mode.value} onClick={() => setTargetMode(mode.value)}
-                className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all ${targetMode === mode.value ? "bg-amber-500/10 text-amber-400 border-l-2 border-amber-500" : "text-zinc-600 hover:text-zinc-400 border-l-2 border-transparent"}`}
-              >{mode.label}</button>
-            ))}
-          </div>
-          <div className="flex flex-col gap-0.5 p-3">
-            <div className="flex items-center gap-3">
-              <img src={`${PUBLIC_IMAGES_BASE_URL}${activeTargetMode.icon}.svg`} className="h-4 w-4 opacity-50" alt="target" />
-              <input type="text" placeholder={`${activeTargetMode.placeholder} (optional)`} value={targetValue}
-                onChange={(e) => setTargetValue(e.target.value.replace(/[^0-9,.]/g, ""))}
-                className="bg-transparent border-none text-sm font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none w-56" />
-            </div>
-            {targetValue && parseFloat(targetValue.replace(/,/g, "")) > 0 && (
-              <span className="text-[9px] font-mono font-bold text-amber-500/60 pl-7">
-                {fmtCompact(parseFloat(targetValue.replace(/,/g, "")))}
-                {targetMode === "damage" ? " dmg" : targetMode === "budget" ? " CC" : " CC/1k"}
-              </span>
-            )}
-          </div>
-        </div>
-
         <button onClick={runOptimizer} disabled={isBuilding}
-          className="flex items-center gap-3 px-8 py-3.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:from-zinc-700 disabled:to-zinc-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98] disabled:shadow-none disabled:scale-100">
-          {isBuilding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Hammer className="h-5 w-5" />}
+          className="flex items-center gap-3 px-8 py-3.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:from-zinc-700 disabled:to-zinc-700 text-white rounded-xl text-md font-black uppercase tracking-wider transition-all shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98] disabled:shadow-none disabled:scale-100">
+          {isBuilding ? <Loader2 className="h-6 w-6 animate-spin" /> : <Hammer className="h-6 w-6" />}
           {isBuilding ? "Building..." : "Build"}
         </button>
       </div>

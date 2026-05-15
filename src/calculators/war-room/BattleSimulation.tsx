@@ -11,7 +11,7 @@ import {
 } from "./utils";
 import { GameItemIcon } from "@/components/GameItemIcon";
 
-const BATTLE_ICON = `${PUBLIC_IMAGES_BASE_URL}battle.svg`;
+const HITS_ICON = `${PUBLIC_IMAGES_BASE_URL}hits.svg`;
 
 const HIT_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; glow: string }> = {
   dodged: {
@@ -453,7 +453,7 @@ export default function BattleSimulation({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {/* Total Hits */}
               <div className="flex flex-col items-center gap-1 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/40">
-                <img src={BATTLE_ICON} className="h-5 w-5 opacity-60 mb-1" alt="hits" />
+                <img src={HITS_ICON} className="h-5 w-5 opacity-60 mb-1" alt="hits" />
                 <span className="text-3xl font-black text-white font-mono leading-none">
                   {simulationResult.totalHits}
                 </span>
