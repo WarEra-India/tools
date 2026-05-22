@@ -388,7 +388,7 @@ export const EquipmentSelectorPopover = ({
   return (
     <Popover open={isOpen} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
-        <div className="h-20 w-20 rounded-2xl border-2 border-dashed border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/30 transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 group relative">
+        <div className={`h-20 w-20 rounded-2xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 group relative ${!currentValue && slot === "food" ? "bg-red-950/10 border-red-900/50 hover:border-red-700/50" : "border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/30"}`}>
           {currentValue ? (
             <>
               <GameItemIcon itemCode={currentValue} className="h-19 w-19 rounded-2xl overflow-hidden" />
@@ -409,7 +409,7 @@ export const EquipmentSelectorPopover = ({
             </>
           ) : (
             <>
-              <div className="h-8 w-8 rounded-xl bg-zinc-800/50 flex items-center justify-center group-hover:bg-zinc-800 transition-colors border border-zinc-700/30">
+              <div className={`h-8 w-8 rounded-xl flex items-center justify-center transition-colors border ${!currentValue && slot === "food" ? "bg-red-950/10 border-red-900/50 hover:border-red-700/50" : "border-zinc-700/30 group-hover:bg-zinc-800 bg-zinc-800/50"}`}>
                 <Plus className="h-4 w-4 text-zinc-600" />
               </div>
               <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest">{slot}</span>

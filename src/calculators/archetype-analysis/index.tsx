@@ -338,8 +338,29 @@ export default function ArchetypeAnalysis() {
       });
     });
 
+    const sorted = Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
+    if (sorted.length === 0) return sorted;
+
+    // Fill missing days between start and end with the previous day's data
+    const filled: typeof sorted = [];
+    const startDate = new Date(sorted[0].date);
+    const endDate = new Date(sorted[sorted.length - 1].date);
+    const byDate = new Map(sorted.map(d => [d.date, d]));
+
+    let prev = sorted[0];
+    for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
+      const key = d.toISOString().slice(0, 10);
+      const existing = byDate.get(key);
+      if (existing) {
+        filled.push(existing);
+        prev = existing;
+      } else {
+        filled.push({ ...prev, date: key });
+      }
+    }
+
     // skipping last day
-    return Object.values(map).sort((a, b) => a.date.localeCompare(b.date)).slice(0, -1);
+    return filled.slice(0, -1);
   }, [data]);
 
   return (
