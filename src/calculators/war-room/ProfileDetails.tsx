@@ -12,7 +12,7 @@ import {
   PUBLIC_IMAGES_BASE_URL,
 } from "./components";
 import { getAttackTotalAndBreakDown, getEffectiveStats } from "./utils";
-import { SKILL_GROUPS } from "../archetype-analysis";
+import { SKILL_GROUPS } from "../nation-hub/lenses/archetype";
 import StatsDashboard from "./StatsDashboard";
 
 export default function ProfileDetails() {

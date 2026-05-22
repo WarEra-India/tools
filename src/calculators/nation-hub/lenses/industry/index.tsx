@@ -141,7 +141,15 @@ const setCache = async (key: string, data: any) => {
   }
 }
 
-export default function GlobalCompanyAnalyzer() {
+interface Props {
+  /** When embedded inside Nation Hub, hide the page chrome (back button, title)
+   *  and constrain the layout to a fixed height instead of h-screen. */
+  embedded?: boolean
+  /** Country _ids to outline on the map (compare mode highlight). */
+  highlightCountryIds?: string[]
+}
+
+export default function GlobalCompanyAnalyzer({ embedded = false, highlightCountryIds }: Props = {}) {
   const [loading, setLoading] = useState(true)
   const [progress, setProgress] = useState({ stage: "Map", current: 0, total: 0, startTime: 0 })
   const [error, setError] = useState<string | null>(null)
@@ -325,6 +333,19 @@ export default function GlobalCompanyAnalyzer() {
             }
           },
           {
+            // Compare-mode highlight: outline regions whose countryId is in
+            // the highlight set. Updated via setPaintProperty in a separate
+            // effect when highlightCountryIds changes.
+            id: 'regions-compare-highlight',
+            type: 'line',
+            source: 'regions',
+            paint: {
+              'line-color': '#3b82f6',
+              'line-width': 0,
+              'line-opacity': 0.9,
+            }
+          },
+          {
             id: 'regions-highlight',
             type: 'fill',
             source: 'regions',
@@ -458,6 +479,40 @@ export default function GlobalCompanyAnalyzer() {
     }
   }, [aggregated, showDisabled, mapLoaded, viewMode, selectedSector])
 
+  // --- Compare-mode Highlight Effect ---
+  // Outlines all regions whose countryId is in highlightCountryIds. Stable
+  // key from the array prevents thrashing on every parent render.
+  const highlightKey = (highlightCountryIds ?? []).slice().sort().join(",")
+  useEffect(() => {
+    if (!mapRef.current || !mapLoaded) return
+    const map = mapRef.current
+    if (!map.getLayer('regions-compare-highlight')) return
+
+    if (!highlightCountryIds || highlightCountryIds.length === 0) {
+      try {
+        map.setPaintProperty('regions-compare-highlight', 'line-width', 0)
+      } catch (e) {
+        console.warn("Failed to clear compare highlight", e)
+      }
+      return
+    }
+
+    // Build a match expression: regions whose countryId is in the set get a
+    // thicker stroke. Default 0 for everything else.
+    const matchExpr: any[] = ['match', ['get', 'countryId']]
+    for (const id of highlightCountryIds) {
+      matchExpr.push(id, 2.5)
+    }
+    matchExpr.push(0) // fallback width
+
+    try {
+      map.setPaintProperty('regions-compare-highlight', 'line-width', matchExpr)
+    } catch (e) {
+      console.warn("Failed to set compare highlight", e)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightKey, mapLoaded])
+
   const selectCountry = (id: string) => {
     setSelectedCountryId(id)
   }
@@ -481,7 +536,7 @@ export default function GlobalCompanyAnalyzer() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 text-zinc-100 p-6">
+      <div className={`flex flex-col items-center justify-center ${embedded ? "min-h-[400px]" : "min-h-screen"} bg-zinc-950 text-zinc-100 p-6`}>
         {/* <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-6" /> */}
         <h2 className="text-xl font-medium mb-2">{progress.stage}...</h2>
         <div className="w-64 bg-zinc-900 h-2 rounded-full overflow-hidden mb-2">
@@ -499,7 +554,7 @@ export default function GlobalCompanyAnalyzer() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6">
+      <div className={`${embedded ? "min-h-[400px]" : "min-h-screen"} bg-zinc-950 flex flex-col items-center justify-center p-6`}>
         <div className="text-red-500 mb-4 font-bold">CRITICAL SYSTEM ERROR</div>
         <p className="text-zinc-400 mb-6">{error}</p>
         <button onClick={() => window.location.reload()} className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm hover:bg-zinc-800 transition-colors">
@@ -512,21 +567,25 @@ export default function GlobalCompanyAnalyzer() {
   const selectedCountry = selectedCountryId ? aggregated[selectedCountryId] : null
 
   return (
-    <div className="h-screen bg-zinc-950 flex flex-col overflow-hidden text-zinc-100" onMouseMove={handleMouseMove}>
+    <div
+      className={`${embedded ? "h-[720px] rounded-xl border border-zinc-800" : "h-screen"} bg-zinc-950 flex flex-col overflow-hidden text-zinc-100`}
+      onMouseMove={handleMouseMove}
+    >
       <header className="h-16 border-b border-zinc-900 flex items-center justify-between px-6 bg-zinc-950/80 backdrop-blur-md z-30">
         <div className="flex items-center gap-4">
-          <Link to="/" className="p-2 hover:bg-zinc-900 rounded-full transition-colors">
-            <ArrowLeft className="w-5 h-5 text-zinc-500" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-bold flex items-center gap-2">
-              <Globe2Icon className="w-4 h-4 text-blue-500" />
-              Industrial Atlas
-            </h1>
-            {/* <div className="flex items-center gap-2">
-              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Industrial Intelligence Network</p>
-            </div> */}
-          </div>
+          {!embedded && (
+            <>
+              <Link to="/" className="p-2 hover:bg-zinc-900 rounded-full transition-colors">
+                <ArrowLeft className="w-5 h-5 text-zinc-500" />
+              </Link>
+              <div>
+                <h1 className="text-lg font-bold flex items-center gap-2">
+                  <Globe2Icon className="w-4 h-4 text-blue-500" />
+                  Industrial Atlas
+                </h1>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-4">

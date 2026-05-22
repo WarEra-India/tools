@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useRef, useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { CountryFlag } from "@/components/CountryFlag"
 import { Loader2, ArrowLeft, ChevronUp, ChevronDown, Minus } from "lucide-react"
@@ -74,13 +74,42 @@ function formatArea(km2: number): string {
 
 type SortKey = "controlledArea" | "originalArea" | "gainedArea" | "lostArea" | "regionCount"
 
-export default function LandArea() {
+interface Props {
+  /** Hide page chrome (back button, page title, intro paragraph). */
+  embedded?: boolean
+  /** When set, the row whose code matches gets a blue highlight + scroll-into-view. */
+  highlightCountryCode?: string
+  /** When set, restrict the table to only these country codes (compare mode).
+   *  Also hides the summary cards and search box. */
+  filterCountryCodes?: string[]
+}
+
+export default function LandArea({
+  embedded = false,
+  highlightCountryCode,
+  filterCountryCodes,
+}: Props = {}) {
+  // Normalize filter for fast lookups.
+  const filterSet = useMemo(() => {
+    if (!filterCountryCodes || filterCountryCodes.length === 0) return null
+    return new Set(filterCountryCodes.map((c) => c.toLowerCase()))
+  }, [filterCountryCodes])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [countryData, setCountryData] = useState<CountryLandData[]>([])
   const [sortKey, setSortKey] = useState<SortKey>("controlledArea")
   const [sortAsc, setSortAsc] = useState(false)
   const [search, setSearch] = useState("")
+  const highlightRowRef = useRef<HTMLTableRowElement | null>(null)
+
+  // Scroll highlighted row into view once data is ready.
+  useEffect(() => {
+    if (!highlightCountryCode || loading) return
+    const t = setTimeout(() => {
+      highlightRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+    }, 200)
+    return () => clearTimeout(t)
+  }, [highlightCountryCode, loading, countryData])
 
   useEffect(() => {
     async function loadData() {
@@ -212,6 +241,10 @@ export default function LandArea() {
 
   const sorted = useMemo(() => {
     let filtered = countryData
+    // Compare-mode hard filter: restrict to the explicit code allow-list.
+    if (filterSet) {
+      filtered = filtered.filter(c => filterSet.has(c.code.toLowerCase()))
+    }
     if (search) {
       const q = search.toLowerCase()
       filtered = filtered.filter(c => c.name.toLowerCase().includes(q))
@@ -220,7 +253,7 @@ export default function LandArea() {
       const diff = a[sortKey] - b[sortKey]
       return sortAsc ? diff : -diff
     })
-  }, [countryData, sortKey, sortAsc, search])
+  }, [countryData, sortKey, sortAsc, search, filterSet])
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -260,64 +293,75 @@ export default function LandArea() {
   const countriesWithOccupied = countryData.filter(c => c.gainedArea > 0).length
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <div className="max-w-7xl mx-auto px-4 pt-6 pb-12 space-y-6">
-        <div>
-          <Link
-            to="/"
-            className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Calculators
-          </Link>
-          <img src={LAND_ICON} alt="craft" className="h-8 w-8" />
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Land Area</h1>
-          <p className="text-zinc-400">All countries ranked by total controlled land area, including occupied territories.</p>
-        </div>
+    <div className={embedded ? "" : "min-h-screen bg-zinc-950"}>
+      <div className={embedded ? "space-y-6" : "max-w-7xl mx-auto px-4 pt-6 pb-12 space-y-6"}>
+        {!embedded && (
+          <div>
+            <Link
+              to="/"
+              className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Calculators
+            </Link>
+            <img src={LAND_ICON} alt="craft" className="h-8 w-8" />
+            <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Land Area</h1>
+            <p className="text-zinc-400">All countries ranked by total controlled land area, including occupied territories.</p>
+          </div>
+        )}
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50">
-            <CardContent className="pt-5 text-center">
-              <p className="text-2xl font-bold text-white">{countriesWithLand}</p>
-              <p className="text-xs text-zinc-500 mt-1">Countries With Land</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50">
-            <CardContent className="pt-5 text-center">
-              <p className="text-2xl font-bold text-white">{totalRegions}</p>
-              <p className="text-xs text-zinc-500 mt-1">Total Regions</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50">
-            <CardContent className="pt-5 text-center">
-              <p className="text-2xl font-bold text-emerald-400">{countriesWithOccupied}</p>
-              <p className="text-xs text-zinc-500 mt-1">Occupying Others</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50">
-            <CardContent className="pt-5 text-center">
-              <p className="text-2xl font-bold text-red-400">{countryData.filter(c => c.lostArea > 0).length}</p>
-              <p className="text-xs text-zinc-500 mt-1">Lost Territory</p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Summary Cards — hidden in compare mode where context is "just these N countries" */}
+        {!filterSet && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50">
+              <CardContent className="pt-5 text-center">
+                <p className="text-2xl font-bold text-white">{countriesWithLand}</p>
+                <p className="text-xs text-zinc-500 mt-1">Countries With Land</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50">
+              <CardContent className="pt-5 text-center">
+                <p className="text-2xl font-bold text-white">{totalRegions}</p>
+                <p className="text-xs text-zinc-500 mt-1">Total Regions</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50">
+              <CardContent className="pt-5 text-center">
+                <p className="text-2xl font-bold text-emerald-400">{countriesWithOccupied}</p>
+                <p className="text-xs text-zinc-500 mt-1">Occupying Others</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50">
+              <CardContent className="pt-5 text-center">
+                <p className="text-2xl font-bold text-red-400">{countryData.filter(c => c.lostArea > 0).length}</p>
+                <p className="text-xs text-zinc-500 mt-1">Lost Territory</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Main Table */}
         <Card className="bg-zinc-950/50 backdrop-blur-xl border-zinc-800/50 overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Country Rankings</CardTitle>
-              <CardDescription>All {countryData.length} countries sorted by controlled area</CardDescription>
+              <CardTitle>{filterSet ? "Selected nations" : "Country Rankings"}</CardTitle>
+              <CardDescription>
+                {filterSet
+                  ? `${sorted.length} of ${countryData.length} countries, sorted by controlled area`
+                  : `All ${countryData.length} countries sorted by controlled area`}
+              </CardDescription>
             </div>
-            <div className="relative">
-              <input
-                placeholder="Search country..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-lg w-48 outline-none focus:border-zinc-600 transition-colors"
-              />
-            </div>
+            {/* Search input hidden in compare mode — parent owns country selection */}
+            {!filterSet && (
+              <div className="relative">
+                <input
+                  placeholder="Search country..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="bg-zinc-900 border border-zinc-800 text-white text-sm px-3 py-2 rounded-lg w-48 outline-none focus:border-zinc-600 transition-colors"
+                />
+              </div>
+            )}
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -348,11 +392,16 @@ export default function LandArea() {
                   {sorted.map((c, i) => {
                     const netChange = c.controlledArea - c.originalArea
                     const netPercent = c.originalArea > 0 ? (netChange / c.originalArea) * 100 : 0
+                    const isHighlighted = !!highlightCountryCode && c.code.toLowerCase() === highlightCountryCode.toLowerCase()
                     return (
                       <tr
                         key={c.countryId}
-                        className={`border-b border-zinc-800/50 transition-colors hover:bg-zinc-900/50 ${i % 2 === 0 ? "" : "bg-zinc-900/20"
-                          }`}
+                        ref={isHighlighted ? highlightRowRef : undefined}
+                        className={`border-b border-zinc-800/50 transition-colors hover:bg-zinc-900/50 ${
+                          isHighlighted
+                            ? "bg-blue-500/10 ring-1 ring-blue-500/40"
+                            : i % 2 === 0 ? "" : "bg-zinc-900/20"
+                        }`}
                       >
                         <td className="px-4 py-3 text-zinc-500 font-mono">{i + 1}</td>
                         <td className="px-4 py-3">

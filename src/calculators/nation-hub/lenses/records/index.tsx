@@ -38,13 +38,27 @@ function getISOWeekRange(weekStr: string) {
   return `${s} - ${e}`;
 }
 
-export default function NationalRecords() {
+interface Props {
+  /** Hide back button, page title, country picker — Nation Hub provides those. */
+  embedded?: boolean;
+  /** Override selectedCountry with this id; ignored when not embedded. */
+  forcedCountryId?: string;
+}
+
+export default function NationalRecords({ embedded = false, forcedCountryId }: Props = {}) {
   const { profile } = useProfile();
 
   // State
   const [loading, setLoading] = useState(true);
   const [countries, setCountries] = useState<any[]>([]);
-  const [selectedCountry, setSelectedCountry] = useState<string>("");
+  const [selectedCountry, setSelectedCountry] = useState<string>(forcedCountryId ?? "");
+
+  // Keep selection in sync with forcedCountryId when used embedded.
+  useEffect(() => {
+    if (forcedCountryId && forcedCountryId !== selectedCountry) {
+      setSelectedCountry(forcedCountryId);
+    }
+  }, [forcedCountryId]);
 
   const [weeks, setWeeks] = useState<any[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string>("");
@@ -126,11 +140,13 @@ export default function NationalRecords() {
 
         setCountries(cData);
 
-        // Default country 
-        if (profile?.user?.country) {
-          setSelectedCountry(profile.user.country);
-        } else if (cData.length > 0) {
-          setSelectedCountry(cData[0].country_id);
+        // Default country — skip when forcedCountryId is provided (embedded mode).
+        if (!forcedCountryId) {
+          if (profile?.user?.country) {
+            setSelectedCountry(profile.user.country);
+          } else if (cData.length > 0) {
+            setSelectedCountry(cData[0].country_id);
+          }
         }
       } catch (err: any) {
         setError(err.message);
@@ -415,57 +431,62 @@ export default function NationalRecords() {
   }
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8">
-      {/* Header */}
-      <div>
-        <div className="flex items-start justify-between gap-4 mb-2">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="p-2 -ml-2 hover:bg-zinc-800 rounded-full transition-colors">
-              <ArrowLeft className="w-6 h-6 text-zinc-400" />
-            </Link>
-            <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-              <img src={FLAG_ICON} alt="craft" className="h-8 w-8" />
-              National Records
-            </h1>
+    <div className={embedded ? "space-y-6" : "space-y-6 max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8"}>
+      {!embedded && (
+        <div>
+          <div className="flex items-start justify-between gap-4 mb-2">
+            <div className="flex items-center gap-4">
+              <Link to="/" className="p-2 -ml-2 hover:bg-zinc-800 rounded-full transition-colors">
+                <ArrowLeft className="w-6 h-6 text-zinc-400" />
+              </Link>
+              <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+                <img src={FLAG_ICON} alt="craft" className="h-8 w-8" />
+                National Records
+              </h1>
+            </div>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              {profile?.user?._id === "6999b242abdf5405edb36d57" && (
+                <button
+                  onClick={handleUpdate}
+                  disabled={updateLoading}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition-colors"
+                >
+                  <RefreshCw className={`w-4 h-4 ${updateLoading ? "animate-spin" : ""}`} />
+                  {updateLoading ? "Updating..." : "Update Now"}
+                </button>
+              )}
+              <span className="text-xs text-zinc-500">Data may be up to 2h old</span>
+            </div>
           </div>
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            {profile?.user?._id === "6999b242abdf5405edb36d57" && (
-              <button
-                onClick={handleUpdate}
-                disabled={updateLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition-colors"
-              >
-                <RefreshCw className={`w-4 h-4 ${updateLoading ? "animate-spin" : ""}`} />
-                {updateLoading ? "Updating..." : "Update Now"}
-              </button>
-            )}
-            <span className="text-xs text-zinc-500">Data may be up to 2h old</span>
-          </div>
+          <p className="text-zinc-400">
+            Historical data, weekly damages, and top citizens leaderboards for every country.
+          </p>
         </div>
-        <p className="text-zinc-400">
-          Historical data, weekly damages, and top citizens leaderboards for every country.
-        </p>
-      </div>
+      )}
 
-      {/* Primary Tab Switcher */}
-      <div className="flex border-b border-zinc-800 mb-6">
-        <button
-          onClick={() => setActiveTab("citizens")}
-          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "citizens" ? "border-blue-500 text-blue-400" : "border-transparent text-zinc-400 hover:text-zinc-300 hover:border-zinc-700"}`}
-        >
-          Top Citizens
-        </button>
-        <button
-          onClick={() => setActiveTab("countries")}
-          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "countries" ? "border-blue-500 text-blue-400" : "border-transparent text-zinc-400 hover:text-zinc-300 hover:border-zinc-700"}`}
-        >
-          Countries Ranking
-        </button>
-      </div>
+      {/* Primary Tab Switcher — hidden when embedded; Nation Hub already shows
+          this lens as the "Records" tab and the spec calls for citizens-only. */}
+      {!embedded && (
+        <div className="flex border-b border-zinc-800 mb-6">
+          <button
+            onClick={() => setActiveTab("citizens")}
+            className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "citizens" ? "border-blue-500 text-blue-400" : "border-transparent text-zinc-400 hover:text-zinc-300 hover:border-zinc-700"}`}
+          >
+            Top Citizens
+          </button>
+          <button
+            onClick={() => setActiveTab("countries")}
+            className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "countries" ? "border-blue-500 text-blue-400" : "border-transparent text-zinc-400 hover:text-zinc-300 hover:border-zinc-700"}`}
+          >
+            Countries Ranking
+          </button>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="flex flex-col md:flex-row gap-4">
-        {activeTab === "citizens" && (
+        {/* Country picker hidden when embedded — Nation Hub already provides the chip-list of selected countries. */}
+        {activeTab === "citizens" && !embedded && (
           <div className="flex-1 max-w-xs bg-zinc-900 border border-zinc-800 rounded-lg shadow-sm">
             <select
               value={selectedCountry}

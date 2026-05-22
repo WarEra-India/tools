@@ -23,7 +23,7 @@ import { useEquipmentPrices } from "@/lib/hooks/useEquipmentPrices"
 import { useLocalConfig } from "@/lib/hooks/useLocalConfig"
 import { GameItemIcon, RARITY_COLORS } from "@/components/GameItemIcon"
 import { RARITY_COSTS } from "../war-room/constants"
-import { SKILL_GROUPS } from "../archetype-analysis"
+import { SKILL_GROUPS } from "../nation-hub/lenses/archetype"
 
 interface AnalysisData {
   summary: {

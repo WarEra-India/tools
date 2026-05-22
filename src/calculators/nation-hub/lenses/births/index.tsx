@@ -13,10 +13,20 @@ import {
   countInRange,
 } from "./logic";
 
-export default function BabyBoom() {
+interface Props {
+  /** Hide page chrome (back button, title) and the country search/chip sidebar.
+   *  Auto-fetches on mount so embedded users don't have to click "Get Data". */
+  embedded?: boolean;
+  /** When set with embedded, lock the lens to these countries (1 = detail, 2+ = compare). */
+  forcedCountries?: Country[];
+}
+
+export default function BabyBoom({ embedded = false, forcedCountries }: Props = {}) {
   const [loading, setLoading] = useState(false);
   const [countries, setCountries] = useState<Country[]>([]);
-  const [selectedCountries, setSelectedCountries] = useState<Country[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<Country[]>(
+    forcedCountries ?? [],
+  );
   const [countrySearch, setCountrySearch] = useState("");
   const [allResults, setAllResults] = useState<CountryResults>({});
   const [error, setError] = useState<string | null>(null);
@@ -27,11 +37,24 @@ export default function BabyBoom() {
   const [minLevel, setMinLevel] = useState<number>(5);
   const [activeOnly, setActiveOnly] = useState<boolean>(true);
 
+  // Stable key from forcedCountries IDs — lets effects depend on the actual
+  // set without paying for shallow-changed array references.
+  const forcedKey = (forcedCountries ?? []).map((c) => c._id).sort().join(",");
+
   useEffect(() => {
+    // Skip directory fetch when embedded — countries come from props.
+    if (embedded) return;
     getAllCountries()
       .then((map) => setCountries(Object.values(map)))
       .catch((err) => setError(err.message));
-  }, []);
+  }, [embedded]);
+
+  // Keep selectedCountries in sync with forcedCountries when embedded.
+  useEffect(() => {
+    if (!embedded || !forcedCountries) return;
+    setSelectedCountries(forcedCountries);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedded, forcedKey]);
 
   const availableCountries = useMemo(() =>
     countries
@@ -57,6 +80,11 @@ export default function BabyBoom() {
     });
   };
 
+  /**
+   * Fetch every available user for the selected countries. No cutoff —
+   * timeRange is a pure frontend filter, so we get the full history once
+   * and let the chart slice it however the user wants.
+   */
   const fetchData = async () => {
     if (selectedCountries.length === 0) return;
     setLoading(true);
@@ -64,7 +92,7 @@ export default function BabyBoom() {
 
     try {
       const entries = await Promise.all(
-        selectedCountries.map(async (c) => [c._id, await fetchAndEnrichCountry(c._id, timeRange)] as const)
+        selectedCountries.map(async (c) => [c._id, await fetchAndEnrichCountry(c._id)] as const)
       );
       setAllResults(Object.fromEntries(entries));
       setHasData(true);
@@ -74,6 +102,14 @@ export default function BabyBoom() {
       setLoading(false);
     }
   };
+
+  // Auto-fetch when embedded — only when the country set changes. timeRange
+  // is a pure frontend filter from here on so it's deliberately not in deps.
+  useEffect(() => {
+    if (!embedded || !forcedCountries || forcedCountries.length === 0) return;
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedded, forcedKey]);
 
   const filteredResults = useMemo(
     () => applyDisplayFilters(allResults, minLevel, activeOnly),
@@ -86,19 +122,22 @@ export default function BabyBoom() {
   );
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto p-4 md:p-6">
-      <div className="flex items-center gap-4">
-        <Link to="/" className="p-2 -ml-2 hover:bg-zinc-800 rounded-full transition-colors">
-          <ArrowLeft className="w-6 h-6 text-zinc-400" />
-        </Link>
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-          <TrendingUp className="w-8 h-8 text-blue-500" />
-          Baby Boom Analysis
-        </h1>
-      </div>
+    <div className={embedded ? "space-y-6" : "space-y-6 max-w-[1400px] mx-auto p-4 md:p-6"}>
+      {!embedded && (
+        <div className="flex items-center gap-4">
+          <Link to="/" className="p-2 -ml-2 hover:bg-zinc-800 rounded-full transition-colors">
+            <ArrowLeft className="w-6 h-6 text-zinc-400" />
+          </Link>
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+            <TrendingUp className="w-8 h-8 text-blue-500" />
+            Baby Boom Analysis
+          </h1>
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Sidebar */}
+      <div className={`grid grid-cols-1 gap-8 items-start ${embedded ? "" : "lg:grid-cols-12"}`}>
+        {/* Sidebar — hidden when embedded; Nation Hub owns country selection */}
+        {!embedded && (
         <div className="lg:col-span-3 space-y-4 lg:sticky lg:top-6">
           <div className="space-y-3">
             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Countries</p>
@@ -146,7 +185,7 @@ export default function BabyBoom() {
           </div>
 
           <button
-            onClick={fetchData}
+            onClick={() => fetchData()}
             disabled={loading || selectedCountries.length === 0}
             className={`w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${loading || selectedCountries.length === 0 ? "bg-zinc-900 text-zinc-700" : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20"}`}
           >
@@ -156,9 +195,10 @@ export default function BabyBoom() {
 
           {error && <p className="text-xs text-red-400">{error}</p>}
         </div>
+        )}
 
         {/* Main content */}
-        <div className="lg:col-span-9 space-y-6">
+        <div className={embedded ? "space-y-6" : "lg:col-span-9 space-y-6"}>
           <Card className="bg-zinc-950/50 border-zinc-800 overflow-hidden shadow-2xl">
             <CardHeader className="border-b border-zinc-900/50">
               <div className="flex flex-row items-center justify-between gap-4 flex-wrap">

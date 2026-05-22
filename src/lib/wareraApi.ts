@@ -177,7 +177,10 @@ export interface UserWorkers {
 }
 
 export async function getUserWorkers(userId: string): Promise<UserWorkers[]> {
-  const data = await post<Record<string, any>>("worker.getWorkers", { userId });
+  const data = await post<Record<string, any>>("worker.getWorkers", { userId }).catch((e) => {
+    console.error("Failed to fetch workers:", e);
+    return { workersPerCompany: [] };
+  });
   const workers: UserWorkers[] = [];
   data.workersPerCompany.forEach((company: any) => {
     workers.push(...company.workers);

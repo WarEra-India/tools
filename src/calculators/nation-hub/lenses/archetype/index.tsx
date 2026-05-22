@@ -5,7 +5,7 @@ import { Loader2, ArrowLeft, Radar, Shield, Swords, Coins, PieChart as PieChartI
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Legend, Tooltip, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar as ReRadar } from "recharts";
 import { useProfile } from "@/lib/ProfileContext";
 import { getUserProfilesBatch, type UserProfile } from "@/lib/wareraApi";
-import { BuffSlot, ModifierToggle } from "../war-room/components";
+import { BuffSlot, ModifierToggle } from "../../../war-room/components";
 
 const API_BASE = "https://warvault.shadoooow.workers.dev/api";
 const SKILLS_BASE_IMAGE_URL = `${import.meta.env.BASE_URL}images/`;
@@ -185,11 +185,18 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function ArchetypeAnalysis() {
+interface Props {
+  /** Hide back button, page title, country picker — Nation Hub provides those. */
+  embedded?: boolean;
+  /** Override selectedCountry with this id; ignored when not embedded. */
+  forcedCountryId?: string;
+}
+
+export default function ArchetypeAnalysis({ embedded = false, forcedCountryId }: Props = {}) {
   const { profile } = useProfile();
   const [loading, setLoading] = useState(false);
   const [countries, setCountries] = useState<any[]>([]);
-  const [selectedCountry, setSelectedCountry] = useState<string>("");
+  const [selectedCountry, setSelectedCountry] = useState<string>(forcedCountryId ?? "");
   const [data, setData] = useState<AnalyzedUser[]>([]);
   const [filter, setFilter] = useState<Archetype | "All">("All");
 
@@ -197,7 +204,16 @@ export default function ArchetypeAnalysis() {
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'buff' | 'debuff' | 'no buff' | 'all'>('all');
 
+  // Keep selection in sync with forcedCountryId when used embedded.
   useEffect(() => {
+    if (forcedCountryId && forcedCountryId !== selectedCountry) {
+      setSelectedCountry(forcedCountryId);
+    }
+  }, [forcedCountryId]);
+
+  useEffect(() => {
+    // Skip the country directory fetch when embedded — parent already picked the country.
+    if (embedded) return;
     async function fetchCountries() {
       const res = await fetch(`${API_BASE}/countries`);
       const list = await res.json();
@@ -211,7 +227,7 @@ export default function ArchetypeAnalysis() {
       }
     }
     fetchCountries();
-  }, [profile]);
+  }, [profile, embedded]);
 
   const fetchAnalysis = async () => {
     if (!selectedCountry) return;
@@ -364,32 +380,34 @@ export default function ArchetypeAnalysis() {
   }, [data]);
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto p-4 md:p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="p-2 -ml-2 hover:bg-zinc-800 rounded-full transition-colors">
-            <ArrowLeft className="w-6 h-6 text-zinc-400" />
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <Radar className="w-8 h-8 text-purple-500 animate-pulse" />
-              Strategic Archetype Analysis
-            </h1>
-            <p className="text-zinc-500 text-sm mt-1">Personnel skill profiling and tactical mode categorization.</p>
+    <div className={embedded ? "space-y-6" : "space-y-6 max-w-[1400px] mx-auto p-4 md:p-6"}>
+      {!embedded && (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Link to="/" className="p-2 -ml-2 hover:bg-zinc-800 rounded-full transition-colors">
+              <ArrowLeft className="w-6 h-6 text-zinc-400" />
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                <Radar className="w-8 h-8 text-purple-500 animate-pulse" />
+                Strategic Archetype Analysis
+              </h1>
+              <p className="text-zinc-500 text-sm mt-1">Personnel skill profiling and tactical mode categorization.</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 bg-zinc-900/50 p-1 rounded-xl border border-zinc-800">
+            <label className="text-[10px] font-black uppercase text-zinc-500 px-3 tracking-widest">Select Nation</label>
+            <select
+              value={selectedCountry}
+              onChange={(e) => setSelectedCountry(e.target.value)}
+              className="bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-sm font-bold text-white outline-none focus:border-purple-500/50 transition-colors cursor-pointer"
+            >
+              {countries.map(c => <option key={c.country_id} value={c.country_id}>{c.name}</option>)}
+            </select>
           </div>
         </div>
-
-        <div className="flex items-center gap-3 bg-zinc-900/50 p-1 rounded-xl border border-zinc-800">
-          <label className="text-[10px] font-black uppercase text-zinc-500 px-3 tracking-widest">Select Nation</label>
-          <select
-            value={selectedCountry}
-            onChange={(e) => setSelectedCountry(e.target.value)}
-            className="bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2 text-sm font-bold text-white outline-none focus:border-purple-500/50 transition-colors cursor-pointer"
-          >
-            {countries.map(c => <option key={c.country_id} value={c.country_id}>{c.name}</option>)}
-          </select>
-        </div>
-      </div>
+      )}
 
       {/* Archetype Intelligence Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

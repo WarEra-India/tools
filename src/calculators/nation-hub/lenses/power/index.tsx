@@ -62,11 +62,18 @@ interface NationPowerData {
   history: HistoryData[];
 }
 
-export default function NationPower() {
+interface Props {
+  /** Hide back button, page title, country picker — Nation Hub provides those. */
+  embedded?: boolean;
+  /** Override selectedCountry with this id; ignored when not embedded. */
+  forcedCountryId?: string;
+}
+
+export default function NationPower({ embedded = false, forcedCountryId }: Props = {}) {
   const { profile } = useProfile();
   const [loading, setLoading] = useState(true);
   const [countries, setCountries] = useState<any[]>([]);
-  const [selectedCountry, setSelectedCountry] = useState<string>("");
+  const [selectedCountry, setSelectedCountry] = useState<string>(forcedCountryId ?? "");
   const [data, setData] = useState<NationPowerData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: "asc" | "desc" } | null>({ key: "weekly_damage", direction: "desc" });
@@ -75,7 +82,16 @@ export default function NationPower() {
   // Eco Rotation State
   const [ecoUserIds, setEcoUserIds] = useState<Set<string>>(new Set());
 
+  // Keep selection in sync with forcedCountryId when used embedded.
   useEffect(() => {
+    if (forcedCountryId && forcedCountryId !== selectedCountry) {
+      setSelectedCountry(forcedCountryId);
+    }
+  }, [forcedCountryId]);
+
+  useEffect(() => {
+    // Skip the country directory fetch when embedded — parent already picked the country.
+    if (embedded) return;
     async function fetchCountries() {
       try {
         const res = await fetch(`${API_BASE}/countries`);
@@ -92,7 +108,7 @@ export default function NationPower() {
       }
     }
     fetchCountries();
-  }, [profile]);
+  }, [profile, embedded]);
 
   useEffect(() => {
     if (!selectedCountry) return;
@@ -190,30 +206,32 @@ export default function NationPower() {
   }
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="p-2 -ml-2 hover:bg-zinc-800 rounded-full transition-colors">
-            <ArrowLeft className="w-6 h-6 text-zinc-400" />
-          </Link>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <img src={BATTLE_ICON} alt="craft" className="h-8 w-8" />
-            Nation Strategic Control
-          </h1>
+    <div className={embedded ? "space-y-6" : "space-y-6 max-w-[1400px] mx-auto p-4 md:p-6"}>
+      {/* Header — hidden when embedded; Nation Hub provides its own chrome */}
+      {!embedded && (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Link to="/" className="p-2 -ml-2 hover:bg-zinc-800 rounded-full transition-colors">
+              <ArrowLeft className="w-6 h-6 text-zinc-400" />
+            </Link>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+              <img src={BATTLE_ICON} alt="craft" className="h-8 w-8" />
+              Nation Strategic Control
+            </h1>
+          </div>
+          <div className="flex gap-4">
+            <select
+              value={selectedCountry}
+              onChange={(e) => setSelectedCountry(e.target.value)}
+              className="h-10 bg-zinc-900 border border-zinc-800 text-zinc-200 px-3 rounded-lg outline-none"
+            >
+              {countries.map(c => (
+                <option key={c.country_id} value={c.country_id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div className="flex gap-4">
-          <select
-            value={selectedCountry}
-            onChange={(e) => setSelectedCountry(e.target.value)}
-            className="h-10 bg-zinc-900 border border-zinc-800 text-zinc-200 px-3 rounded-lg outline-none"
-          >
-            {countries.map(c => (
-              <option key={c.country_id} value={c.country_id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+      )}
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">

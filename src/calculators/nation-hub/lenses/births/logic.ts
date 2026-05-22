@@ -32,8 +32,12 @@ export function timeRangeCutoff(days: number): Date {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 }
 
-export async function fetchUsersForCountry(countryId: string, timeRangeDays: number): Promise<RawUser[]> {
-  const cutoff = timeRangeCutoff(timeRangeDays);
+/**
+ * Fetch every user the API will give us for this country — no date cutoff.
+ * The time-range UI is a pure frontend filter, so we pay this paginated
+ * fetch once per country and let the chart slice it however it wants.
+ */
+export async function fetchUsersForCountry(countryId: string): Promise<RawUser[]> {
   const allItems: RawUser[] = [];
   let cursor: string | undefined;
 
@@ -51,25 +55,17 @@ export async function fetchUsersForCountry(countryId: string, timeRangeDays: num
     const data = json?.result?.data;
     const items: RawUser[] = data?.items || [];
 
-    let hitCutoff = false;
-    for (const item of items) {
-      if (new Date(item.createdAt) >= cutoff) {
-        allItems.push(item);
-      } else {
-        hitCutoff = true;
-        break;
-      }
-    }
+    allItems.push(...items);
 
-    if (hitCutoff || !data?.nextCursor) break;
+    if (!data?.nextCursor) break;
     cursor = data.nextCursor;
   }
 
   return allItems;
 }
 
-export async function fetchAndEnrichCountry(countryId: string, timeRangeDays: number): Promise<EnrichedUser[]> {
-  const rawUsers = await fetchUsersForCountry(countryId, timeRangeDays);
+export async function fetchAndEnrichCountry(countryId: string): Promise<EnrichedUser[]> {
+  const rawUsers = await fetchUsersForCountry(countryId);
   if (rawUsers.length === 0) return [];
 
   const profiles = await getUserProfilesBatch(rawUsers.map(u => u._id));
