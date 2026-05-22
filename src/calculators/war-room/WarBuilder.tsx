@@ -1,5 +1,9 @@
-import { useState, useCallback, useRef } from "react";
-import { Hammer, Loader2, Target, Zap, Download } from "lucide-react";
+import { useState, useCallback, useRef, useMemo } from "react";
+import { Hammer, Loader2, Target, Zap, Download, ScatterChart as ScatterIcon } from "lucide-react";
+import {
+  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
+  ResponsiveContainer, ZAxis,
+} from "recharts";
 import MilitaryRankIcon from "@/components/MilitaryRankIcon";
 import { GameItemIcon } from "@/components/GameItemIcon";
 import {
@@ -43,6 +47,58 @@ interface BuilderProgress {
   current: number;
   total: number;
   phase: string;
+}
+
+interface LandscapePoint {
+  damage: number;
+  costPer1k: number;
+  netCost: number;
+  hits: number;
+  weapon: string;
+  ammo: string | null;
+  food: string | null;
+  pill: string;
+  tier: number;
+  pickCode?: string;
+}
+
+const WEAPON_COLORS: Record<string, string> = {
+  knife: "#a1a1aa",
+  gun: "#60a5fa",
+  rifle: "#fbbf24",
+  sniper: "#22d3ee",
+  tank: "#f97316",
+  jet: "#ec4899",
+};
+
+const PICK_COLORS: Record<string, string> = {
+  BD: "#ef4444",
+  BC: "#22c55e",
+  BO: "#a855f7",
+  BT: "#f59e0b",
+};
+
+const MAX_CHART_POINTS = 1000;
+
+function sampleArray<T>(arr: T[], n: number): T[] {
+  if (arr.length <= n) return arr;
+  const step = arr.length / n;
+  const result: T[] = [];
+  for (let i = 0; i < n; i++) result.push(arr[Math.floor(i * step)]);
+  return result;
+}
+
+function computeParetoFrontier(points: LandscapePoint[]): LandscapePoint[] {
+  const sorted = [...points].sort((a, b) => a.costPer1k - b.costPer1k);
+  const frontier: LandscapePoint[] = [];
+  let maxDmg = -Infinity;
+  for (const p of sorted) {
+    if (p.damage > maxDmg) {
+      frontier.push(p);
+      maxDmg = p.damage;
+    }
+  }
+  return frontier;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────
@@ -149,10 +205,31 @@ function allocateByPriority(
 // ─── Equipment Tier Combos ──────────────────────────────────────────────
 
 function getEquipmentTiers(): number[][] {
-  return [
-    [6, 6, 6, 6, 6], [5, 5, 5, 5, 5], [4, 4, 4, 4, 4], [3, 3, 3, 3, 3],
-    [6, 6, 6, 6, 5], [5, 5, 5, 5, 4], [4, 4, 4, 4, 3],
-  ];
+  const MIN_TIER = 3;
+  const MAX_TIER = 6;
+  const baselines = [3, 4, 5, 6];
+  const result: number[][] = [];
+  const seen = new Set<string>();
+
+  const add = (combo: number[]) => {
+    const key = combo.join(",");
+    if (!seen.has(key)) { seen.add(key); result.push(combo); }
+  };
+
+  // Same-tier baselines + single-slot ±1 mixes (e.g. helmet T6 with rest T5)
+  for (const baseline of baselines) {
+    add([baseline, baseline, baseline, baseline, baseline]);
+    for (let slot = 0; slot < 5; slot++) {
+      for (const delta of [-1, 1]) {
+        const t = baseline + delta;
+        if (t < MIN_TIER || t > MAX_TIER) continue;
+        const combo = [baseline, baseline, baseline, baseline, baseline];
+        combo[slot] = t;
+        add(combo);
+      }
+    }
+  }
+  return result;
 }
 
 function tierToCode(slot: string, tier: number): string {
@@ -283,6 +360,8 @@ export default function WarBuilder({
   const [targetMode, setTargetMode] = useState<TargetMode>("damage");
   const [targetValue, setTargetValue] = useState<string>("");
   const [results, setResults] = useState<BuildResult[] | null>(null);
+  const [landscape, setLandscape] = useState<{ all: LandscapePoint[]; pareto: LandscapePoint[] } | null>(null);
+  const [showLandscape, setShowLandscape] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
   const [progress, setProgress] = useState<BuilderProgress>({ current: 0, total: 0, phase: "" });
   const cancelRef = useRef(false);
@@ -295,24 +374,28 @@ export default function WarBuilder({
     if (!gameConfig || !livePrices || !equipPrices) return;
     setIsBuilding(true);
     setResults(null);
+    setLandscape(null);
+    setShowLandscape(true);
     cancelRef.current = false;
 
     const skillAllocations = generateSkillAllocations(warBudget);
     const equipTiers = getEquipmentTiers();
 
     type CandidateBuild = {
-      weapon: string; ammo: string; armorTier: number[];
+      weapon: string; ammo: string | null; armorTier: number[];
       food: string | null; pill: string; skills: SkillAllocation;
     };
 
     const candidates: CandidateBuild[] = [];
     for (const skills of skillAllocations)
-      for (const weapon of WEAPONS)
-        for (const ammo of AMMO_TYPES)
+      for (const weapon of WEAPONS) {
+        const ammoChoices: (string | null)[] = weapon === "knife" ? [null] : [...AMMO_TYPES];
+        for (const ammo of ammoChoices)
           for (const food of FOOD_TYPES)
             for (const pill of PILL_STATES)
               for (const tiers of equipTiers)
                 candidates.push({ weapon, ammo, armorTier: tiers, food, pill, skills });
+      }
 
     const total = candidates.length;
     setProgress({ current: 0, total, phase: "Simulating builds..." });
@@ -369,12 +452,14 @@ export default function WarBuilder({
     });
 
     const buildResults: BuildResult[] = [];
+    const pickKeys: Record<string, string> = {};
 
     if (allResults.length > 0) {
       // 1. Best Damage
       const byDmg = [...allResults].sort((a, b) => b.result.avgDamage - a.result.avgDamage);
       const bd = byDmg[0];
       const bdKey = JSON.stringify(bd.build);
+      pickKeys[bdKey] = "BD";
       buildResults.push({
         label: "Best Damage", shortCode: "BD", simState: mkState(bd.build),
         avgDamage: bd.result.avgDamage, avgCostPer1k: bd.result.avgCostPer1k,
@@ -389,6 +474,7 @@ export default function WarBuilder({
         const byCost = [...validCost].sort((a, b) => a.result.avgCostPer1k - b.result.avgCostPer1k);
         const bc = byCost[0];
         bcKey = JSON.stringify(bc.build);
+        pickKeys[bcKey] = "BC";
         buildResults.push({
           label: "Best Cost / 1k", shortCode: "BC", simState: mkState(bc.build),
           avgDamage: bc.result.avgDamage, avgCostPer1k: bc.result.avgCostPer1k,
@@ -418,6 +504,7 @@ export default function WarBuilder({
           if (score > bestScore) { bestScore = score; best = e; }
         }
         if (best) {
+          pickKeys[JSON.stringify(best.build)] = "BO";
           buildResults.push({
             label: "Best Overall", shortCode: "BO", simState: mkState(best.build),
             avgDamage: best.result.avgDamage, avgCostPer1k: best.result.avgCostPer1k,
@@ -433,6 +520,7 @@ export default function WarBuilder({
           const reaching = allResults.filter(r => r.result.avgDamage >= parsedTarget);
           if (reaching.length > 0) {
             const bt = [...reaching].sort((a, b) => a.result.avgNetCost - b.result.avgNetCost)[0];
+            pickKeys[JSON.stringify(bt.build)] = "BT";
             buildResults.push({
               label: `Target ${fmtCompact(parsedTarget)}`, shortCode: "BT", simState: mkState(bt.build),
               avgDamage: bt.result.avgDamage, avgCostPer1k: bt.result.avgCostPer1k,
@@ -444,6 +532,7 @@ export default function WarBuilder({
           const affordable = allResults.filter(r => r.result.avgNetCost <= parsedTarget);
           if (affordable.length > 0) {
             const bt = [...affordable].sort((a, b) => b.result.avgDamage - a.result.avgDamage)[0];
+            pickKeys[JSON.stringify(bt.build)] = "BT";
             buildResults.push({
               label: `Budget ${fmtCompact(parsedTarget)}`, shortCode: "BT", simState: mkState(bt.build),
               avgDamage: bt.result.avgDamage, avgCostPer1k: bt.result.avgCostPer1k,
@@ -455,6 +544,7 @@ export default function WarBuilder({
           const withinCost = validCost.filter(r => r.result.avgCostPer1k <= parsedTarget);
           if (withinCost.length > 0) {
             const bt = [...withinCost].sort((a, b) => b.result.avgDamage - a.result.avgDamage)[0];
+            pickKeys[JSON.stringify(bt.build)] = "BT";
             buildResults.push({
               label: `≤${parsedTarget.toFixed(1)}/1k`, shortCode: "BT", simState: mkState(bt.build),
               avgDamage: bt.result.avgDamage, avgCostPer1k: bt.result.avgCostPer1k,
@@ -465,6 +555,27 @@ export default function WarBuilder({
         }
       }
     }
+
+    // Build landscape (all viable combinations) for visualization
+    const landscapePoints: LandscapePoint[] = allResults
+      .filter(r => r.result.avgCostPer1k < Infinity && r.result.avgCostPer1k > 0)
+      .map(r => {
+        const key = JSON.stringify(r.build);
+        return {
+          damage: r.result.avgDamage,
+          costPer1k: r.result.avgCostPer1k,
+          netCost: r.result.avgNetCost,
+          hits: r.result.avgHits,
+          weapon: r.build.weapon,
+          ammo: r.build.ammo,
+          food: r.build.food,
+          pill: r.build.pill,
+          tier: r.build.armorTier[0],
+          pickCode: pickKeys[key],
+        };
+      });
+    const paretoFrontier = computeParetoFrontier(landscapePoints);
+    setLandscape({ all: landscapePoints, pareto: paretoFrontier });
 
     setResults(buildResults);
     setIsBuilding(false);
@@ -596,6 +707,41 @@ export default function WarBuilder({
           <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">No viable builds found</p>
         </div>
       )}
+
+      {landscape && landscape.all.length > 0 && (
+        showLandscape ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold text-zinc-500">
+                Showing up to {Math.min(landscape.all.length, MAX_CHART_POINTS).toLocaleString()} of {landscape.all.length.toLocaleString()} points
+              </span>
+              <button onClick={() => setShowLandscape(false)}
+                className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-lg border border-zinc-800 transition-all">
+                Hide landscape
+              </button>
+            </div>
+            <BuildLandscape landscape={landscape} />
+          </div>
+        ) : (
+          <button onClick={() => setShowLandscape(true)}
+            className="flex flex-col items-center justify-center gap-2 py-6 px-4 bg-zinc-950/40 hover:bg-zinc-900/60 border border-dashed border-zinc-800 hover:border-cyan-500/40 rounded-2xl transition-all group">
+            <div className="flex items-center gap-2">
+              <ScatterIcon className="h-4 w-4 text-cyan-400/70 group-hover:text-cyan-400" />
+              <span className="text-xs font-black text-zinc-300 group-hover:text-white uppercase tracking-widest">
+                Show Build Landscape
+              </span>
+            </div>
+            <span className="text-[10px] font-mono text-zinc-500">
+              {landscape.all.length.toLocaleString()} viable combinations explored
+            </span>
+            {landscape.all.length > MAX_CHART_POINTS && (
+              <span className="text-[9px] font-bold text-amber-500/80 uppercase tracking-wider mt-1">
+                ⚠ Heavy plot — downsampled to {MAX_CHART_POINTS.toLocaleString()} for performance
+              </span>
+            )}
+          </button>
+        )
+      )}
     </div>
   );
 }
@@ -679,6 +825,144 @@ function BuildResultCard({ build, onLoad }: { build: BuildResult; onLoad: () => 
         <Download className="h-3.5 w-3.5" />
         Load
       </button>
+    </div>
+  );
+}
+
+// ─── Build Landscape (scatter plot of all combinations) ─────────────────
+
+function LandscapeTooltip({ active, payload }: any) {
+  if (!active || !payload || !payload.length) return null;
+  const p: LandscapePoint = payload[0].payload;
+  return (
+    <div className="bg-zinc-950/95 border border-zinc-700 rounded-lg p-2.5 shadow-xl text-[10px] font-mono">
+      {p.pickCode && (
+        <div className="mb-1 pb-1 border-b border-zinc-800">
+          <span className="font-black uppercase tracking-widest" style={{ color: PICK_COLORS[p.pickCode] }}>
+            {p.pickCode === "BD" ? "Best Damage" : p.pickCode === "BC" ? "Best Cost/1k" : p.pickCode === "BO" ? "Best Overall" : "Target Pick"}
+          </span>
+        </div>
+      )}
+      <div className="flex justify-between gap-3"><span className="text-zinc-500">Damage</span><span className="text-amber-400 font-bold">{fmtCompact(p.damage)}</span></div>
+      <div className="flex justify-between gap-3"><span className="text-zinc-500">Cost / 1k</span><span className="text-green-400 font-bold">{p.costPer1k.toFixed(2)}</span></div>
+      <div className="flex justify-between gap-3"><span className="text-zinc-500">Net cost</span><span className="text-zinc-300 font-bold">{fmtCompact(Math.abs(p.netCost))}</span></div>
+      <div className="flex justify-between gap-3"><span className="text-zinc-500">Hits</span><span className="text-zinc-300 font-bold">{Math.round(p.hits)}</span></div>
+      <div className="mt-1 pt-1 border-t border-zinc-800 flex flex-wrap gap-1">
+        <span className="px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300" style={{ color: WEAPON_COLORS[p.weapon] }}>{p.weapon}</span>
+        <span className="px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400">T{p.tier}</span>
+        {p.ammo && <span className="px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400">{p.ammo.replace("Ammo", "")}</span>}
+        {p.food && <span className="px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400">{p.food}</span>}
+        {p.pill === "buff" && <span className="px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-300">buff</span>}
+      </div>
+    </div>
+  );
+}
+
+const PickMarker = (props: any) => {
+  const { cx, cy, payload } = props;
+  if (cx == null || cy == null) return null;
+  const code = payload?.pickCode as string | undefined;
+  if (!code) return null;
+  const color = PICK_COLORS[code] || "#fff";
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={11} fill={color} stroke="#09090b" strokeWidth={2.5} />
+      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fontSize={8} fontWeight={900} fill="#09090b">
+        {code}
+      </text>
+    </g>
+  );
+};
+
+function BuildLandscape({ landscape }: { landscape: { all: LandscapePoint[]; pareto: LandscapePoint[] } }) {
+  const { all, pareto } = landscape;
+
+  const byWeapon = useMemo(() => {
+    const groups: Record<string, LandscapePoint[]> = {};
+    for (const p of all) {
+      if (p.pickCode) continue;
+      (groups[p.weapon] ||= []).push(p);
+    }
+    // Downsample per-weapon proportionally so the cloud shape is preserved
+    const nonPickTotal = Object.values(groups).reduce((a, g) => a + g.length, 0);
+    if (nonPickTotal > MAX_CHART_POINTS) {
+      const ratio = MAX_CHART_POINTS / nonPickTotal;
+      for (const w of Object.keys(groups)) {
+        const target = Math.max(1, Math.round(groups[w].length * ratio));
+        groups[w] = sampleArray(groups[w], target);
+      }
+    }
+    return groups;
+  }, [all]);
+
+  const picks = useMemo(() => all.filter(p => p.pickCode), [all]);
+  const weaponsPresent = Object.keys(byWeapon);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <ScatterIcon className="h-4 w-4 text-cyan-400" />
+          <span className="text-xs font-black text-white uppercase tracking-widest">Build Landscape</span>
+          <span className="text-[10px] font-mono font-bold text-zinc-500">
+            {all.length.toLocaleString()} viable combinations · {pareto.length} on Pareto frontier
+          </span>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {weaponsPresent.map(w => (
+            <div key={w} className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: WEAPON_COLORS[w] }} />
+              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">{w}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-1.5 pl-3 border-l border-zinc-800">
+            <span className="h-0.5 w-4 bg-amber-400" />
+            <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wider">Pareto</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="h-[420px] w-full bg-zinc-950/40 rounded-2xl border border-zinc-800/40 p-4">
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+            <XAxis
+              type="number" dataKey="costPer1k" name="Cost / 1k dmg"
+              stroke="#52525b" tick={{ fill: "#a1a1aa", fontSize: 10 }}
+              tickFormatter={(v) => v.toFixed(1)}
+              label={{ value: "Cost per 1k damage (coins)", position: "insideBottom", offset: -15, fill: "#71717a", fontSize: 11 }}
+            />
+            <YAxis
+              type="number" dataKey="damage" name="Damage"
+              stroke="#52525b" tick={{ fill: "#a1a1aa", fontSize: 10 }}
+              tickFormatter={(v) => fmtCompact(v)}
+              label={{ value: "Avg damage", angle: -90, position: "insideLeft", offset: 5, fill: "#71717a", fontSize: 11 }}
+            />
+            <ZAxis range={[18, 18]} />
+            <RTooltip content={<LandscapeTooltip />} cursor={{ strokeDasharray: "3 3", stroke: "#3f3f46" }} />
+
+            {weaponsPresent.map(w => (
+              <Scatter key={w} name={w} data={byWeapon[w]} fill={WEAPON_COLORS[w]} fillOpacity={0.35} />
+            ))}
+
+            <Scatter
+              name="Pareto"
+              data={pareto}
+              fill="#fbbf24"
+              fillOpacity={0.9}
+              line={{ stroke: "#fbbf24", strokeWidth: 1.5, strokeOpacity: 0.6 }}
+              lineJointType="monotoneX"
+              shape="circle"
+            />
+
+            <Scatter name="Picks" data={picks} shape={<PickMarker />} />
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+
+      <p className="text-[10px] text-zinc-600 text-center font-mono">
+        Top-left is ideal: high damage, low cost. The amber line traces the Pareto frontier — builds where no other dominates on both axes.
+      </p>
     </div>
   );
 }
