@@ -1,9 +1,7 @@
 import { PUBLIC_IMAGES_BASE_URL } from "@/calculators/war-room/components";
-import { monthUnique } from "@/lib/images";
+import { itemImageUrl } from "@/lib/images";
 import { ITEM_NAMES } from "@/lib/items";
 import { type ReactNode } from "react";
-
-const BASE_IMAGES_URL = "https://app.warera.io/images/items/";
 
 export const RARITY_COLORS: Record<string, { color: string; bg: string, color2?: string, bg2?: string }> = {
   common: {
@@ -104,7 +102,7 @@ export function GameItemIcon({ itemCode, rarity: rarityOverride, className = "h-
     >
       {baseCode && (
         <img
-          src={`${BASE_IMAGES_URL}${baseCode}.png?v=${monthUnique()}`}
+          src={itemImageUrl(baseCode)}
           alt={itemCode || "item"}
           className="h-full w-full object-contain"
         />

@@ -8,27 +8,17 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Area,
-  AreaChart,
-} from "recharts";
 import { useProfile } from "@/lib/ProfileContext";
 import { useTransactions } from "@/lib/hooks/useTransactions";
 import { GameItemIcon } from "@/components/GameItemIcon";
 import { HistoryChart } from "@/components/HistoryChart";
+import { itemImageUrl } from "@/lib/images";
 
 const PUBLIC_IMAGES_BASE_URL = `${import.meta.env.BASE_URL}images/`;
 const COIN_ICON = `${PUBLIC_IMAGES_BASE_URL}game_coin.svg`;
-const BASE_IMAGES_URL = "https://app.warera.io/images/items/";
-const API_BASE = "https://warvault.shadoooow.workers.dev/api"
 
 function getCategoryIcon(type: string) {
-  if (type == "openCase") return `${BASE_IMAGES_URL}case1.png`;
+  if (type == "openCase") return itemImageUrl("case1");
 
   // Remove virtual prefix if present
   const baseType = type == "battleLoot" ? "lootChance" : type.split('-')[0];

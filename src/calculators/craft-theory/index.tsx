@@ -23,7 +23,7 @@ import { useEquipmentPrices } from "@/lib/hooks/useEquipmentPrices"
 import { useLocalConfig } from "@/lib/hooks/useLocalConfig"
 import { GameItemIcon, RARITY_COLORS } from "@/components/GameItemIcon"
 import { RARITY_COSTS } from "../war-room/constants"
-import { SKILL_GROUPS } from "../nation-hub/lenses/archetype"
+import { itemImageUrl } from "@/lib/images"
 
 interface AnalysisData {
   summary: {
@@ -39,9 +39,8 @@ interface AnalysisData {
 const PUBLIC_IMAGES_BASE_URL = `${import.meta.env.BASE_URL}images/`
 const COIN_ICON = `${PUBLIC_IMAGES_BASE_URL}game_coin.svg`
 const CRAFT_ICON = `${PUBLIC_IMAGES_BASE_URL}craftItem.svg`
-const BASE_IMAGES_URL = "https://app.warera.io/images/items/"
-const SCRAPS_ICON = `${BASE_IMAGES_URL}scraps.png`
-const STEEL_ICON = `${BASE_IMAGES_URL}steel.png`
+const SCRAPS_ICON = itemImageUrl("scraps")
+const STEEL_ICON = itemImageUrl("steel")
 
 // Rarity costs imported from constants
 
