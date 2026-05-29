@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Radar, Shield, Swords, Coins, PieChart as PieChartIcon, Target, Info } from "lucide-react";
+import { Loader2, ArrowLeft, Radar, Shield, Swords, Coins, PieChart as PieChartIcon, Target, Info, ChevronDown } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Legend, Tooltip, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar as ReRadar } from "recharts";
 import { useProfile } from "@/lib/ProfileContext";
 import { getUserProfilesBatch, type UserProfile } from "@/lib/wareraApi";
@@ -839,27 +839,35 @@ export default function ArchetypeAnalysis({ embedded = false, forcedCountryId }:
                             </div>
                           )}
 
-                          <div className="flex items-centre gap-4 w-full">
-                            {MODE_TYPES.map((key) => {
-                              const focus = key == "WAR" ? u.warFocus : (1 - u.warFocus);
-                              if (focus === 0) {
-                                return null;
-                              }
+                          <details className="w-full group/skills">
+                            <summary className="text-[10px] font-bold text-zinc-500 hover:text-zinc-300 uppercase tracking-widest cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center justify-center gap-2 my-2 outline-none">
+                              <span>WAR {(u.warFocus * 100).toFixed(0)}%</span>
+                              <span className="text-zinc-700">•</span>
+                              <span>ECO {((1 - u.warFocus) * 100).toFixed(0)}%</span>
+                              <ChevronDown className="w-3 h-3 transition-transform group-open/skills:rotate-180" />
+                            </summary>
+                            <div className="flex gap-4 w-full pt-1">
+                              {MODE_TYPES.map((key) => {
+                                const focus = key == "WAR" ? u.warFocus : (1 - u.warFocus);
+                                if (focus === 0) {
+                                  return null;
+                                }
 
-                              return (
-                                <div className="flex flex-col gap-2 flex-1" key={key}>
-                                  <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-tighter text-center">{key} {(focus * 100).toFixed(0)}%</span>
-                                  <div className="flex flex-wrap gap-1">
-                                    {SKILL_GROUPS[key].map(s =>
-                                      Array.from({ length: u.parsedSkills[s].l }).map((_, i) => (
-                                        <img src={`${SKILLS_BASE_IMAGE_URL}${s}.svg`} alt={s} className="w-3 h-3" key={s + i} />
-                                      ))
-                                    )}
+                                return (
+                                  <div className="flex flex-col gap-2 flex-1" key={key}>
+                                    {/* <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-tighter text-center">{key} {(focus * 100).toFixed(0)}%</span> */}
+                                    <div className="flex flex-wrap gap-1 justify-center">
+                                      {SKILL_GROUPS[key].map(s =>
+                                        Array.from({ length: u.parsedSkills[s].l }).map((_, i) => (
+                                          <img src={`${SKILLS_BASE_IMAGE_URL}${s}.svg`} alt={s} className="w-3 h-3" key={s + i} />
+                                        ))
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            })}
-                          </div>
+                                );
+                              })}
+                            </div>
+                          </details>
 
                           <div className="mt-3 pt-3 border-t border-zinc-900/50">
                             <div className="flex h-4 w-full overflow-hidden rounded-lg bg-zinc-900 text-[8px] font-bold">
