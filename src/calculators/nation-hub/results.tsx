@@ -5,8 +5,9 @@ import { getAllCountries, type Country } from "@/lib/api/warera";
 import { CountryChipList } from "./components/CountryChipList";
 import { CountrySearchBar } from "./components/CountrySearchBar";
 import { LensTabs } from "./components/LensTabs";
+import { LensTabStrip } from "./components/LensTabStrip";
 import { LensStack } from "./components/LensStack";
-import { buildResultsSearch, useSelectedCountries } from "./state";
+import { buildResultsSearch, useActiveTab, useSelectedCountries } from "./state";
 
 /**
  * Results screen. Reads the selected countries from URL ?c=...
@@ -17,6 +18,7 @@ export default function NationHubResults() {
   const navigate = useNavigate();
   const [, setSearchParams] = useSearchParams();
   const { countries, loading, error } = useSelectedCountries();
+  const [activeTab, setActiveTab] = useActiveTab("power");
 
   // Mounted-fade-in: page starts at opacity 0 and fades in on mount to
   // match the landing-page fade-out animation.
@@ -25,6 +27,20 @@ export default function NationHubResults() {
     const t = setTimeout(() => setMounted(true), 10);
     return () => clearTimeout(t);
   }, []);
+
+  // Measure the sticky command bar so lens views with their own sticky columns
+  // (power/births/archetype) can offset below it instead of tucking underneath.
+  // Published as --nh-bar-h; lens columns read it with a 1.5rem fallback.
+  const [barEl, setBarEl] = useState<HTMLDivElement | null>(null);
+  const [barH, setBarH] = useState(0);
+  useEffect(() => {
+    if (!barEl) return;
+    const update = () => setBarH(barEl.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(barEl);
+    return () => ro.disconnect();
+  }, [barEl]);
 
   // For the "Add to compare" popover.
   const [directory, setDirectory] = useState<Country[]>([]);
@@ -80,54 +96,68 @@ export default function NationHubResults() {
       className={`min-h-screen bg-zinc-950 transition-opacity duration-300 ${
         mounted ? "opacity-100" : "opacity-0"
       }`}
+      style={barH ? ({ "--nh-bar-h": `${barH + 12}px` } as React.CSSProperties) : undefined}
     >
-      <div className="max-w-[1400px] mx-auto px-4 md:px-6 pt-6 pb-16 space-y-6">
-        {/* Header: back, selected chips, add-more */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <Link
-            to="/nation-hub"
-            className="p-2 -ml-2 hover:bg-zinc-900 rounded-full transition-colors"
-            aria-label="Back to landing"
-          >
-            <ArrowLeft className="w-5 h-5 text-zinc-400" />
-          </Link>
+      {/* Sticky command bar: back / chips / add-more, plus the lens tab strip
+          in detail mode. Full-bleed so its backdrop covers content scrolling
+          under it on wide screens; inner container keeps the max-width. */}
+      <div
+        ref={setBarEl}
+        className="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/60"
+      >
+        <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-3 space-y-3">
+          {/* Header: back, selected chips, add-more */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <Link
+              to="/nation-hub"
+              className="p-2 -ml-2 hover:bg-zinc-900 rounded-full transition-colors"
+              aria-label="Back to landing"
+            >
+              <ArrowLeft className="w-5 h-5 text-zinc-400" />
+            </Link>
 
-          <div className="flex-1 min-w-0">
-            <CountryChipList
-              countries={countries}
-              onRemove={handleRemove}
-              size="sm"
-            />
+            <div className="flex-1 min-w-0">
+              <CountryChipList
+                countries={countries}
+                onRemove={handleRemove}
+                size="sm"
+              />
+            </div>
+
+            <div className="relative">
+              {adding ? (
+                <div className="w-72">
+                  <CountrySearchBar
+                    countries={directory}
+                    selected={countries}
+                    onAdd={handleAdd}
+                    size="sm"
+                    placeholder="Add another…"
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={() => setAdding(true)}
+                  className="h-10 px-4 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-300 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  {isCompare ? "Add nation" : "Add to compare"}
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="relative">
-            {adding ? (
-              <div className="w-72">
-                <CountrySearchBar
-                  countries={directory}
-                  selected={countries}
-                  onAdd={handleAdd}
-                  size="sm"
-                  placeholder="Add another…"
-                />
-              </div>
-            ) : (
-              <button
-                onClick={() => setAdding(true)}
-                className="h-10 px-4 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-300 transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                {isCompare ? "Add nation" : "Add to compare"}
-              </button>
-            )}
-          </div>
+          {/* Lens tabs — detail mode only (compare mode has no tabs). */}
+          {!isCompare && <LensTabStrip active={activeTab} onChange={setActiveTab} />}
         </div>
+      </div>
 
-        {/* Body */}
+      {/* Body */}
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 pt-6 pb-16">
         {isCompare ? (
           <LensStack countries={countries} />
         ) : (
-          <LensTabs country={countries[0]} />
+          <LensTabs country={countries[0]} activeTab={activeTab} />
         )}
       </div>
     </div>

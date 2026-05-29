@@ -78,6 +78,21 @@ const COLORS = {
   Sentinel: "#a855f7",   // Purple
 };
 
+/**
+ * Live combat-readiness buckets for the consolidated Vanguard graph.
+ * Pilled = a buff (pill) is active, Ready = clean / available to pill,
+ * Debuff = a debuff is active (on cooldown). Mutually exclusive, buff-first.
+ */
+const READINESS = {
+  pilled: { label: "Pilled Up", color: "#10b981" }, // green — buffed, ready to strike
+  ready: { label: "Ready", color: "#3b82f6" },      // blue — available to pill
+  debuff: { label: "On Debuff", color: "#ef4444" }, // red — penalised / cooling down
+} as const;
+
+// Per-resource accent for the health / hunger availability meters.
+const HEALTH_ACCENT = "#34d399"; // emerald
+const HUNGER_ACCENT = "#fbbf24"; // amber
+
 
 const DECIDER_PERCENTAGES = {
   VANGUARD: 0.65,
@@ -183,6 +198,37 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     );
   }
   return null;
+};
+
+/**
+ * Compact horizontal availability meter — [icon] [fill bar] current/max.
+ * Used to surface live health & hunger per person once status is fetched.
+ */
+const ResourceMeter = ({ icon, current, max, accent }: { icon: string; current: number; max: number; accent: string }) => {
+  const pct = max > 0 ? Math.min(100, (current / max) * 100) : 0;
+  return (
+    <div className="flex items-center gap-1.5 flex-1 min-w-0" title={`${icon}: ${Math.round(current)}/${Math.round(max)}`}>
+      <img src={`${SKILLS_BASE_IMAGE_URL}${icon}.svg`} alt={icon} className="w-4 h-4 shrink-0 opacity-90" />
+      <div className="flex-1 min-w-0 h-1.5 rounded-full bg-zinc-800/80 overflow-hidden">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: accent }} />
+      </div>
+      <span className="text-[9px] font-mono font-bold text-zinc-300 shrink-0 tabular-nums">
+        {Math.round(current)}<span className="text-zinc-600">/{Math.round(max)}</span>
+      </span>
+    </div>
+  );
+};
+
+/** One readiness category tile in the consolidated Vanguard graph. */
+const ReadinessTile = ({ label, value, total, color }: { label: string; value: number; total: number; color: string }) => {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div className="rounded-xl border bg-zinc-900/30 p-3 flex flex-col items-center" style={{ borderColor: `${color}40` }}>
+      <span className="text-2xl font-black font-mono leading-none" style={{ color }}>{value}</span>
+      <span className="text-[8px] font-black uppercase tracking-widest text-zinc-500 text-center leading-tight mt-1.5">{label}</span>
+      <span className="text-[8px] font-mono text-zinc-600 mt-0.5">{pct}%</span>
+    </div>
+  );
 };
 
 interface Props {
@@ -314,6 +360,24 @@ export default function ArchetypeAnalysis({ embedded = false, forcedCountryId }:
 
     return { distribution, radarData, counts };
   }, [data]);
+
+  // Consolidated live readiness of the Vanguard roster, derived from fetched
+  // status. Buff-first precedence keeps the three buckets mutually exclusive.
+  const vanguardReadiness = useMemo(() => {
+    let pilled = 0, ready = 0, debuff = 0, reporting = 0, missing = 0;
+    data.forEach(u => {
+      if (u.archetype !== "Vanguard") return;
+      const profile = statusMap[u.user_id];
+      if (!profile) { missing++; return; }
+      reporting++;
+      const hasBuff = (profile.buffs?.buffCodes?.length || 0) > 0;
+      const hasDebuff = (profile.buffs?.debuffCodes?.length || 0) > 0;
+      if (hasBuff) pilled++;
+      else if (hasDebuff) debuff++;
+      else ready++;
+    });
+    return { pilled, ready, debuff, reporting, missing, total: pilled + ready + debuff };
+  }, [data, statusMap]);
 
   const filteredData = useMemo(() => {
     let result = filter === "All" ? data : data.filter(u => u.archetype === filter);
@@ -464,7 +528,7 @@ export default function ArchetypeAnalysis({ embedded = false, forcedCountryId }:
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* LEFT: Charts & Aggregates */}
-            <div className="lg:col-span-12 xl:col-span-5 space-y-6 lg:sticky lg:top-6">
+            <div className="lg:col-span-12 xl:col-span-5 space-y-6 lg:sticky lg:top-[var(--nh-bar-h,1.5rem)]">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="bg-zinc-950/40 border-zinc-800 border-l-4 border-l-red-500">
                   <CardContent className="p-4">
@@ -593,6 +657,51 @@ export default function ArchetypeAnalysis({ embedded = false, forcedCountryId }:
                 )}
               </div>
 
+              {/* Consolidated Vanguard combat readiness — appears once live status is fetched. */}
+              {Object.keys(statusMap).length > 0 && vanguardReadiness.total > 0 && (
+                <Card className="bg-zinc-950/50 border-zinc-800 shadow-xl overflow-hidden">
+                  <CardHeader className="border-b border-zinc-900 pb-3">
+                    <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400 flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2">
+                        <Swords className="w-4 h-4 text-red-400" />
+                        Vanguard Combat Readiness
+                      </span>
+                      <span className="text-[9px] font-mono text-zinc-600 normal-case tracking-normal">
+                        {vanguardReadiness.reporting} reporting{vanguardReadiness.missing > 0 ? ` · ${vanguardReadiness.missing} n/a` : ''}
+                      </span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4 space-y-3">
+                    {/* Stacked proportion bar */}
+                    <div className="flex h-3 w-full overflow-hidden rounded-full bg-zinc-900">
+                      {(['pilled', 'ready', 'debuff'] as const).map((key) => {
+                        const v = vanguardReadiness[key];
+                        if (v === 0) return null;
+                        return (
+                          <div
+                            key={key}
+                            title={`${READINESS[key].label}: ${v}`}
+                            style={{ width: `${(v / vanguardReadiness.total) * 100}%`, backgroundColor: READINESS[key].color }}
+                          />
+                        );
+                      })}
+                    </div>
+                    {/* Category tiles */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['pilled', 'ready', 'debuff'] as const).map((key) => (
+                        <ReadinessTile
+                          key={key}
+                          label={READINESS[key].label}
+                          value={vanguardReadiness[key]}
+                          total={vanguardReadiness.total}
+                          color={READINESS[key].color}
+                        />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-4">
                   <div className="flex gap-2">
@@ -613,6 +722,7 @@ export default function ArchetypeAnalysis({ embedded = false, forcedCountryId }:
                 {filteredData.map(u => {
                   const segments = getModeSegments(u.history);
                   const totalDays = u.history.length;
+                  const status = statusMap[u.user_id];
 
                   return (
                     <div
@@ -665,6 +775,24 @@ export default function ArchetypeAnalysis({ embedded = false, forcedCountryId }:
                               </div>
                             </div>
                           </div>
+
+                          {/* Live health & hunger availability — only once status is fetched. */}
+                          {status && (
+                            <div className="flex items-center gap-3 mb-2.5">
+                              <ResourceMeter
+                                icon="health"
+                                current={status.skills.health?.currentBarValue ?? 0}
+                                max={status.skills.health?.total ?? 0}
+                                accent={HEALTH_ACCENT}
+                              />
+                              <ResourceMeter
+                                icon="hunger"
+                                current={status.skills.hunger?.currentBarValue ?? 0}
+                                max={status.skills.hunger?.total ?? 0}
+                                accent={HUNGER_ACCENT}
+                              />
+                            </div>
+                          )}
 
                           <div className="flex items-centre gap-4 w-full">
                             {MODE_TYPES.map((key) => {

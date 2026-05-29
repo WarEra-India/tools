@@ -370,7 +370,7 @@ export default function CraftTheory() {
         </div>
 
         {analysis && (
-          <Card className="mb-6 border-zinc-800/60 bg-zinc-900/10 backdrop-blur-sm overflow-hidden">
+          <Card className="mb-6 border-zinc-800/60 bg-zinc-900/10 backdrop-blur-sm overflow-hidden" style={{ display: "none" }}>
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500/20 via-emerald-500 to-emerald-500/20" />
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
@@ -577,7 +577,7 @@ export default function CraftTheory() {
         <Card className="mb-6 border-zinc-800 bg-zinc-900/20">
           <CardContent className="py-4 px-6 flex flex-wrap gap-8 items-center">
             <div className="flex items-center gap-3">
-              <img src={SCRAPS_ICON} className="h-8 w-8 object-contain" />
+              <GameItemIcon itemCode="scraps" className="h-8 w-8 rounded-md" />
               <div className="flex flex-col">
                 <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold leading-tight">Scraps Price</span>
                 <span className="flex items-center gap-1 font-semibold text-zinc-100">
@@ -587,7 +587,7 @@ export default function CraftTheory() {
               </div>
             </div>
             <div className="flex items-center gap-3 border-l border-zinc-800 pl-8">
-              <img src={STEEL_ICON} className="h-8 w-8 object-contain" />
+              <GameItemIcon itemCode="steel" className="h-8 w-8 rounded-md" />
               <div className="flex flex-col">
                 <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold leading-tight">Steel Price</span>
                 <span className="flex items-center gap-1 font-semibold text-zinc-100">

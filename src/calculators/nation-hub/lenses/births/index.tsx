@@ -138,7 +138,7 @@ export default function BabyBoom({ embedded = false, forcedCountries }: Props = 
       <div className={`grid grid-cols-1 gap-8 items-start ${embedded ? "" : "lg:grid-cols-12"}`}>
         {/* Sidebar — hidden when embedded; Nation Hub owns country selection */}
         {!embedded && (
-        <div className="lg:col-span-3 space-y-4 lg:sticky lg:top-6">
+        <div className="lg:col-span-3 space-y-4 lg:sticky lg:top-[var(--nh-bar-h,1.5rem)]">
           <div className="space-y-3">
             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Countries</p>
             <div className="relative">

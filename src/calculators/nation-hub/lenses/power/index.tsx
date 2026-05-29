@@ -241,7 +241,7 @@ export default function NationPower({ embedded = false, forcedCountryId }: Props
       ) : data && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* LEFT COLUMN: Command Center (Sticky) */}
-          <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-6">
+          <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-[var(--nh-bar-h,1.5rem)]">
             <Card className="bg-zinc-950/50 border-zinc-800 shadow-2xl backdrop-blur-md">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Live Mission Summary</CardTitle>
