@@ -1,4 +1,5 @@
 import { PUBLIC_IMAGES_BASE_URL } from "@/calculators/war-room/components";
+import { monthUnique } from "@/lib/images";
 import { ITEM_NAMES } from "@/lib/items";
 import { type ReactNode } from "react";
 
@@ -103,7 +104,7 @@ export function GameItemIcon({ itemCode, rarity: rarityOverride, className = "h-
     >
       {baseCode && (
         <img
-          src={`${BASE_IMAGES_URL}${baseCode}.png?v=1234`}
+          src={`${BASE_IMAGES_URL}${baseCode}.png?v=${monthUnique()}`}
           alt={itemCode || "item"}
           className="h-full w-full object-contain"
         />

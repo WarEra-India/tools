@@ -4,5 +4,10 @@
  * the image slug used by warera.io directly.
  */
 export function itemImageUrl(itemCode: string): string {
-  return `https://app.warera.io/images/items/${itemCode}.png?v=1234`;
+  return `https://app.warera.io/images/items/${itemCode}.png?v=${monthUnique()}`;
+}
+
+// returns mmyyyy string of current date
+export function monthUnique(): string {
+  return new Date().toLocaleDateString("en-US", { month: "2-digit", year: "numeric" }).replace("/","");
 }
