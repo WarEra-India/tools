@@ -138,6 +138,20 @@ const getArchetype = (skills: UserSkills): { archetype: Archetype; warSum: numbe
   return { archetype, warSum, ecoSum, warFocus };
 };
 
+/**
+ * Map a live warera profile's skills into the warvault `UserSkills` shape
+ * ({ l: level, t: total }) so the same archetype maths can run on live data.
+ * Live skill levels are authoritative; warvault's `current` snapshot is stale.
+ */
+const liveSkillsToUserSkills = (profile: UserProfile): UserSkills => {
+  const out = {} as UserSkills;
+  ([...SKILL_GROUPS.WAR, ...SKILL_GROUPS.ECO] as (keyof UserSkills)[]).forEach((k) => {
+    const s = profile.skills?.[k as string];
+    out[k] = { l: s?.level ?? 0, t: s?.total ?? 0 };
+  });
+  return out;
+};
+
 function getModeSegments(history: {
   date: string;
   warFocus: number;
@@ -332,11 +346,37 @@ export default function ArchetypeAnalysis({ embedded = false, forcedCountryId }:
     setStatusFilter('all');
   }, [selectedCountry]);
 
+  // Source-of-truth roster. Once live status is fetched for a user, their
+  // archetype, skills and headline stats are recomputed from that live data
+  // (warvault's `current` snapshot is stale); warvault is kept only as the
+  // fallback and for `history` (the evolution timeline + per-card mode bar).
+  const effectiveData = useMemo<AnalyzedUser[]>(() => {
+    return data.map((u) => {
+      const live = statusMap[u.user_id];
+      if (!live) return u;
+      const parsed = liveSkillsToUserSkills(live);
+      const { archetype, warSum, ecoSum, warFocus } = getArchetype(parsed);
+      return {
+        ...u,
+        parsedSkills: parsed,
+        warScore: warSum,
+        ecoScore: ecoSum,
+        warFocus,
+        archetype,
+        level: live.leveling?.level ?? u.level,
+        weekly_damage: live.rankings?.weeklyUserDamages?.value ?? u.weekly_damage,
+        wealth: live.stats?.wealth?.total ?? live.rankings?.userWealth?.value ?? u.wealth,
+        username: live.username ?? u.username,
+        avatar_url: live.avatarUrl ?? u.avatar_url,
+      };
+    });
+  }, [data, statusMap]);
+
   const stats = useMemo(() => {
     const counts = { Vanguard: 0, Industrialist: 0, Sentinel: 0 };
     const sums = { Vanguard: 0, Industrialist: 0, Sentinel: 0 };
 
-    data.forEach(u => {
+    effectiveData.forEach(u => {
       counts[u.archetype]++;
       sums[u.archetype] += u.level;
     });
@@ -348,8 +388,8 @@ export default function ArchetypeAnalysis({ embedded = false, forcedCountryId }:
     const allSkillKeys = [...SKILL_GROUPS.WAR, ...SKILL_GROUPS.ECO];
 
     allSkillKeys.forEach(key => {
-      const totalLevel = data.reduce((acc, u) => acc + (u.parsedSkills[key as keyof UserSkills]?.l || 0), 0);
-      averageSkills[key] = data.length > 0 ? totalLevel / data.length : 0;
+      const totalLevel = effectiveData.reduce((acc, u) => acc + (u.parsedSkills[key as keyof UserSkills]?.l || 0), 0);
+      averageSkills[key] = effectiveData.length > 0 ? totalLevel / effectiveData.length : 0;
     });
 
     const radarData = allSkillKeys.map(key => ({
@@ -359,13 +399,13 @@ export default function ArchetypeAnalysis({ embedded = false, forcedCountryId }:
     }));
 
     return { distribution, radarData, counts };
-  }, [data]);
+  }, [effectiveData]);
 
   // Consolidated live readiness of the Vanguard roster, derived from fetched
   // status. Buff-first precedence keeps the three buckets mutually exclusive.
   const vanguardReadiness = useMemo(() => {
     let pilled = 0, ready = 0, debuff = 0, reporting = 0, missing = 0;
-    data.forEach(u => {
+    effectiveData.forEach(u => {
       if (u.archetype !== "Vanguard") return;
       const profile = statusMap[u.user_id];
       if (!profile) { missing++; return; }
@@ -377,10 +417,10 @@ export default function ArchetypeAnalysis({ embedded = false, forcedCountryId }:
       else ready++;
     });
     return { pilled, ready, debuff, reporting, missing, total: pilled + ready + debuff };
-  }, [data, statusMap]);
+  }, [effectiveData, statusMap]);
 
   const filteredData = useMemo(() => {
-    let result = filter === "All" ? data : data.filter(u => u.archetype === filter);
+    let result = filter === "All" ? effectiveData : effectiveData.filter(u => u.archetype === filter);
 
     if (statusFilter !== 'all') {
       result = result.filter(u => {
@@ -398,7 +438,7 @@ export default function ArchetypeAnalysis({ embedded = false, forcedCountryId }:
     }
 
     return result;
-  }, [data, filter, statusMap, statusFilter]);
+  }, [effectiveData, filter, statusMap, statusFilter]);
 
   const countryTimeline = useMemo(() => {
     const map: Record<string, { date: string, Vanguard: number, Industrialist: number, Sentinel: number }> = {};
@@ -627,14 +667,19 @@ export default function ArchetypeAnalysis({ embedded = false, forcedCountryId }:
 
               <div className="flex items-center justify-between">
                 {Object.keys(statusMap).length == 0 ? (
-                  <button
-                    onClick={fetchStatus}
-                    disabled={statusLoading || data.length === 0}
-                    className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-xl border border-purple-400/30 transition-all shadow-[0_0_20px_rgba(168,85,247,0.2)] flex items-center gap-2 h-[42px]"
-                  >
-                    {statusLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Radar className="w-3 h-3" />}
-                    Get Current Status
-                  </button>
+                  <div className="flex flex-col gap-1.5">
+                    <button
+                      onClick={fetchStatus}
+                      disabled={statusLoading || data.length === 0}
+                      className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-xl border border-purple-400/30 transition-all shadow-[0_0_20px_rgba(168,85,247,0.2)] flex items-center gap-2 h-[42px]"
+                    >
+                      {statusLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Radar className="w-3 h-3" />}
+                      Get Current Status
+                    </button>
+                    <span className="text-[9px] text-zinc-600 font-medium max-w-[280px] leading-snug">
+                      Loads live buffs, health &amp; hunger and recomputes archetypes from current skills (history shown below stays as-is).
+                    </span>
+                  </div>
                 ) : (
                   <div className="flex justify-center">
                     <div className="flex items-center gap-6">

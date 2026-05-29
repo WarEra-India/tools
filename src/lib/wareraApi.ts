@@ -103,6 +103,13 @@ export interface UserProfile {
     debuffCodes?: string[];
     debuffEndAt?: string;
   };
+  stats?: {
+    wealth?: { total?: number };
+  };
+  rankings?: {
+    weeklyUserDamages?: { value?: number };
+    userWealth?: { value?: number };
+  };
 }
 
 export async function getUserProfile(userId: string): Promise<UserProfile> {
