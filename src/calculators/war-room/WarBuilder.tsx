@@ -13,22 +13,12 @@ import {
 } from "./components";
 import {
   totalSkillPointsForLevel,
-  skillLevelToCumulativeCost,
   companiesSkillPointsCost,
-  calcMilBonus,
-  effectiveTotalDamage,
-  effectivePercentageValue,
-  runFullSimulation,
 } from "./utils";
-import {
-  SKILL_PROGRESSION,
-  AMMO_PERCENTAGES,
-  FOOD_MULTIPLIERS,
-  EQUIPEMENTS,
-  RARITY_COSTS,
-} from "./constants";
+import type { OptimizeConfig, OptimizerResult, LandscapePoint } from "./optimizer-core";
 import { INITIAL_SIM_STATE, type SimEquipmentState } from "./Simulator";
 import type { FullProfile } from "@/lib/wareraApi";
+import type { WorkerMessage } from "./optimizer-worker";
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -41,25 +31,13 @@ interface BuildResult {
   avgNetCost: number;
   avgHits: number;
   description: string;
+  targetMiss?: boolean;
 }
 
 interface BuilderProgress {
   current: number;
   total: number;
   phase: string;
-}
-
-interface LandscapePoint {
-  damage: number;
-  costPer1k: number;
-  netCost: number;
-  hits: number;
-  weapon: string;
-  ammo: string | null;
-  food: string | null;
-  pill: string;
-  tier: number;
-  pickCode?: string;
 }
 
 const WEAPON_COLORS: Record<string, string> = {
@@ -88,33 +66,6 @@ function sampleArray<T>(arr: T[], n: number): T[] {
   return result;
 }
 
-function computeParetoFrontier(points: LandscapePoint[]): LandscapePoint[] {
-  const sorted = [...points].sort((a, b) => a.costPer1k - b.costPer1k);
-  const frontier: LandscapePoint[] = [];
-  let maxDmg = -Infinity;
-  for (const p of sorted) {
-    if (p.damage > maxDmg) {
-      frontier.push(p);
-      maxDmg = p.damage;
-    }
-  }
-  return frontier;
-}
-
-// ─── Constants ──────────────────────────────────────────────────────────
-
-const WEAPONS = ["knife", "gun", "rifle", "sniper", "tank", "jet"] as const;
-const AMMO_TYPES = ["lightAmmo", "ammo", "heavyAmmo"] as const;
-const FOOD_TYPES = [null, "bread", "steak", "cookedFish"] as const;
-const PILL_STATES = ["no buff", "buff"] as const;
-
-const WAR_SKILLS = [
-  "attack", "health", "hunger", "precision",
-  "criticalChance", "criticalDamages", "armor", "dodge",
-] as const;
-
-const SIM_RUNS_PER_BUILD = 5;
-
 // ─── Intl Formatter ─────────────────────────────────────────────────────
 
 const fmtCompact = (n: number) =>
@@ -130,222 +81,6 @@ const TARGET_MODES: { value: TargetMode; label: string; placeholder: string; ico
   { value: "costPer1k", label: "Cost / 1k", placeholder: "Cost per 1K", icon: "game_coin" },
 ];
 
-// ─── Skill Distribution Strategies ──────────────────────────────────────
-
-type SkillAllocation = Record<(typeof WAR_SKILLS)[number], number>;
-
-function generateSkillAllocations(warBudget: number): SkillAllocation[] {
-  const strategies: { name: string; priorities: (typeof WAR_SKILLS)[number][] }[] = [
-    { name: "attack_heavy", priorities: ["attack", "hunger", "health", "precision", "criticalChance", "criticalDamages", "armor", "dodge"] },
-    { name: "crit_build", priorities: ["criticalDamages", "criticalChance", "attack", "precision", "hunger", "health", "armor", "dodge"] },
-    { name: "balanced", priorities: ["attack", "criticalChance", "criticalDamages", "precision", "hunger", "health", "armor", "dodge"] },
-    { name: "tank", priorities: ["health", "hunger", "armor", "dodge", "attack", "precision", "criticalChance", "criticalDamages"] },
-    { name: "precision", priorities: ["precision", "attack", "criticalChance", "criticalDamages", "hunger", "health", "armor", "dodge"] },
-    { name: "glass_cannon", priorities: ["attack", "hunger", "criticalDamages", "criticalChance", "precision", "health", "armor", "dodge"] },
-    { name: "endurance", priorities: ["hunger", "health", "attack", "precision", "criticalChance", "criticalDamages", "dodge", "armor"] },
-    { name: "dodge_build", priorities: ["dodge", "hunger", "health", "attack", "precision", "criticalChance", "criticalDamages", "armor"] },
-    { name: "armor_build", priorities: ["armor", "hunger", "health", "attack", "precision", "criticalChance", "criticalDamages", "dodge"] },
-    { name: "crit_precision", priorities: ["criticalChance", "precision", "criticalDamages", "attack", "hunger", "health", "armor", "dodge"] },
-    { name: "max_dps", priorities: ["attack", "criticalDamages", "criticalChance", "precision", "hunger", "health", "armor", "dodge"] },
-    { name: "sustain_dps", priorities: ["hunger", "health", "attack", "criticalDamages", "criticalChance", "precision", "dodge", "armor"] },
-  ];
-
-  for (let baseLevel = 1; baseLevel <= 5; baseLevel++) {
-    strategies.push({
-      name: `spread_${baseLevel}`,
-      priorities: ["attack", "criticalDamages", "criticalChance", "precision", "hunger", "health", "armor", "dodge"],
-    });
-  }
-
-  const results: SkillAllocation[] = [];
-  const seen = new Set<string>();
-
-  for (const strategy of strategies) {
-    const allocation = allocateByPriority(warBudget, strategy.priorities, strategy.name.startsWith("spread_") ? parseInt(strategy.name.split("_")[1]) : 0);
-    const key = JSON.stringify(allocation);
-    if (!seen.has(key)) {
-      seen.add(key);
-      results.push(allocation);
-    }
-  }
-
-  return results;
-}
-
-function allocateByPriority(
-  budget: number,
-  priorities: (typeof WAR_SKILLS)[number][],
-  baseLevel: number = 0,
-): SkillAllocation {
-  const alloc: SkillAllocation = {
-    attack: 0, health: 0, hunger: 0, precision: 0,
-    criticalChance: 0, criticalDamages: 0, armor: 0, dodge: 0,
-  };
-  let remaining = budget;
-
-  if (baseLevel > 0) {
-    for (const skill of WAR_SKILLS) {
-      const maxLvl = Math.min(baseLevel, SKILL_PROGRESSION[skill].maxLevel);
-      const cost = skillLevelToCumulativeCost(maxLvl);
-      if (remaining >= cost) { alloc[skill] = maxLvl; remaining -= cost; }
-    }
-  }
-
-  for (const skill of priorities) {
-    const maxLevel = SKILL_PROGRESSION[skill].maxLevel;
-    while (alloc[skill] < maxLevel) {
-      const nextLevel = alloc[skill] + 1;
-      if (remaining >= nextLevel) { remaining -= nextLevel; alloc[skill] = nextLevel; }
-      else break;
-    }
-  }
-  return alloc;
-}
-
-// ─── Equipment Tier Combos ──────────────────────────────────────────────
-
-function getEquipmentTiers(): number[][] {
-  const MIN_TIER = 3;
-  const MAX_TIER = 6;
-  const baselines = [3, 4, 5, 6];
-  const result: number[][] = [];
-  const seen = new Set<string>();
-
-  const add = (combo: number[]) => {
-    const key = combo.join(",");
-    if (!seen.has(key)) { seen.add(key); result.push(combo); }
-  };
-
-  // Same-tier baselines + single-slot ±1 mixes (e.g. helmet T6 with rest T5)
-  for (const baseline of baselines) {
-    add([baseline, baseline, baseline, baseline, baseline]);
-    for (let slot = 0; slot < 5; slot++) {
-      for (const delta of [-1, 1]) {
-        const t = baseline + delta;
-        if (t < MIN_TIER || t > MAX_TIER) continue;
-        const combo = [baseline, baseline, baseline, baseline, baseline];
-        combo[slot] = t;
-        add(combo);
-      }
-    }
-  }
-  return result;
-}
-
-function tierToCode(slot: string, tier: number): string {
-  return `${slot}${tier}`;
-}
-
-// ─── Cost Calculator ───────────────────────────────────────────────────
-
-function calculateBuildCost(
-  simState: SimEquipmentState, totalHits: number, dodgedHits: number,
-  gameConfig: any, livePrices: any, equipPrices: any, hungerPoints: number,
-): number {
-  let totalCost = 0;
-
-  if (simState.modifier === "buff") totalCost += livePrices?.prices?.cocain ?? 0;
-  if (simState.food && typeof simState.food === "string")
-    totalCost += (livePrices?.prices?.[simState.food] ?? 0) * hungerPoints;
-  if (simState.ammo) totalCost += (livePrices?.prices?.[simState.ammo] ?? 0) * totalHits;
-
-  const otherHits = totalHits - dodgedHits;
-  for (const slot of EQUIPEMENTS) {
-    if (slot === "ammo") continue;
-    const code = simState[slot as keyof typeof simState];
-    if (!code || typeof code !== "string") continue;
-    const hits = slot === "weapon" ? totalHits : otherHits;
-    if (hits > 0) totalCost += Math.ceil(hits / 100) * (equipPrices?.[code] ?? 0);
-  }
-
-  let scrapReceived = 0;
-  for (const slot of EQUIPEMENTS) {
-    if (slot === "ammo") continue;
-    const code = simState[slot as keyof typeof simState];
-    if (!code || typeof code !== "string") continue;
-    const hits = slot === "weapon" ? totalHits : otherHits;
-    const itemsBroken = Math.floor(hits / 100);
-    const equip = gameConfig?.equipments?.find((e: any) => e.code === code);
-    if (equip?.rarity && itemsBroken > 0) {
-      scrapReceived += itemsBroken * Math.round((RARITY_COSTS[equip.rarity]?.scraps ?? 0) / 3);
-    }
-  }
-
-  totalCost -= scrapReceived * (livePrices?.prices?.scraps ?? 0);
-  return totalCost;
-}
-
-// ─── Build Simulator ────────────────────────────────────────────────────
-
-function simulateBuild(
-  simState: SimEquipmentState, gameConfig: any, livePrices: any, equipPrices: any,
-): { avgDamage: number; avgCostPer1k: number; avgNetCost: number; avgHits: number } {
-  const getStats = (slot: string, code: string | null) => {
-    if (!code) return null;
-    const rawStats = gameConfig.equipments.find((e: any) => e.code === code)?.dynamicStats;
-    if (!rawStats) return null;
-    const out: any = {};
-    for (const [k, v] of Object.entries(rawStats)) {
-      out[k] = Array.isArray(v) ? Math.ceil(((v as number[])[0] + (v as number[])[1]) / 2) : v;
-    }
-    return out;
-  };
-
-  const weaponStats = getStats("weapon", simState.weapon);
-  const helmetStats = getStats("helmet", simState.helmet);
-  const chestStats = getStats("chest", simState.chest);
-  const glovesStats = getStats("gloves", simState.gloves);
-  const pantsStats = getStats("pants", simState.pants);
-  const bootsStats = getStats("boots", simState.boots);
-
-  const ammoPercent = simState.ammo ? AMMO_PERCENTAGES[simState.ammo as keyof typeof AMMO_PERCENTAGES] || 0 : 0;
-  const getStatVal = (val: any) => (val ? (Array.isArray(val) ? Math.ceil((val[0] + val[1]) / 2) : val) : 0);
-
-  const attackSkill = SKILL_PROGRESSION.attack.base + simState.skills.attack * SKILL_PROGRESSION.attack.inc;
-  const milBonus = calcMilBonus(simState.militaryRank);
-  const buffPct = simState.modifier === "buff" ? 60 : simState.modifier === "debuff" ? -60 : 0;
-  const totalAttack = effectiveTotalDamage(attackSkill, getStatVal(weaponStats?.attack), ammoPercent, milBonus, simState.orders, buffPct);
-
-  const precisionTotal = SKILL_PROGRESSION.precision.base + simState.skills.precision * SKILL_PROGRESSION.precision.inc + getStatVal(glovesStats?.precision);
-  const critChanceTotal = SKILL_PROGRESSION.criticalChance.base + simState.skills.criticalChance * SKILL_PROGRESSION.criticalChance.inc + getStatVal(weaponStats?.criticalChance);
-  const critDmgTotal = SKILL_PROGRESSION.criticalDamages.base + simState.skills.criticalDamages * SKILL_PROGRESSION.criticalDamages.inc + getStatVal(helmetStats?.criticalDamages);
-
-  const armorTotal = SKILL_PROGRESSION.armor.base + simState.skills.armor * SKILL_PROGRESSION.armor.inc + getStatVal(chestStats?.armor) + getStatVal(pantsStats?.armor);
-  const dodgeTotal = SKILL_PROGRESSION.dodge.base + simState.skills.dodge * SKILL_PROGRESSION.dodge.inc + getStatVal(bootsStats?.dodge);
-
-  const healthSkill = SKILL_PROGRESSION.health.base + simState.skills.health * SKILL_PROGRESSION.health.inc;
-  const hungerSkill = SKILL_PROGRESSION.hunger.base + simState.skills.hunger * SKILL_PROGRESSION.hunger.inc;
-
-  let healthRestored = 0;
-  if (simState.food) {
-    const mult = FOOD_MULTIPLIERS[simState.food] || 0;
-    healthRestored = Math.floor(healthSkill * mult * hungerSkill);
-  }
-
-  let totalDamage = 0, totalNetCost = 0, totalHits = 0;
-
-  for (let i = 0; i < SIM_RUNS_PER_BUILD; i++) {
-    const result = runFullSimulation({
-      totalHealth: healthSkill + healthRestored,
-      attackValue: totalAttack,
-      armorEffective: effectivePercentageValue(armorTotal),
-      dodgeEffective: effectivePercentageValue(dodgeTotal),
-      precisionTotal, criticalChance: critChanceTotal,
-      criticalDamages: critDmgTotal,
-      lootChance: SKILL_PROGRESSION.lootChance.base,
-    });
-
-    totalDamage += result.totalDamageDealt;
-    totalHits += result.totalHits;
-    totalNetCost += calculateBuildCost(simState, result.totalHits, result.hitBreakdown.dodged, gameConfig, livePrices, equipPrices, hungerSkill);
-  }
-
-  const avgDamage = totalDamage / SIM_RUNS_PER_BUILD;
-  const avgNetCost = totalNetCost / SIM_RUNS_PER_BUILD;
-  const avgHits = totalHits / SIM_RUNS_PER_BUILD;
-  return { avgDamage, avgCostPer1k: avgDamage > 0 ? avgNetCost / (avgDamage / 1000) : Infinity, avgNetCost, avgHits };
-}
-
 // ─── Component ──────────────────────────────────────────────────────────
 
 export default function WarBuilder({
@@ -360,6 +95,7 @@ export default function WarBuilder({
   const [targetMode, setTargetMode] = useState<TargetMode>("damage");
   const [targetValue, setTargetValue] = useState<string>("");
   const [results, setResults] = useState<BuildResult[] | null>(null);
+  const [buildStats, setBuildStats] = useState<{ uniqueSkills: number; viableBuilds: number; mcVerified: number } | null>(null);
   const [landscape, setLandscape] = useState<{ all: LandscapePoint[]; pareto: LandscapePoint[] } | null>(null);
   const [showLandscape, setShowLandscape] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
@@ -370,216 +106,82 @@ export default function WarBuilder({
   const ecoPointsUsed = companiesSkillPointsCost(companiesCount);
   const warBudget = Math.max(0, totalPoints - ecoPointsUsed);
 
+  const workerRef = useRef<Worker | null>(null);
+
   const runOptimizer = useCallback(async () => {
     if (!gameConfig || !livePrices || !equipPrices) return;
+    workerRef.current?.terminate();
     setIsBuilding(true);
     setResults(null);
     setLandscape(null);
     setShowLandscape(true);
-    cancelRef.current = false;
 
-    const skillAllocations = generateSkillAllocations(warBudget);
-    const equipTiers = getEquipmentTiers();
+    const parsedTarget = targetValue ? parseFloat(targetValue.replace(/,/g, "")) : null;
 
-    type CandidateBuild = {
-      weapon: string; ammo: string | null; armorTier: number[];
-      food: string | null; pill: string; skills: SkillAllocation;
+    const optimizeConfig: OptimizeConfig = {
+      budget: warBudget,
+      militaryRank,
+      orders: 0,
+      targetMode: parsedTarget && parsedTarget > 0 ? targetMode : null,
+      targetValue: parsedTarget && parsedTarget > 0 ? parsedTarget : null,
+      gameConfig,
+      livePrices,
+      equipPrices,
     };
 
-    const candidates: CandidateBuild[] = [];
-    for (const skills of skillAllocations)
-      for (const weapon of WEAPONS) {
-        const ammoChoices: (string | null)[] = weapon === "knife" ? [null] : [...AMMO_TYPES];
-        for (const ammo of ammoChoices)
-          for (const food of FOOD_TYPES)
-            for (const pill of PILL_STATES)
-              for (const tiers of equipTiers)
-                candidates.push({ weapon, ammo, armorTier: tiers, food, pill, skills });
-      }
+    const worker = new Worker(
+      new URL("./optimizer-worker.ts", import.meta.url),
+      { type: "module" },
+    );
+    workerRef.current = worker;
 
-    const total = candidates.length;
-    setProgress({ current: 0, total, phase: "Simulating builds..." });
+    worker.onmessage = (e: MessageEvent<WorkerMessage>) => {
+      if (e.data.type === "progress") {
+        setProgress({ current: e.data.current, total: e.data.total, phase: e.data.phase });
+      } else if (e.data.type === "result") {
+        worker.terminate();
+        workerRef.current = null;
+        const { builds, stats, landscape: lscape, pareto } = e.data.result;
+        setBuildStats(stats);
 
-    type SimResult = { build: CandidateBuild; result: ReturnType<typeof simulateBuild> };
-    const allResults: SimResult[] = [];
-    const parsedTarget = targetValue ? parseFloat(targetValue.replace(/,/g, "")) : null;
-    const CHUNK_SIZE = 200;
-    let processed = 0;
-
-    for (let i = 0; i < candidates.length; i += CHUNK_SIZE) {
-      if (cancelRef.current) break;
-      const chunk = candidates.slice(i, i + CHUNK_SIZE);
-
-      for (const candidate of chunk) {
-        const simState: SimEquipmentState = {
+        const mkState = (b: typeof builds[0]): SimEquipmentState => ({
           ...structuredClone(INITIAL_SIM_STATE),
-          weapon: candidate.weapon, ammo: candidate.ammo,
-          helmet: tierToCode("helmet", candidate.armorTier[0]),
-          chest: tierToCode("chest", candidate.armorTier[1]),
-          gloves: tierToCode("gloves", candidate.armorTier[2]),
-          pants: tierToCode("pants", candidate.armorTier[3]),
-          boots: tierToCode("boots", candidate.armorTier[4]),
-          food: candidate.food, modifier: candidate.pill as any,
-          militaryRank, orders: 50, playerLevel,
+          weapon: b.weapon, ammo: b.ammo,
+          helmet: `helmet${b.armorTier[0]}`,
+          chest: `chest${b.armorTier[1]}`,
+          gloves: `gloves${b.armorTier[2]}`,
+          pants: `pants${b.armorTier[3]}`,
+          boots: `boots${b.armorTier[4]}`,
+          food: b.food, modifier: b.pill as any,
+          militaryRank, orders: 0, playerLevel,
           ecoSkillsPoints: ecoPointsUsed, equipmentStatsOverride: {},
-          skills: { ...candidate.skills, lootChance: 0 },
-        };
-
-        const result = simulateBuild(simState, gameConfig, livePrices, equipPrices);
-        if (result.avgDamage > 0) allResults.push({ build: candidate, result });
-      }
-
-      processed += chunk.length;
-      setProgress({ current: processed, total, phase: `Simulating... (${allResults.length} viable)` });
-      await new Promise((r) => setTimeout(r, 5));
-    }
-
-    setProgress({ current: total, total, phase: "Analyzing results..." });
-    await new Promise((r) => setTimeout(r, 10));
-
-    const mkState = (c: CandidateBuild): SimEquipmentState => ({
-      ...structuredClone(INITIAL_SIM_STATE),
-      weapon: c.weapon, ammo: c.ammo,
-      helmet: tierToCode("helmet", c.armorTier[0]),
-      chest: tierToCode("chest", c.armorTier[1]),
-      gloves: tierToCode("gloves", c.armorTier[2]),
-      pants: tierToCode("pants", c.armorTier[3]),
-      boots: tierToCode("boots", c.armorTier[4]),
-      food: c.food, modifier: c.pill as any,
-      militaryRank, orders: 50, playerLevel,
-      ecoSkillsPoints: ecoPointsUsed, equipmentStatsOverride: {},
-      skills: { ...c.skills, lootChance: 0 },
-    });
-
-    const buildResults: BuildResult[] = [];
-    const pickKeys: Record<string, string> = {};
-
-    if (allResults.length > 0) {
-      // 1. Best Damage
-      const byDmg = [...allResults].sort((a, b) => b.result.avgDamage - a.result.avgDamage);
-      const bd = byDmg[0];
-      const bdKey = JSON.stringify(bd.build);
-      pickKeys[bdKey] = "BD";
-      buildResults.push({
-        label: "Best Damage", shortCode: "BD", simState: mkState(bd.build),
-        avgDamage: bd.result.avgDamage, avgCostPer1k: bd.result.avgCostPer1k,
-        avgNetCost: bd.result.avgNetCost, avgHits: bd.result.avgHits,
-        description: "Maximum total damage output",
-      });
-
-      // 2. Best Cost/1k
-      const validCost = allResults.filter(r => r.result.avgCostPer1k < Infinity && r.result.avgCostPer1k > 0);
-      let bcKey = "";
-      if (validCost.length > 0) {
-        const byCost = [...validCost].sort((a, b) => a.result.avgCostPer1k - b.result.avgCostPer1k);
-        const bc = byCost[0];
-        bcKey = JSON.stringify(bc.build);
-        pickKeys[bcKey] = "BC";
-        buildResults.push({
-          label: "Best Cost / 1k", shortCode: "BC", simState: mkState(bc.build),
-          avgDamage: bc.result.avgDamage, avgCostPer1k: bc.result.avgCostPer1k,
-          avgNetCost: bc.result.avgNetCost, avgHits: bc.result.avgHits,
-          description: "Cheapest cost per 1,000 damage",
+          skills: { ...b.skills, lootChance: 0 },
         });
+
+        setResults(builds.map(b => ({
+          label: b.label,
+          shortCode: b.shortCode,
+          simState: mkState(b),
+          avgDamage: b.avgDamage,
+          avgCostPer1k: b.avgCostPer1k,
+          avgNetCost: b.avgNetCost,
+          avgHits: b.avgHits,
+          description: b.description,
+          targetMiss: b.targetMiss,
+        })));
+        setLandscape({ all: lscape, pareto });
+        setIsBuilding(false);
+        setProgress({ current: 1, total: 1, phase: "Done!" });
       }
+    };
 
-      // 3. Best Overall — exclude BD & BC, then find best balanced build
-      const overallPool = validCost.filter(r => {
-        const key = JSON.stringify(r.build);
-        return key !== bdKey && key !== bcKey;
-      });
-      if (overallPool.length > 0) {
-        const damages = overallPool.map(r => r.result.avgDamage);
-        const costs = overallPool.map(r => r.result.avgCostPer1k);
-        const minD = Math.min(...damages), maxD = Math.max(...damages);
-        const minC = Math.min(...costs), maxC = Math.max(...costs);
-        const dR = maxD - minD || 1, cR = maxC - minC || 1;
+    worker.onerror = () => {
+      worker.terminate();
+      workerRef.current = null;
+      setIsBuilding(false);
+    };
 
-        let best: SimResult | null = null;
-        let bestScore = -Infinity;
-        for (const e of overallPool) {
-          const dN = (e.result.avgDamage - minD) / dR;
-          const cN = 1 - (e.result.avgCostPer1k - minC) / cR;
-          const score = dN * 0.5 + cN * 0.5;
-          if (score > bestScore) { bestScore = score; best = e; }
-        }
-        if (best) {
-          pickKeys[JSON.stringify(best.build)] = "BO";
-          buildResults.push({
-            label: "Best Overall", shortCode: "BO", simState: mkState(best.build),
-            avgDamage: best.result.avgDamage, avgCostPer1k: best.result.avgCostPer1k,
-            avgNetCost: best.result.avgNetCost, avgHits: best.result.avgHits,
-            description: "Best balance of damage and cost",
-          });
-        }
-      }
-
-      // 4. Target-based
-      if (parsedTarget && parsedTarget > 0) {
-        if (targetMode === "damage") {
-          const reaching = allResults.filter(r => r.result.avgDamage >= parsedTarget);
-          if (reaching.length > 0) {
-            const bt = [...reaching].sort((a, b) => a.result.avgNetCost - b.result.avgNetCost)[0];
-            pickKeys[JSON.stringify(bt.build)] = "BT";
-            buildResults.push({
-              label: `Target ${fmtCompact(parsedTarget)}`, shortCode: "BT", simState: mkState(bt.build),
-              avgDamage: bt.result.avgDamage, avgCostPer1k: bt.result.avgCostPer1k,
-              avgNetCost: bt.result.avgNetCost, avgHits: bt.result.avgHits,
-              description: `Cheapest to reach ${fmtCompact(parsedTarget)} damage`,
-            });
-          }
-        } else if (targetMode === "budget") {
-          const affordable = allResults.filter(r => r.result.avgNetCost <= parsedTarget);
-          if (affordable.length > 0) {
-            const bt = [...affordable].sort((a, b) => b.result.avgDamage - a.result.avgDamage)[0];
-            pickKeys[JSON.stringify(bt.build)] = "BT";
-            buildResults.push({
-              label: `Budget ${fmtCompact(parsedTarget)}`, shortCode: "BT", simState: mkState(bt.build),
-              avgDamage: bt.result.avgDamage, avgCostPer1k: bt.result.avgCostPer1k,
-              avgNetCost: bt.result.avgNetCost, avgHits: bt.result.avgHits,
-              description: `Best damage within ${fmtCompact(parsedTarget)} budget`,
-            });
-          }
-        } else if (targetMode === "costPer1k") {
-          const withinCost = validCost.filter(r => r.result.avgCostPer1k <= parsedTarget);
-          if (withinCost.length > 0) {
-            const bt = [...withinCost].sort((a, b) => b.result.avgDamage - a.result.avgDamage)[0];
-            pickKeys[JSON.stringify(bt.build)] = "BT";
-            buildResults.push({
-              label: `≤${parsedTarget.toFixed(1)}/1k`, shortCode: "BT", simState: mkState(bt.build),
-              avgDamage: bt.result.avgDamage, avgCostPer1k: bt.result.avgCostPer1k,
-              avgNetCost: bt.result.avgNetCost, avgHits: bt.result.avgHits,
-              description: `Best damage at ≤${parsedTarget.toFixed(1)} cost/1k`,
-            });
-          }
-        }
-      }
-    }
-
-    // Build landscape (all viable combinations) for visualization
-    const landscapePoints: LandscapePoint[] = allResults
-      .filter(r => r.result.avgCostPer1k < Infinity && r.result.avgCostPer1k > 0)
-      .map(r => {
-        const key = JSON.stringify(r.build);
-        return {
-          damage: r.result.avgDamage,
-          costPer1k: r.result.avgCostPer1k,
-          netCost: r.result.avgNetCost,
-          hits: r.result.avgHits,
-          weapon: r.build.weapon,
-          ammo: r.build.ammo,
-          food: r.build.food,
-          pill: r.build.pill,
-          tier: r.build.armorTier[0],
-          pickCode: pickKeys[key],
-        };
-      });
-    const paretoFrontier = computeParetoFrontier(landscapePoints);
-    setLandscape({ all: landscapePoints, pareto: paretoFrontier });
-
-    setResults(buildResults);
-    setIsBuilding(false);
-    setProgress({ current: total, total, phase: "Done!" });
+    worker.postMessage({ type: "optimize", config: optimizeConfig });
   }, [warBudget, playerLevel, militaryRank, ecoPointsUsed, targetValue, targetMode, gameConfig, livePrices, equipPrices]);
 
   const handleLoad = (build: BuildResult) => {
@@ -619,15 +221,6 @@ export default function WarBuilder({
             <div className="flex items-center gap-2 text-[9px] text-zinc-500 font-mono">
               <span>{totalPoints} total</span><span>−</span><span>{ecoPointsUsed} eco</span>
             </div>
-          </div>
-
-          <div className="flex flex-col items-center gap-1 px-4 py-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50">
-            <div className="flex items-center gap-2">
-              <img src={`${PUBLIC_IMAGES_BASE_URL}orders.svg`} className="h-4 w-4 opacity-60" alt="orders" />
-              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Orders</span>
-            </div>
-            <span className="text-xl font-mono font-black text-zinc-300 leading-none">50%</span>
-            <span className="text-[9px] text-zinc-600 font-mono">fixed</span>
           </div>
 
           {/* Target */}
@@ -689,9 +282,16 @@ export default function WarBuilder({
       {/* Results */}
       {results && results.length > 0 && (
         <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-amber-400" />
-            <span className="text-xs font-black text-white uppercase tracking-widest">Recommended Builds</span>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-amber-400" />
+              <span className="text-xs font-black text-white uppercase tracking-widest">Recommended Builds</span>
+            </div>
+            {buildStats && (
+              <span className="text-[9px] font-mono font-bold text-zinc-600">
+                {buildStats.uniqueSkills} skill sets · {buildStats.viableBuilds.toLocaleString()} viable · {buildStats.mcVerified} verified
+              </span>
+            )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {results.map((build) => (
@@ -754,9 +354,10 @@ function BuildResultCard({ build, onLoad }: { build: BuildResult; onLoad: () => 
   const isBO = build.shortCode === "BO";
   const isBT = build.shortCode === "BT";
 
-  const border = isBD ? "border-red-500/30 hover:border-red-500/50" : isBC ? "border-green-500/30 hover:border-green-500/50" : isBO ? "border-purple-500/30 hover:border-purple-500/50" : "border-amber-500/30 hover:border-amber-500/50";
+  const miss = build.targetMiss;
+  const border = miss ? "border-dashed border-amber-500/30" : isBD ? "border-red-500/30 hover:border-red-500/50" : isBC ? "border-green-500/30 hover:border-green-500/50" : isBO ? "border-purple-500/30 hover:border-purple-500/50" : "border-amber-500/30 hover:border-amber-500/50";
   const accent = isBD ? "text-red-400" : isBC ? "text-green-400" : isBO ? "text-purple-400" : "text-amber-400";
-  const bg = isBD ? "bg-red-500/5" : isBC ? "bg-green-500/5" : isBO ? "bg-purple-500/5" : "bg-amber-500/5";
+  const bg = miss ? "bg-amber-500/3" : isBD ? "bg-red-500/5" : isBC ? "bg-green-500/5" : isBO ? "bg-purple-500/5" : "bg-amber-500/5";
 
   const equipCodes = [build.simState.weapon, build.simState.ammo, build.simState.helmet, build.simState.chest, build.simState.gloves, build.simState.pants, build.simState.boots].filter(Boolean);
 
@@ -765,6 +366,7 @@ function BuildResultCard({ build, onLoad }: { build: BuildResult; onLoad: () => 
       <div className="flex flex-col gap-0.5">
         <span className={`text-[10px] font-black uppercase tracking-widest ${accent}`}>{build.label}</span>
         <span className="text-[9px] font-bold text-zinc-600">{build.description}</span>
+        {miss && <span className="text-[9px] font-bold text-amber-500/80 mt-0.5">Closest match found</span>}
       </div>
 
       <div className="flex flex-col items-center gap-1 py-2">

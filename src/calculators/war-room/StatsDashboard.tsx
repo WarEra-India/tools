@@ -33,6 +33,7 @@ export default function StatsDashboard({
   showLootChance = false,
   showHealthAndHunger = false,
   healthRestored,
+  effectiveHealthBase,
 }: {
   attackData: AttackData;
   effectiveStats: EffectiveStats;
@@ -40,6 +41,7 @@ export default function StatsDashboard({
   showLootChance?: boolean;
   showHealthAndHunger?: boolean;
   healthRestored?: number;
+  effectiveHealthBase?: number;
 }) {
   const bd = attackData.breakdown;
 
@@ -125,18 +127,24 @@ export default function StatsDashboard({
         />
       )}
 
-      {showHealthAndHunger && (
-        <StatBreakdown
-          icon="health"
-          label="Health"
-          breakdown={{
-            skill: r(effectiveStats.health.skill, roundValues),
-            ...(healthRestored ? { food: r(healthRestored, roundValues) } : {}),
-          }}
-          total={r(effectiveStats.health.skill + (healthRestored || 0), roundValues)}
-          isPercentage={false}
-        />
-      )}
+      {showHealthAndHunger && (() => {
+        const baseHealth = effectiveStats.health.skill;
+        const healthBase = effectiveHealthBase ?? baseHealth;
+        const regenAmount = healthBase - baseHealth;
+        return (
+          <StatBreakdown
+            icon="health"
+            label="Health"
+            breakdown={{
+              skill: r(baseHealth, roundValues),
+              ...(regenAmount > 0 ? { regen: r(regenAmount, roundValues) } : {}),
+              ...(healthRestored ? { food: r(healthRestored, roundValues) } : {}),
+            }}
+            total={r(healthBase + (healthRestored || 0), roundValues)}
+            isPercentage={false}
+          />
+        );
+      })()}
     </>
   );
 }

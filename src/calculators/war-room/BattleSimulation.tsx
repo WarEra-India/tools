@@ -61,6 +61,7 @@ interface BattleSimulationProps {
     lootChance: { skill: number };
   };
   healthRestored: number;
+  effectiveHealthBase?: number;
   simEquipment?: any;
   gameConfig?: any;
   livePrices?: any;
@@ -86,6 +87,7 @@ export default function BattleSimulation({
   attackData,
   effectiveStats,
   healthRestored,
+  effectiveHealthBase,
   simEquipment,
   gameConfig,
   livePrices,
@@ -101,7 +103,7 @@ export default function BattleSimulation({
   const animationRef = useRef<number | null>(null);
   const cancelledRef = useRef(false);
 
-  const totalHealth = effectiveStats.health.skill + healthRestored;
+  const totalHealth = (effectiveHealthBase ?? effectiveStats.health.skill) + healthRestored;
 
   const cleanupAnimation = useCallback(() => {
     if (animationRef.current !== null) {

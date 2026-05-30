@@ -199,7 +199,11 @@ export default function Simulator({
   const simAttackData = useMemo(() => getAttackTotalAndBreakDown(workingProfile, simOverride), [workingProfile, simOverride]);
   const simEffectiveStats = useMemo(() => getEffectiveStats(workingProfile, simOverride), [workingProfile, simOverride]);
 
-  const totalHungerPoints = simEffectiveStats.hunger.skill || 0;
+  const hasBuff = simEquipment.modifier === 'buff';
+  const baseHealthPoints = simEffectiveStats.health.skill || 0;
+  const baseHungerPoints = simEffectiveStats.hunger.skill || 0;
+  const effectiveHealthPoints = hasBuff ? Math.floor(baseHealthPoints * 1.8) : baseHealthPoints;
+  const totalHungerPoints = hasBuff ? Math.floor(baseHungerPoints * 1.8) : baseHungerPoints;
   const foodPrices: Record<string, number> = {
     bread: livePrices?.prices?.bread ?? 0,
     steak: livePrices?.prices?.steak ?? 0,
@@ -230,10 +234,9 @@ export default function Simulator({
 
   const healthRestored = useMemo(() => {
     if (!simEquipment.food) return 0;
-    const maxHealth = simEffectiveStats.health.skill || 0;
     const mult = FOOD_MULTIPLIERS[simEquipment.food] || 0;
-    return Math.floor(maxHealth * mult * totalHungerPoints);
-  }, [simEquipment.food, simEffectiveStats.health.skill, totalHungerPoints]);
+    return Math.floor(effectiveHealthPoints * mult * totalHungerPoints);
+  }, [simEquipment.food, effectiveHealthPoints, totalHungerPoints]);
 
   const allowedPoints = totalSkillPointsForLevel(simEquipment.playerLevel || 1);
   const ecoPoints = simEquipment.ecoSkillsPoints || 0;
@@ -604,10 +607,10 @@ export default function Simulator({
               <StatsDashboard
                 attackData={simAttackData}
                 effectiveStats={simEffectiveStats}
-                // roundValues={true}
                 showLootChance={true}
                 showHealthAndHunger={true}
                 healthRestored={healthRestored}
+                effectiveHealthBase={effectiveHealthPoints}
               />
             </div>
           </div>
@@ -618,6 +621,7 @@ export default function Simulator({
           attackData={simAttackData}
           effectiveStats={simEffectiveStats}
           healthRestored={healthRestored}
+          effectiveHealthBase={effectiveHealthPoints}
           simEquipment={simEquipment}
           gameConfig={gameConfig}
           livePrices={livePrices}

@@ -168,6 +168,54 @@ export const getEffectiveStats = (profile: FullProfile, sim?: any) => {
   };
 };
 
+// ─── Analytical Expected Damage (used by optimizer) ────────────────
+
+export interface AnalyticalParams {
+  totalHealth: number;
+  attackValue: number;
+  armorEffective: number;   // 0–100
+  dodgeEffective: number;   // 0–100
+  precisionTotal: number;   // 0–100
+  criticalChance: number;   // 0–100
+  criticalDamages: number;  // e.g. 189 means +189%
+}
+
+export interface AnalyticalResult {
+  expectedDamage: number;
+  expectedHits: number;
+  expectedDmgPerHit: number;
+}
+
+export const computeAnalyticalDamage = (p: AnalyticalParams): AnalyticalResult => {
+  const healthCostPerHit = HIT_BASE_HEALTH_COST * (1 - p.armorEffective / 100);
+  if (healthCostPerHit <= 0) {
+    return { expectedDamage: Infinity, expectedHits: Infinity, expectedDmgPerHit: p.attackValue };
+  }
+
+  const maxNonDodgedHits = Math.floor(p.totalHealth / healthCostPerHit);
+  if (maxNonDodgedHits <= 0) {
+    return { expectedDamage: 0, expectedHits: 0, expectedDmgPerHit: 0 };
+  }
+
+  const dodgeFraction = Math.min(p.dodgeEffective, 99) / 100;
+  const expectedHits = maxNonDodgedHits / (1 - dodgeFraction);
+
+  const precFrac = Math.min(p.precisionTotal, 100) / 100;
+  const critFrac = Math.min(p.criticalChance, 100) / 100;
+  const critMult = 1 + p.criticalDamages / 100;
+
+  const expectedDmgPerHit = p.attackValue * (
+    precFrac * (critFrac * critMult + (1 - critFrac))
+    + (1 - precFrac) * MISS_DAMAGE_MULTIPLIER
+  );
+
+  return {
+    expectedDamage: expectedHits * expectedDmgPerHit,
+    expectedHits,
+    expectedDmgPerHit,
+  };
+};
+
 // ─── Simulation Engine ───────────────────────────────────────────────
 
 export type HitType = 'miss' | 'normal' | 'critical';
