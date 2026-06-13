@@ -4,7 +4,6 @@ import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
   ResponsiveContainer, ZAxis,
 } from "recharts";
-import MilitaryRankIcon from "@/components/MilitaryRankIcon";
 import { GameItemIcon } from "@/components/GameItemIcon";
 import {
   PUBLIC_IMAGES_BASE_URL,
@@ -91,7 +90,6 @@ export default function WarBuilder({
 }) {
   const [playerLevel, setPlayerLevel] = useState<number>(profile?.user?.leveling?.level ?? 20);
   const [companiesCount, setCompaniesCount] = useState<number>(profile?.companies?.length ?? 5);
-  const [militaryRank, setMilitaryRank] = useState<number>(profile?.user?.militaryRank ?? 61);
   const [targetMode, setTargetMode] = useState<TargetMode>("damage");
   const [targetValue, setTargetValue] = useState<string>("");
   const [results, setResults] = useState<BuildResult[] | null>(null);
@@ -120,8 +118,6 @@ export default function WarBuilder({
 
     const optimizeConfig: OptimizeConfig = {
       budget: warBudget,
-      militaryRank,
-      orders: 0,
       targetMode: parsedTarget && parsedTarget > 0 ? targetMode : null,
       targetValue: parsedTarget && parsedTarget > 0 ? parsedTarget : null,
       gameConfig,
@@ -153,7 +149,7 @@ export default function WarBuilder({
           pants: `pants${b.armorTier[3]}`,
           boots: `boots${b.armorTier[4]}`,
           food: b.food, modifier: b.pill as any,
-          militaryRank, orders: 0, playerLevel,
+          playerLevel,
           ecoSkillsPoints: ecoPointsUsed, equipmentStatsOverride: {},
           skills: { ...b.skills, lootChance: 0 },
         });
@@ -182,10 +178,10 @@ export default function WarBuilder({
     };
 
     worker.postMessage({ type: "optimize", config: optimizeConfig });
-  }, [warBudget, playerLevel, militaryRank, ecoPointsUsed, targetValue, targetMode, gameConfig, livePrices, equipPrices]);
+  }, [warBudget, playerLevel, ecoPointsUsed, targetValue, targetMode, gameConfig, livePrices, equipPrices]);
 
   const handleLoad = (build: BuildResult) => {
-    const presetName = `L${playerLevel} C${companiesCount} M${militaryRank} ${build.shortCode}`;
+    const presetName = `L${playerLevel} C${companiesCount} ${build.shortCode}`;
     onLoadBuild(build.simState, presetName);
   };
 
@@ -210,7 +206,6 @@ export default function WarBuilder({
         <div className="flex items-center justify-center gap-8 flex-wrap w-full">
           <ResourceInput icon="level" iconNode={<img src={`${PUBLIC_IMAGES_BASE_URL}skills.svg`} className="h-5 w-5 opacity-80" alt="level" />} label="Player Level" value={playerLevel} formatter={v => v} onDecrease={() => setPlayerLevel(Math.max(1, playerLevel - 1))} onIncrease={() => setPlayerLevel(Math.min(200, playerLevel + 1))} />
           <ResourceInput icon="companies" iconNode={<div className="h-5 w-5 flex items-center justify-center"><img src={`${PUBLIC_IMAGES_BASE_URL}companies.svg`} className="h-4 w-4" alt="eco" /></div>} label="Companies" value={companiesCount} formatter={v => v} onDecrease={() => setCompaniesCount(Math.max(2, companiesCount - 1))} onIncrease={() => setCompaniesCount(Math.min(12, companiesCount + 1))} />
-          <ResourceInput icon="battle" iconNode={<MilitaryRankIcon rank={militaryRank} imgClassName="h-6 w-6" />} label="Military Rank" value={militaryRank} formatter={() => null} onDecrease={() => setMilitaryRank(Math.max(1, militaryRank - 1))} onIncrease={() => setMilitaryRank(Math.min(120, militaryRank + 1))} />
 
           <div className="flex flex-col items-center gap-1 px-4 py-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50">
             <div className="flex items-center gap-2">

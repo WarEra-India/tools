@@ -6,11 +6,6 @@ import {
   RARITY_COSTS,
   HIT_BASE_HEALTH_COST,
   MISS_DAMAGE_MULTIPLIER,
-  MIL_RANK_TIER1_MAX,
-  MIL_RANK_TIER2_MAX,
-  MIL_RANK_JUMP_THRESHOLD,
-  MIL_BASE_BONUS_MULTIPLIER,
-  MIL_HIGH_BONUS_MULTIPLIER,
   EFFECTIVE_STAT_DIVISOR,
 } from "./constants";
 import { runFullSimulation } from "./utils";
@@ -32,21 +27,6 @@ export type SkillAllocation = Record<WarSkill, number>;
 export const skillLevelToCumulativeCost = (level: number): number =>
   (level * (level + 1)) / 2;
 
-export const calcMilBonus = (rank: number): number => {
-  const localRank = Math.min(rank, MIL_RANK_TIER1_MAX);
-  let bonus = (localRank - 1) * MIL_BASE_BONUS_MULTIPLIER + Math.floor((localRank - 1) / 4) * MIL_BASE_BONUS_MULTIPLIER;
-  if (rank <= MIL_RANK_TIER1_MAX) return bonus;
-  const phase1 = Math.min(rank, MIL_RANK_TIER2_MAX) - MIL_RANK_TIER1_MAX;
-  if (phase1 > 0) {
-    bonus += phase1 * MIL_BASE_BONUS_MULTIPLIER;
-    if (rank >= MIL_RANK_JUMP_THRESHOLD) bonus += MIL_BASE_BONUS_MULTIPLIER;
-  }
-  if (rank >= MIL_RANK_TIER2_MAX + 1) {
-    bonus += (rank - MIL_RANK_TIER2_MAX) * MIL_HIGH_BONUS_MULTIPLIER;
-  }
-  return bonus;
-};
-
 export const effectivePercentageValue = (totalValue: number): number =>
   Math.round((totalValue / (totalValue + EFFECTIVE_STAT_DIVISOR)) * 100);
 
@@ -54,15 +34,11 @@ export const effectiveTotalDamage = (
   skillValue: number,
   weaponValue: number,
   ammoBonusPercentage: number,
-  militaryBonusPercentage: number,
-  ordersBonusPercentage: number,
   buffPercentage: number,
 ): number =>
   Math.round(
     (skillValue + weaponValue)
     * (1 + ammoBonusPercentage / 100)
-    * (1 + militaryBonusPercentage / 100)
-    * (1 + ordersBonusPercentage / 100)
     * (1 + buffPercentage / 100)
   );
 
@@ -120,8 +96,6 @@ export interface EquipSetup {
 
 export interface SearchConfig {
   budget: number;
-  militaryRank: number;
-  orders: number;
   weaponSetups: { name: string; stats: WeaponSetup }[];
   foodTypes: (string | null)[];
   equipStats: EquipSetup;
@@ -138,8 +112,7 @@ export function exhaustiveSkillSearch(
   config: SearchConfig,
   onProgress?: (completedSetups: number, totalSetups: number) => void,
 ): SkillSearchResult[] {
-  const { budget, militaryRank, orders, weaponSetups, foodTypes, equipStats, topN } = config;
-  const milBonus = calcMilBonus(militaryRank);
+  const { budget, weaponSetups, foodTypes, equipStats, topN } = config;
   const maxLevels = WAR_SKILLS.map(s => SKILL_PROGRESSION[s].maxLevel);
   const skillCosts = Array.from({ length: 11 }, (_, i) => skillLevelToCumulativeCost(i));
 
@@ -166,7 +139,7 @@ export function exhaustiveSkillSearch(
           const armorSkill = SKILL_PROGRESSION.armor.base + levels[6] * SKILL_PROGRESSION.armor.inc;
           const dodgeSkill = SKILL_PROGRESSION.dodge.base + levels[7] * SKILL_PROGRESSION.dodge.inc;
 
-          const totalAttack = effectiveTotalDamage(attackSkill, weapon.stats.weaponAttack, 0, milBonus, orders, 0);
+          const totalAttack = effectiveTotalDamage(attackSkill, weapon.stats.weaponAttack, 0, 0);
           const precision = precSkill + equipStats.glovesPrecision;
           const critChance = critCSkill + weapon.stats.weaponCritChance;
           const critDmg = critDSkill + equipStats.helmetCritDmg;
@@ -319,8 +292,6 @@ function calculateBuildCost(
 
 export interface OptimizeConfig {
   budget: number;
-  militaryRank: number;
-  orders: number;
   targetMode: "damage" | "budget" | "costPer1k" | null;
   targetValue: number | null;
   gameConfig: any;
@@ -363,8 +334,7 @@ export function runFullOptimization(
   config: OptimizeConfig,
   onProgress: (phase: string, current: number, total: number) => void,
 ): OptimizerResult {
-  const { budget, militaryRank, orders, targetMode, targetValue, gameConfig, livePrices, equipPrices } = config;
-  const milBonus = calcMilBonus(militaryRank);
+  const { budget, targetMode, targetValue, gameConfig, livePrices, equipPrices } = config;
 
   // Pre-cache all equipment stats
   const statsCache = new Map<string, Record<string, number>>();
@@ -404,7 +374,7 @@ export function runFullOptimization(
   };
 
   const searchResults = exhaustiveSkillSearch({
-    budget, militaryRank, orders,
+    budget,
     weaponSetups,
     foodTypes: [...FOOD_TYPES],
     equipStats: midTierEquip,
@@ -483,7 +453,7 @@ export function runFullOptimization(
           const foodMult = food ? (FOOD_MULTIPLIERS[food] ?? 0) : 0;
           for (const pill of PILL_STATES) {
             const hasBuff = pill === "buff";
-            const totalAttack = effectiveTotalDamage(attackSkill, wc.attack, ammoPercent, milBonus, orders, hasBuff ? 60 : 0);
+            const totalAttack = effectiveTotalDamage(attackSkill, wc.attack, ammoPercent, hasBuff ? 60 : 0);
             const healthSkill = hasBuff ? Math.floor(baseHealthSkill * 1.8) : baseHealthSkill;
             const hungerSkill = hasBuff ? Math.floor(baseHungerSkill * 1.8) : baseHungerSkill;
             const healthRestored = foodMult > 0 ? Math.floor(baseHealthSkill * foodMult * hungerSkill) : 0;
@@ -586,7 +556,7 @@ export function runFullOptimization(
     const ammoPercent = build.ammo ? AMMO_PERCENTAGES[build.ammo as keyof typeof AMMO_PERCENTAGES] || 0 : 0;
     const attackSkill = SKILL_PROGRESSION.attack.base + build.skills.attack * SKILL_PROGRESSION.attack.inc;
     const hasBuff = build.pill === "buff";
-    const totalAttack = effectiveTotalDamage(attackSkill, wStats.attack ?? 0, ammoPercent, milBonus, orders, hasBuff ? 60 : 0);
+    const totalAttack = effectiveTotalDamage(attackSkill, wStats.attack ?? 0, ammoPercent, hasBuff ? 60 : 0);
 
     const precisionTotal = SKILL_PROGRESSION.precision.base + build.skills.precision * SKILL_PROGRESSION.precision.inc + (gStats.precision ?? 0);
     const critChanceTotal = SKILL_PROGRESSION.criticalChance.base + build.skills.criticalChance * SKILL_PROGRESSION.criticalChance.inc + (wStats.criticalChance ?? 0);
