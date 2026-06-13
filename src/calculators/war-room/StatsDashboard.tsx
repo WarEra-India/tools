@@ -34,6 +34,7 @@ export default function StatsDashboard({
   showHealthAndHunger = false,
   healthRestored,
   effectiveHealthBase,
+  hasBuff = false,
 }: {
   attackData: AttackData;
   effectiveStats: EffectiveStats;
@@ -42,6 +43,7 @@ export default function StatsDashboard({
   showHealthAndHunger?: boolean;
   healthRestored?: number;
   effectiveHealthBase?: number;
+  hasBuff?: boolean;
 }) {
   const bd = attackData.breakdown;
 
@@ -132,17 +134,22 @@ export default function StatsDashboard({
         const healthBase = effectiveHealthBase ?? baseHealth;
         const regenAmount = healthBase - baseHealth;
         return (
-          <StatBreakdown
-            icon="health"
-            label="Health"
-            breakdown={{
-              skill: r(baseHealth, roundValues),
-              ...(regenAmount > 0 ? { regen: r(regenAmount, roundValues) } : {}),
-              ...(healthRestored ? { food: r(healthRestored, roundValues) } : {}),
-            }}
-            total={r(healthBase + (healthRestored || 0), roundValues)}
-            isPercentage={false}
-          />
+          <>
+            <StatBreakdown
+              icon="health"
+              label="Health"
+              breakdown={{
+                skill: r(baseHealth, roundValues),
+                ...(regenAmount > 0 ? { regen: r(regenAmount, roundValues) } : {}),
+                ...(healthRestored ? { food: r(healthRestored, roundValues) } : {}),
+              }}
+              total={r(healthBase + (healthRestored || 0), roundValues)}
+              isPercentage={false}
+            />
+            {hasBuff && (
+              <p className="text-[10px] text-amber-400/70 -mt-2 px-1">* Assuming 8hr pill buff window</p>
+            )}
+          </>
         );
       })()}
     </>

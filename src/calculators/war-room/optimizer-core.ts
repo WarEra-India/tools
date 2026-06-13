@@ -486,7 +486,7 @@ export function runFullOptimization(
             const totalAttack = effectiveTotalDamage(attackSkill, wc.attack, ammoPercent, milBonus, orders, hasBuff ? 60 : 0);
             const healthSkill = hasBuff ? Math.floor(baseHealthSkill * 1.8) : baseHealthSkill;
             const hungerSkill = hasBuff ? Math.floor(baseHungerSkill * 1.8) : baseHungerSkill;
-            const healthRestored = foodMult > 0 ? Math.floor(healthSkill * foodMult * hungerSkill) : 0;
+            const healthRestored = foodMult > 0 ? Math.floor(baseHealthSkill * foodMult * hungerSkill) : 0;
             const totalHealth = healthSkill + healthRestored;
             const critChanceBase = critCSkill + wc.critChance;
 
@@ -600,7 +600,7 @@ export function runFullOptimization(
     const hungerSkill = hasBuff ? Math.floor(baseHunger * 1.8) : baseHunger;
 
     let healthRestored = 0;
-    if (build.food) healthRestored = Math.floor(healthSkill * (FOOD_MULTIPLIERS[build.food] || 0) * hungerSkill);
+    if (build.food) healthRestored = Math.floor(baseHealth * (FOOD_MULTIPLIERS[build.food] || 0) * hungerSkill);
 
     let totalDamage = 0, totalNetCost = 0, totalHits = 0;
     for (let i = 0; i < MC_RUNS; i++) {

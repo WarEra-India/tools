@@ -235,8 +235,8 @@ export default function Simulator({
   const healthRestored = useMemo(() => {
     if (!simEquipment.food) return 0;
     const mult = FOOD_MULTIPLIERS[simEquipment.food] || 0;
-    return Math.floor(effectiveHealthPoints * mult * totalHungerPoints);
-  }, [simEquipment.food, effectiveHealthPoints, totalHungerPoints]);
+    return Math.floor(baseHealthPoints * mult * totalHungerPoints);
+  }, [simEquipment.food, baseHealthPoints, totalHungerPoints]);
 
   const allowedPoints = totalSkillPointsForLevel(simEquipment.playerLevel || 1);
   const ecoPoints = simEquipment.ecoSkillsPoints || 0;
@@ -611,6 +611,7 @@ export default function Simulator({
                 showHealthAndHunger={true}
                 healthRestored={healthRestored}
                 effectiveHealthBase={effectiveHealthPoints}
+                hasBuff={hasBuff}
               />
             </div>
           </div>
