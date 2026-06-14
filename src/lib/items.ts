@@ -14,11 +14,13 @@ export const ITEM_NAMES: Record<string, { name: string, rarity: string }> = {
   iron: { name: "Iron", rarity: "common" },
   lead: { name: "Lead", rarity: "common" },
   oil: { name: "Oil", rarity: "common" },
+  wood: { name: "Wood", rarity: "common" },
 
   // Processed Building Materials
   concrete: { name: "Concrete", rarity: "uncommon" },
   steel: { name: "Steel", rarity: "uncommon" },
   petroleum: { name: "Petroleum", rarity: "uncommon" },
+  paper: { name: "Paper", rarity: "uncommon" },
 
   // Processed Food
   bread: { name: "Bread", rarity: "uncommon" },
