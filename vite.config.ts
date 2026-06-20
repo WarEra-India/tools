@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(() => {
   return {
-    base: "/warera-calculators/",
+    base: "/tools/",
     plugins: [
       react(),
       tailwindcss(),
