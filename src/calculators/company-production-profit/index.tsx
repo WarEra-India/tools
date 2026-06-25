@@ -293,7 +293,7 @@ export default function CompanyProductionProfit() {
             Back to Calculators
           </Link>
           <h1 className="text-3xl font-bold tracking-tight">
-            Company Production
+            Production
           </h1>
           <p className="mt-1 text-zinc-400">
             Live market prices to see which items are most profitable to produce.

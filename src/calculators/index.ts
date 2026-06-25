@@ -13,7 +13,7 @@ export interface CalculatorMeta {
 export const calculators: CalculatorMeta[] = [
   {
     id: "company-production-profit",
-    name: "Company Production",
+    name: "Production",
     description:
       "Calculate the most profitable items to produce based on current market prices and production points.",
     path: "/company-production-profit",
@@ -30,9 +30,9 @@ export const calculators: CalculatorMeta[] = [
   },
   {
     id: "nation-hub",
-    name: "Nation Intelligence Hub",
+    name: "Nation Intelligence",
     description:
-      "Analyze one or many nations across power, births, land, records, archetype, and industry — global view for a single country, comparison view for multiple.",
+      "Analyze one or many nations across power, births, land, records, archetype, and industry",
     path: "/nation-hub",
     icon: "globe",
     component: lazy(() => import("./nation-hub/index")),
@@ -44,5 +44,13 @@ export const calculators: CalculatorMeta[] = [
     path: "/craft-theory",
     icon: "craftItem",
     component: lazy(() => import("./craft-theory/index")),
+  },
+  {
+    id: "journal",
+    name: "Journal",
+    description: "Explore the articles",
+    path: "/journal",
+    icon: "articleTip",
+    component: lazy(() => import("./journal/index")),
   },
 ];

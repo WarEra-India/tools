@@ -48,6 +48,34 @@
     scrollbar-color: #3f3f46 #18181b;
 }
 
+/* Custom Modal Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #09090b;
+    /* zinc-950 */
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #27272a;
+    /* zinc-800 */
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #3f3f46;
+    /* zinc-700 */
+}
+
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #27272a #09090b;
+}
+
 /* Main text log */
 
 .main-heading {
@@ -90,5 +118,11 @@
     66% {
         clip-path: polygon(0 85%, 100% 85%, 100% 100%, 0 100%);
         transform: translate(5px, 5px);
+    }
+}
+
+.tiptap-block {
+    a {
+        color: oklch(76.5% 0.177 163.223);
     }
 }
