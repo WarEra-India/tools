@@ -79,7 +79,7 @@ const authorCache = new Map<string, Promise<UserLiteSuggestion | null>>()
 
 async function getCachedAuthor(userId: string): Promise<UserLiteSuggestion | null> {
   if (!userId) return null
-  if (authorCache.has(userId)) return authorCache.get(userId)
+  if (authorCache.has(userId)) return authorCache.get(userId) as Promise<UserLiteSuggestion | null>
 
   const promise = getUserByIdSuggestion(userId).catch(err => {
     console.error("Failed to fetch author", err)
@@ -602,10 +602,10 @@ export default function Journal() {
 
                     <div className="ml-auto flex">
                       <a
-                        href={`https://app.warera.io/article/${articleDetails.id || articleDetails._id}`}
+                        href={`https://app.warera.io/article/${articleDetails._id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-zinc-300 hover:text-white bg-zinc-800 px-4 py-1.5 rounded-md text-sm border border-zinc-700 hover:bg-zinc-700 transition-colors shadow-sm"
+                        className="flex items-center gap-1.5 text-zinc-300 hover:text-white bg-zinc-800 px-3 py-1.5 rounded-md text-sm border border-zinc-700 hover:bg-zinc-700 transition-colors shadow-sm"
                         title="Open in WarEra"
                       >
                         <ExternalLink className="h-4 w-4" />
