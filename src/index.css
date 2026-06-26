@@ -121,6 +121,37 @@
     }
 }
 
+/* react-day-picker dark theme overrides */
+:root .rdp-root {
+  --rdp-accent-color: #10b981;
+  --rdp-background-color: transparent;
+  --rdp-accent-background-color: rgba(16, 185, 129, 0.2);
+  --rdp-day_button-border-radius: 9999px;
+  --rdp-selected-color: #ffffff;
+  --rdp-outline: 2px solid #10b981;
+  --rdp-outline-offset: 2px;
+  --rdp-today-color: #34d399;
+  
+  --rdp-range_middle-background-color: rgba(16, 185, 129, 0.15);
+  --rdp-range_start-date-background-color: #10b981;
+  --rdp-range_end-date-background-color: #10b981;
+  
+  color: #e4e4e7; /* zinc-200 */
+}
+
+.rdp-day_button {
+  color: #a1a1aa;
+}
+
+.rdp-day_button[aria-disabled="true"] {
+  color: #3f3f46;
+}
+
+.rdp-day_button:hover:not([aria-disabled="true"]):not(.rdp-selected) {
+  background-color: #3f3f46;
+  color: #e4e4e7;
+}
+
 .tiptap-block {
     a {
         color: oklch(76.5% 0.177 163.223);

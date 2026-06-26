@@ -8,6 +8,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { getUserByIdSuggestion, type UserLiteSuggestion } from "@/lib/wareraApi"
+import { DayPicker, type DateRange } from "react-day-picker"
+import "react-day-picker/style.css"
 
 interface WarvaultArticle {
   id: string
@@ -293,6 +295,133 @@ function MultiSelectDropdown({
   )
 }
 
+function DateRangeDropdown({
+  startDate, endDate, setStartDate, setEndDate
+}: {
+  startDate: string, endDate: string, setStartDate: (val: string) => void, setEndDate: (val: string) => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [range, setRange] = useState<DateRange | undefined>(() => {
+    return {
+      from: startDate ? new Date(startDate) : undefined,
+      to: endDate ? new Date(endDate) : undefined
+    }
+  })
+
+  useEffect(() => {
+    if (isOpen) {
+      setRange({
+        from: startDate ? new Date(startDate) : undefined,
+        to: endDate ? new Date(endDate) : undefined
+      })
+    }
+  }, [isOpen, startDate, endDate])
+
+  const handleApply = () => {
+    if (range?.from) {
+      const from = new Date(range.from.getTime() - (range.from.getTimezoneOffset() * 60000))
+      setStartDate(from.toISOString().split("T")[0])
+    } else {
+      setStartDate("")
+    }
+
+    if (range?.to) {
+      const to = new Date(range.to.getTime() - (range.to.getTimezoneOffset() * 60000))
+      setEndDate(to.toISOString().split("T")[0])
+    } else {
+      setEndDate("")
+    }
+    setIsOpen(false)
+  }
+
+  const handleClear = () => {
+    setStartDate("")
+    setEndDate("")
+    setIsOpen(false)
+  }
+
+  const applyPreset = (days: number) => {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(end.getDate() - days)
+
+    const startStr = start.toISOString().split("T")[0]
+    const endStr = end.toISOString().split("T")[0]
+
+    setStartDate(startStr)
+    setEndDate(endStr)
+    setIsOpen(false)
+  }
+
+  const applyAllTime = () => {
+    setStartDate("")
+    setEndDate("")
+    setIsOpen(false)
+  }
+
+  const label = startDate || endDate
+    ? `${startDate ? new Date(startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' }) : 'Start'} - ${endDate ? new Date(endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' }) : 'End'}`
+    : "All Time"
+
+  return (
+    <div className="relative flex-none">
+      <div
+        className="h-10 w-full sm:w-60 appearance-none rounded-md border border-zinc-800 bg-zinc-900 pl-9 pr-10 py-2 text-sm text-zinc-50 focus-within:ring-2 focus-within:ring-emerald-500 transition-colors hover:border-zinc-700 cursor-pointer flex items-center justify-between"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 pointer-events-none" />
+        <span className="truncate pr-2 font-medium">{label}</span>
+        <ChevronDown className="h-4 w-4 text-zinc-500 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
+      </div>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div className="absolute top-full right-0 mt-2 w-[22rem] sm:w-max bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col sm:flex-row">
+
+            {/* Presets Sidebar */}
+            <div className="flex flex-row sm:flex-col gap-1 p-3 bg-zinc-900/50 border-b sm:border-b-0 sm:border-r border-zinc-800 sm:w-40 overflow-x-auto sm:overflow-visible shrink-0">
+              <button onClick={() => applyPreset(0)} className="text-left px-3 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-md transition-colors whitespace-nowrap">Today</button>
+              <button onClick={() => applyPreset(7)} className="text-left px-3 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-md transition-colors whitespace-nowrap">Last 7 Days</button>
+              <button onClick={() => applyPreset(30)} className="text-left px-3 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-md transition-colors whitespace-nowrap">Last 30 Days</button>
+              <button onClick={applyAllTime} className="text-left px-3 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-md transition-colors whitespace-nowrap">All Time</button>
+            </div>
+
+            {/* Custom Range */}
+            <div className="p-4 flex-1 flex flex-col gap-4 items-center">
+              <DayPicker
+                mode="range"
+                selected={range}
+                onSelect={setRange}
+                disabled={[{ before: new Date("2025-05-01") }, { after: new Date() }]}
+                className="text-zinc-300 mx-auto"
+                showOutsideDays
+              />
+
+              <div className="flex gap-2 mt-auto pt-4 w-full">
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-2 rounded-lg text-xs font-medium transition-colors"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApply}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-lg text-xs font-medium transition-colors shadow-lg shadow-emerald-900/20"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function Journal() {
   const [articles, setArticles] = useState<WarvaultArticle[]>([])
   const [loading, setLoading] = useState(false)
@@ -303,6 +432,8 @@ export default function Journal() {
   const [categories, setCategories] = useState<string[]>([])
   const [languages, setLanguages] = useState<string[]>([])
   const [sort, setSort] = useState("desc")
+  const [startDate, setStartDate] = useState("")
+  const [endDate, setEndDate] = useState("")
   const [offset, setOffset] = useState(0)
   const LIMIT = 20
 
@@ -322,6 +453,8 @@ export default function Journal() {
       if (search) queryParams.set("search", search)
       if (categories.length > 0) queryParams.set("category", categories.join(","))
       if (languages.length > 0) queryParams.set("language", languages.join(","))
+      if (startDate) queryParams.set("startDate", startDate)
+      if (endDate) queryParams.set("endDate", endDate)
       if (sort) {
         queryParams.set("order", sort)
         queryParams.set("sort", sort)
@@ -343,13 +476,13 @@ export default function Journal() {
     } finally {
       setLoading(false)
     }
-  }, [search, categories, languages, sort, offset])
+  }, [search, categories, languages, sort, offset, startDate, endDate])
 
   // Initial load and filter changes
   useEffect(() => {
     fetchArticles(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categories, languages, sort])
+  }, [categories, languages, sort, startDate, endDate])
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -424,8 +557,9 @@ export default function Journal() {
         </div>
 
         {/* Filters */}
-        <div className="mb-8 flex flex-col sm:flex-row gap-4">
-          <form onSubmit={handleSearchSubmit} className="relative flex-1">
+        <div className="mb-8 flex flex-col gap-4">
+          {/* Row 1: Search */}
+          <form onSubmit={handleSearchSubmit} className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
             <Input
               type="text"
@@ -436,37 +570,47 @@ export default function Journal() {
             />
           </form>
 
-          <MultiSelectDropdown
-            icon={Tag}
-            placeholder="All Categories"
-            selected={categories}
-            onChange={setCategories}
-            options={CATEGORIES.map(c => ({ label: c, value: c.toLowerCase() }))}
-          />
+          {/* Row 2: Dropdowns */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <MultiSelectDropdown
+              icon={Tag}
+              placeholder="All Categories"
+              selected={categories}
+              onChange={setCategories}
+              options={CATEGORIES.map(c => ({ label: c, value: c.toLowerCase() }))}
+            />
 
-          <MultiSelectDropdown
-            icon={Globe}
-            placeholder="All Languages"
-            selected={languages}
-            onChange={setLanguages}
-            options={Object.values(LANGUAGES).map(l => ({
-              label: l.label,
-              value: l.code,
-              icon: <CountryFlag countryCode={l.flagCode} className="w-4 h-3 opacity-90 rounded-[1px]" />
-            }))}
-          />
+            <MultiSelectDropdown
+              icon={Globe}
+              placeholder="All Languages"
+              selected={languages}
+              onChange={setLanguages}
+              options={Object.values(LANGUAGES).map(l => ({
+                label: l.label,
+                value: l.code,
+                icon: <CountryFlag countryCode={l.flagCode} className="w-4 h-3 opacity-90 rounded-[1px]" />
+              }))}
+            />
 
-          <div className="relative flex-none">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 pointer-events-none" />
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-              className="h-10 w-full sm:w-36 appearance-none rounded-md border border-zinc-800 bg-zinc-900 pl-9 pr-10 py-2 text-sm text-zinc-50 outline-none focus:ring-2 focus:ring-emerald-500 transition-colors hover:border-zinc-700"
-            >
-              <option value="desc">Newest</option>
-              <option value="asc">Oldest</option>
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 pointer-events-none" />
+            <div className="relative flex-none">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 pointer-events-none" />
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+                className="h-10 w-full appearance-none rounded-md border border-zinc-800 bg-zinc-900 pl-9 pr-10 py-2 text-sm text-zinc-50 outline-none focus:ring-2 focus:ring-emerald-500 transition-colors hover:border-zinc-700"
+              >
+                <option value="desc">Newest First</option>
+                <option value="asc">Oldest First</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 pointer-events-none" />
+            </div>
+
+            <DateRangeDropdown
+              startDate={startDate}
+              endDate={endDate}
+              setStartDate={setStartDate}
+              setEndDate={setEndDate}
+            />
           </div>
         </div>
 
