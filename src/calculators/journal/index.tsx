@@ -57,6 +57,13 @@ const WARERA_API = "https://api2.warera.io/trpc/article.getArticleById"
 const articleCache = new Map<string, { timestamp: number, data: any }>()
 const CACHE_TTL = 10 * 60 * 1000 // 10 minutes
 
+const parseUtcDate = (dateStr: string) => {
+  if (!dateStr) return new Date();
+  if (/(Z|[+-]\d{2}:?\d{2})$/i.test(dateStr)) return new Date(dateStr);
+  const normalizedStr = dateStr.includes(' ') && !dateStr.includes('T') ? dateStr.replace(' ', 'T') : dateStr;
+  return new Date(normalizedStr + 'Z');
+};
+
 async function getCachedArticleDetails(articleId: string): Promise<any> {
   const cached = articleCache.get(articleId)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -138,7 +145,7 @@ function ArticleCard({ article, onClick }: { article: WarvaultArticle, onClick: 
               )}
               <span className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5" />
-                {new Date(article.date).toLocaleDateString(undefined, {
+                {parseUtcDate(article.date).toLocaleDateString(undefined, {
                   year: 'numeric', month: 'short', day: 'numeric'
                 })}
               </span>
@@ -703,7 +710,7 @@ export default function Journal() {
                     )}
                     <span className="text-zinc-500 flex items-center gap-1.5 ml-auto text-xs font-medium bg-zinc-900/50 px-3 py-1.5 rounded-full border border-zinc-800/50">
                       <Calendar className="h-3.5 w-3.5" />
-                      {new Date(articleDetails.publishedAt || articleDetails.createdAt).toLocaleString(undefined, {
+                      {parseUtcDate(articleDetails.publishedAt || articleDetails.createdAt).toLocaleString(undefined, {
                         year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
                       })}
                     </span>

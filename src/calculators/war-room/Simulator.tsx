@@ -611,9 +611,12 @@ export default function Simulator({
                 showHealthAndHunger={true}
                 healthRestored={healthRestored}
                 effectiveHealthBase={effectiveHealthPoints}
-                hasBuff={hasBuff}
               />
+              
             </div>
+            {hasBuff && (
+              <p className="text-[14px] text-red-400 -mt-2 px-1">* Assuming 8hr pill buff window</p>
+            )}
           </div>
         </div>
 
