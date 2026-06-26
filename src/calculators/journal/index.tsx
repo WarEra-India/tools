@@ -158,54 +158,57 @@ function ArticleCard({ article, onClick }: { article: WarvaultArticle, onClick: 
         </div>
 
         {/* Stats on Card */}
-        {stats ? (
-          <div className="flex flex-wrap items-center gap-4 text-xs pt-3 border-t border-zinc-800/50">
-            <div className="flex items-center gap-1 text-zinc-400" title="Views">
-              <Eye className="h-3.5 w-3.5" /> {stats.views.toLocaleString()}
-            </div>
-            <div className="flex items-center gap-1 text-emerald-400" title="Likes">
-              <ThumbsUp className="h-3.5 w-3.5" /> {stats.likes.toLocaleString()}
-            </div>
-            <div className="flex items-center gap-1 text-red-400" title="Dislikes">
-              <ThumbsDown className="h-3.5 w-3.5" /> {stats.dislikes.toLocaleString()}
-            </div>
-            <div className="flex items-center gap-1 text-zinc-400" title="Comments">
-              <MessageSquare className="h-3.5 w-3.5" /> {stats.comments.toLocaleString()}
-            </div>
-            <div className="flex items-center gap-1 text-amber-400" title="Score">
-              <Star className="h-3.5 w-3.5" /> {stats.score.toLocaleString()}
-            </div>
-            {stats.tips > 0 && (
-              <div className="flex items-center gap-1 text-yellow-500" title="Tips">
-                <Coins className="h-3.5 w-3.5" /> {stats.tips.toLocaleString()}
+        <div className="flex flex-wrap items-center gap-4 text-xs pt-3 border-t border-zinc-800/50">
+          {stats ? (
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-1 text-zinc-400" title="Views">
+                <Eye className="h-3.5 w-3.5" /> {stats.views.toLocaleString()}
               </div>
-            )}
-            {stats.gemTips > 0 && (
-              <div className="flex items-center gap-1 text-rose-400" title="Gem Tips">
-                <Gem className="h-3.5 w-3.5" /> {stats.gemTips.toLocaleString()}
+              <div className="flex items-center gap-1 text-emerald-400" title="Likes">
+                <ThumbsUp className="h-3.5 w-3.5" /> {stats.likes.toLocaleString()}
               </div>
-            )}
-            {stats.subs > 0 && (
-              <div className="flex items-center gap-1 text-blue-400" title="Subscribers">
-                <Users className="h-3.5 w-3.5" /> {stats.subs.toLocaleString()}
+              <div className="flex items-center gap-1 text-red-400" title="Dislikes">
+                <ThumbsDown className="h-3.5 w-3.5" /> {stats.dislikes.toLocaleString()}
               </div>
-            )}
-            <div className="ml-auto">
-              <a
-                href={`https://app.warera.io/article/${article.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-1.5 text-zinc-300 hover:text-white bg-zinc-800 px-2.5 py-1 rounded-md text-xs border border-zinc-700 hover:bg-zinc-700 transition-colors shadow-sm"
-                title="Open in WarEra"
-              >
-                <ExternalLink className="h-3.5 w-3.5" /> View
-              </a>
+              <div className="flex items-center gap-1 text-zinc-400" title="Comments">
+                <MessageSquare className="h-3.5 w-3.5" /> {stats.comments.toLocaleString()}
+              </div>
+              <div className="flex items-center gap-1 text-amber-400" title="Score">
+                <Star className="h-3.5 w-3.5" /> {stats.score.toLocaleString()}
+              </div>
+              {stats.tips > 0 && (
+                <div className="flex items-center gap-1 text-yellow-500" title="Tips">
+                  <Coins className="h-3.5 w-3.5" /> {stats.tips.toLocaleString()}
+                </div>
+              )}
+              {stats.gemTips > 0 && (
+                <div className="flex items-center gap-1 text-rose-400" title="Gem Tips">
+                  <Gem className="h-3.5 w-3.5" /> {stats.gemTips.toLocaleString()}
+                </div>
+              )}
+              {stats.subs > 0 && (
+                <div className="flex items-center gap-1 text-blue-400" title="Subscribers">
+                  <Users className="h-3.5 w-3.5" /> {stats.subs.toLocaleString()}
+                </div>
+              )}
             </div>
+          ) : (
+            <div className="h-6.5 w-48 bg-zinc-800/50 rounded animate-pulse" />
+          )}
+
+          <div className="ml-auto">
+            <a
+              href={`https://app.warera.io/article/${article.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 text-zinc-300 hover:text-white bg-zinc-800 px-2.5 py-1 rounded-md text-xs border border-zinc-700 hover:bg-zinc-700 transition-colors shadow-sm"
+              title="Open in WarEra"
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> View
+            </a>
           </div>
-        ) : (
-          <div className="h-4 w-24 bg-zinc-800/50 rounded animate-pulse mt-2" />
-        )}
+        </div>
       </CardContent>
     </Card>
   )
