@@ -29,6 +29,15 @@ export const calculators: CalculatorMeta[] = [
     component: lazy(() => import("./war-room/index")),
   },
   {
+    id: "battle-analysis",
+    name: "Battle Analysis",
+    description:
+      "See what you spent vs gained in battles you fought — wear backtracking from your loadout and skills.",
+    path: "/battle-analysis",
+    icon: "battle",
+    component: lazy(() => import("./battle-analysis/index")),
+  },
+  {
     id: "nation-hub",
     name: "Nation Intelligence",
     description:

@@ -102,17 +102,146 @@ export interface Battle {
   defenderPoints: number;
 }
 
-export async function getActiveBattles(): Promise<Battle[]> {
-  const data = await post<{ items: any[] }>("battle.getBattles", {
-    isActive: true,
-    limit: 100,
+export interface BattleSide {
+  region?: string;
+  country?: string;
+  wonRoundsCount?: number;
+  damages?: number;
+  hitCount?: number;
+  points?: number;
+}
+
+export interface BattleListItem {
+  _id: string;
+  war?: string;
+  type?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  roundsToWin?: number;
+  attacker: BattleSide;
+  defender: BattleSide;
+  stats?: { hitCount?: number };
+}
+
+export interface BattlesPage {
+  items: BattleListItem[];
+  nextCursor: string | null;
+}
+
+const battlesCache = new Map<string, BattlesPage>();
+
+function battlesCacheKey(opts?: {
+  cursor?: string | null;
+  limit?: number;
+  isActive?: boolean;
+}): string {
+  return JSON.stringify({
+    cursor: opts?.cursor ?? null,
+    limit: opts?.limit ?? null,
+    isActive: opts?.isActive ?? null,
   });
-  if (!data?.items) return [];
-  return data.items.map((b: any) => ({
+}
+
+export async function getBattles(opts?: {
+  cursor?: string | null;
+  limit?: number;
+  isActive?: boolean;
+}): Promise<BattlesPage> {
+  const key = battlesCacheKey(opts);
+  const cached = battlesCache.get(key);
+  if (cached) return cached;
+
+  const body: Record<string, unknown> = {};
+  if (opts?.cursor != null) body.cursor = opts.cursor;
+  if (opts?.limit != null) body.limit = opts.limit;
+  if (opts?.isActive != null) body.isActive = opts.isActive;
+
+  const data = await post<{ items?: BattleListItem[]; nextCursor?: string | null }>(
+    "battle.getBattles",
+    body,
+  );
+  const page: BattlesPage = {
+    items: data?.items ?? [],
+    nextCursor: data?.nextCursor ?? null,
+  };
+  battlesCache.set(key, page);
+  return page;
+}
+
+export interface BattlePoolLootItem {
+  item: {
+    _id: string;
+    type?: string;
+    code: string;
+    skills?: Record<string, number>;
+    state?: number;
+    maxState?: number;
+    quantity?: number;
+  };
+  rank?: number;
+  round?: string | null;
+  pool?: string;
+}
+
+export interface BattleLootSummary {
+  _id: string;
+  user: string;
+  battle: string;
+  hits: number;
+  totalDmg: number;
+  case1Count: number;
+  case2Count: number;
+  poolLoot: BattlePoolLootItem[];
+  totalMoneyFromBounty: number;
+  totalMoneyFromContract: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+const lootSummaryCache = new Map<string, BattleLootSummary | null>();
+
+export async function getBattleLootSummary(
+  battleId: string,
+  userId: string,
+): Promise<BattleLootSummary | null> {
+  const key = `${battleId}|${userId}`;
+  if (lootSummaryCache.has(key)) return lootSummaryCache.get(key) ?? null;
+
+  try {
+    const data = await post<BattleLootSummary | null>(
+      "battleLootSummary.getByBattleAndUser",
+      { battleId, userId },
+    );
+    if (!data || typeof data !== "object") {
+      lootSummaryCache.set(key, null);
+      return null;
+    }
+    const summary: BattleLootSummary = {
+      ...data,
+      hits: data.hits ?? 0,
+      totalDmg: data.totalDmg ?? 0,
+      case1Count: data.case1Count ?? 0,
+      case2Count: data.case2Count ?? 0,
+      poolLoot: data.poolLoot ?? [],
+      totalMoneyFromBounty: data.totalMoneyFromBounty ?? 0,
+      totalMoneyFromContract: data.totalMoneyFromContract ?? 0,
+    };
+    lootSummaryCache.set(key, summary);
+    return summary;
+  } catch {
+    lootSummaryCache.set(key, null);
+    return null;
+  }
+}
+
+export async function getActiveBattles(): Promise<Battle[]> {
+  const data = await getBattles({ isActive: true, limit: 100 });
+  return data.items.map((b) => ({
     _id: b._id,
-    attackerCountryId: b.attacker?.country?._id || b.attacker?.country,
-    defenderCountryId: b.defender?.country?._id || b.defender?.country,
-    regionId: b.defender?.region?._id || b.defender?.region || b.region?._id || b.region,
+    attackerCountryId: b.attacker?.country ?? "",
+    defenderCountryId: b.defender?.country ?? "",
+    regionId: b.defender?.region ?? "",
     isActive: b.isActive,
     startTime: b.createdAt,
     attackerPoints: b.attacker?.points || 0,
@@ -129,14 +258,99 @@ export async function getLastHits(roundId: string): Promise<any> {
   return data;
 }
 
-export async function getBattleRanking(battleId: string, side: "attacker" | "defender"): Promise<any[]> {
-  const data = await post<any>("battleRanking.getRanking", {
+export interface BattleRankingLootItem {
+  _id: string;
+  type?: string;
+  code: string;
+  skills?: Record<string, number>;
+  state?: number;
+  maxState?: number;
+  quantity?: number;
+}
+
+export interface BattleRankingEntry {
+  _id: string;
+  user: string;
+  value: number;
+  rank: number;
+  badge?: string;
+  lootItem?: BattleRankingLootItem | null;
+}
+
+export type BattleRankingSide = "attacker" | "defender" | "merged";
+
+export interface BattleRankingPage {
+  items: BattleRankingEntry[];
+  nextCursor: string | null;
+}
+
+const battleRankingPageCache = new Map<string, BattleRankingPage>();
+
+export async function getBattleRanking(
+  battleId: string,
+  side: BattleRankingSide = "merged",
+  limit = 100,
+  cursor?: string | null,
+): Promise<BattleRankingPage> {
+  const key = `${battleId}|${side}|${limit}|${cursor ?? ""}`;
+  const cached = battleRankingPageCache.get(key);
+  if (cached) return cached;
+
+  const body: Record<string, unknown> = {
     battleId,
     dataType: "damage",
     type: "user",
-    side
-  });
-  return data.rankings || data.items || [];
+    side,
+    limit,
+  };
+  if (cursor != null) body.cursor = cursor;
+
+  const data = await post<{
+    items?: BattleRankingEntry[];
+    rankings?: BattleRankingEntry[];
+    nextCursor?: string | null;
+  }>("battleRanking.getRanking", body);
+
+  const page: BattleRankingPage = {
+    items: data.rankings || data.items || [],
+    nextCursor: data.nextCursor ?? null,
+  };
+  battleRankingPageCache.set(key, page);
+  return page;
+}
+
+const userBattleRankingCache = new Map<string, BattleRankingEntry | null>();
+
+/**
+ * Walk merged battle rankings page-by-page until the user is found (or ranking ends).
+ */
+export async function getUserBattleRanking(
+  battleId: string,
+  userId: string,
+  pageSize = 100,
+): Promise<BattleRankingEntry | null> {
+  const cacheKey = `${battleId}|${userId}|merged`;
+  if (userBattleRankingCache.has(cacheKey)) {
+    return userBattleRankingCache.get(cacheKey) ?? null;
+  }
+
+  let cursor: string | null = null;
+  // Safety: avoid unbounded loops on huge rankings
+  const maxPages = 200;
+
+  for (let pageNum = 0; pageNum < maxPages; pageNum++) {
+    const page = await getBattleRanking(battleId, "merged", pageSize, cursor);
+    const found = page.items.find((e) => e.user === userId);
+    if (found) {
+      userBattleRankingCache.set(cacheKey, found);
+      return found;
+    }
+    if (!page.nextCursor || page.items.length === 0) break;
+    cursor = page.nextCursor;
+  }
+
+  userBattleRankingCache.set(cacheKey, null);
+  return null;
 }
 
 export interface Transaction {

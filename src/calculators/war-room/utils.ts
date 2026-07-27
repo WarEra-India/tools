@@ -379,3 +379,44 @@ export const runFullSimulation = (params: SimulationParams): SimulationResult =>
     hitBreakdown,
   };
 };
+
+/**
+ * Runs exactly `hitCount` hits without stopping on health (for wear backtracking
+ * from a known battle hit count). Uses Infinity health so dodge/precision/crit
+ * rolls still apply for armor durability.
+ */
+export const runFixedHitsSimulation = (
+  params: SimulationParams,
+  hitCount: number,
+): SimulationResult => {
+  const hits: HitResult[] = [];
+  let healthRemaining = Number.POSITIVE_INFINITY;
+  let totalDamageDealt = 0;
+  let case1Count = 0;
+  let case2Count = 0;
+  const hitBreakdown = { dodged: 0, miss: 0, normal: 0, critical: 0 };
+
+  const capped = Math.max(0, Math.floor(hitCount));
+  for (let hitNumber = 1; hitNumber <= capped; hitNumber++) {
+    const result = simulateHit(params, healthRemaining, hitNumber);
+    if (result === null) break;
+
+    hits.push(result);
+    healthRemaining = result.healthRemaining;
+    totalDamageDealt += result.damageDealt;
+    hitBreakdown[result.type]++;
+    if (result.isDodged) hitBreakdown.dodged++;
+
+    if (result.casesEarned.includes(1)) case1Count++;
+    if (result.casesEarned.includes(2)) case2Count++;
+  }
+
+  return {
+    hits,
+    totalHits: hits.length,
+    totalDamageDealt,
+    case1Count,
+    case2Count,
+    hitBreakdown,
+  };
+};
