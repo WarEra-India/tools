@@ -9,5 +9,5 @@ function monthUnique(): string {
  * the image slug used by warera.io directly.
  */
 export function itemImageUrl(itemCode: string): string {
-  return `https://app.warera.io/images/items/${itemCode}.png?v=${monthUnique()}`;
+  return `https://media.warera.io/images/items/${itemCode}.png?v=${monthUnique()}`;
 }
