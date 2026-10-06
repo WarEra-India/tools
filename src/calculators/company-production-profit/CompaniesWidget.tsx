@@ -2,7 +2,7 @@ import { Building2, ChevronDown, ChevronRight } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProfile } from "@/lib/ProfileContext";
-import { type LocationBonus, getEthicsBonus, calcBonus, type RegionInfo } from "@/lib/hooks/useLocationBonus";
+import { type LocationBonus, calculateItemBonus, type RegionInfo } from "@/lib/hooks/useLocationBonus";
 import { itemName } from "@/lib/items";
 import { itemImageUrl } from "@/lib/images";
 import type { CompanyInfo } from "@/lib/wareraApi";
@@ -17,20 +17,23 @@ function calcCompanyBonus(company: CompanyInfo, locationBonus: LocationBonus | n
   const region = locationBonus.regionById[company.region];
   if (!region) return null;
   const specializedItem = locationBonus.countrySpecializedItem[region.countryId] ?? null;
-  const itemStratBonus = company.itemCode === specializedItem ? region.stratBonus : 0;
   const industrialism = locationBonus.countryIndustrialism[region.countryId] ?? 0;
-  const depositMatch = region.depositType === company.itemCode ? region.depositBonus : 0;
-  const ethics = getEthicsBonus(
+  const breakdown = calculateItemBonus(
     company.itemCode,
+    region.depositType,
+    region.depositBonus,
+    region.stratBonus,
     industrialism,
     specializedItem
   );
   return {
-    totalBonus: calcBonus(depositMatch, itemStratBonus, ethics, industrialism),
-    depositMatch,
-    ethics,
+    totalBonus: breakdown.bonus,
+    depositMatch: breakdown.depositBonus,
+    ethics: breakdown.ethicsBonus,
+    ethicDepositBonus: breakdown.ethicDepositBonus,
+    ethicSpecializationBonus: breakdown.ethicSpecializationBonus,
     industrialism,
-    stratBonus: itemStratBonus,
+    stratBonus: breakdown.strategicBonus,
   };
 }
 

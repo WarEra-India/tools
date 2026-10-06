@@ -181,7 +181,7 @@ export default function CompanyProductionProfit() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [useBestLocation, setUseBestLocation] = useState(true)
   const { data: livePrices, loading: pricesLoading } = useLivePrices()
-  const { data: locationBonus } = useLocationBonus()
+  const { data: locationBonus, loading: locationBonusLoading } = useLocationBonus()
 
   const data = useMemo(() => {
     if (!gameConfig) return null
@@ -192,7 +192,7 @@ export default function CompanyProductionProfit() {
     }
   }, [gameConfig, livePrices])
 
-  const isLoading = configLoading || pricesLoading || !data
+  const isLoading = configLoading || pricesLoading || (useBestLocation && locationBonusLoading) || !data
 
   const rows = useMemo(
     () =>

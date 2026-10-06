@@ -30,9 +30,7 @@ export function calculate(data: GameData): ProfitRow[] {
     const recipe = data.recipes[item];
     let rawCost = 0;
 
-    // Determine the primary raw input to pick the location bonus
-    const primaryInput = Object.keys(recipe.inputs)[0] ?? "";
-    const bonusPct = bonus[primaryInput] ?? 0;
+    const bonusPct = bonus[item] ?? 0;
 
     for (const input in recipe.inputs) {
       const qty = recipe.inputs[input];

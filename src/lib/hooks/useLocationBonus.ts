@@ -5,69 +5,173 @@ const COUNTRIES_URL = API_BASE + "/country.getAllCountries";
 const REGIONS_URL = API_BASE + "/region.getRegionsObject";
 const PARTY_URL = API_BASE + "/";
 
-/** Maps raw-material deposit type → broad category for ethics bonus */
-const DEPOSIT_CATEGORY: Record<string, "agricultural" | "industrial"> = {
-  grain: "agricultural",
-  livestock: "agricultural",
-  fish: "agricultural",
-  coca: "agricultural",
-  // bread: "agricultural",
-  // steak: "agricultural",
-  // cookedFish: "agricultural",
-  // cocaine: "agricultural",
+export const AGRICULTURAL_DEPOSITS = new Set([
+  "grain",
+  "livestock",
+  "fish",
+  "coca",
+]);
 
-  limestone: "industrial",
-  iron: "industrial",
-  lead: "industrial",
-  petroleum: "industrial",
-  concrete: "industrial",
-  steel: "industrial",
-  oil: "industrial",
-  ammo: "industrial",
-  lightAmmo: "industrial",
-  heavyAmmo: "industrial",
-};
+export const INDUSTRIAL_ITEMS = new Set([
+  "limestone",
+  "iron",
+  "lead",
+  "petroleum",
+  "concrete",
+  "steel",
+  "oil",
+  "ammo",
+  "lightAmmo",
+  "heavyAmmo",
+  "paper",
+]);
 
-/** Returns the ethics production bonus % for a given deposit type and industrialism value */
-export function getEthicsBonus(
-  itemCode: string | null,
-  industrialism: number,
-  specializedItem: string | null = null
-): number {
-  if (!itemCode) return 0;
+export const AGRICULTURAL_ITEMS = new Set([
+  "grain",
+  "livestock",
+  "fish",
+  "coca",
+  "bread",
+  "steak",
+  "cookedFish",
+  "cocain",
+]);
 
-  const category = DEPOSIT_CATEGORY[itemCode];
-  if (!category) return 0;
+export const ALL_PRODUCIBLE_ITEMS = [
+  "ammo",
+  "bread",
+  "coca",
+  "cocain",
+  "concrete",
+  "cookedFish",
+  "fish",
+  "grain",
+  "heavyAmmo",
+  "iron",
+  "lead",
+  "lightAmmo",
+  "limestone",
+  "livestock",
+  "oil",
+  "paper",
+  "petroleum",
+  "steak",
+  "steel",
+  "wood",
+] as const;
 
-  if (industrialism === -2 && category === "agricultural") return 30;
-
-  if (specializedItem && itemCode !== specializedItem) return 0;
-
-  if (industrialism === -1 && category === "agricultural") return 10;
-  if (industrialism === 1 && category === "industrial") return 10;
-  if (industrialism === 2 && category === "industrial") return 30;
-  return 0;
+export interface ItemBonusBreakdown {
+  bonus: number;
+  depositBonus: number;
+  ethicDepositBonus: number;
+  strategicBonus: number;
+  ethicSpecializationBonus: number;
+  ethicsBonus: number;
 }
 
 /**
- * Calculate Bonus, getRecommendedRegionIds
+ * Calculates the exact bonus breakdown for an item in a region/country
+ * based on deposit, country specialization, and ruling party ethics.
+ */
+export function calculateItemBonus(
+  itemCode: string,
+  regionDepositType: string | null,
+  regionDepositBonus: number,
+  countryStratBonus: number,
+  countryIndustrialism: number,
+  countrySpecializedItem: string | null
+): ItemBonusBreakdown {
+  // 1. Raw deposit bonus (only applies if region deposit matches item)
+  const depositBonus = regionDepositType === itemCode ? regionDepositBonus : 0;
+
+  // 2. Ethic deposit bonus (only applies to agricultural deposits when region has matching deposit)
+  let ethicDepositBonus = 0;
+  if (depositBonus > 0 && AGRICULTURAL_DEPOSITS.has(itemCode)) {
+    if (countryIndustrialism === -2) {
+      ethicDepositBonus = 30;
+    } else if (countryIndustrialism === -1) {
+      ethicDepositBonus = 10;
+    }
+  }
+
+  // 3. Strategic bonus (applies if country specializes in this item)
+  const isSpecialized = countrySpecializedItem === itemCode;
+  const strategicBonus = isSpecialized ? countryStratBonus : 0;
+
+  // 4. Ethic specialization bonus (applies if country specializes in this item)
+  let ethicSpecializationBonus = 0;
+  if (isSpecialized) {
+    if (INDUSTRIAL_ITEMS.has(itemCode)) {
+      if (countryIndustrialism === 2) {
+        ethicSpecializationBonus = 30;
+      } else if (countryIndustrialism === 1) {
+        ethicSpecializationBonus = 10;
+      }
+    } else if (AGRICULTURAL_ITEMS.has(itemCode)) {
+      if (countryIndustrialism === -2) {
+        ethicSpecializationBonus = 30;
+      } else if (countryIndustrialism === -1) {
+        ethicSpecializationBonus = 10;
+      }
+    }
+  }
+
+  const bonus =
+    depositBonus + ethicDepositBonus + strategicBonus + ethicSpecializationBonus;
+
+  return {
+    bonus,
+    depositBonus,
+    ethicDepositBonus,
+    strategicBonus,
+    ethicSpecializationBonus,
+    ethicsBonus: ethicDepositBonus + ethicSpecializationBonus,
+  };
+}
+
+/** Returns the ethics production bonus % for an item */
+export function getEthicsBonus(
+  itemCode: string | null,
+  industrialism: number,
+  specializedItem: string | null = null,
+  hasDeposit: boolean = false
+): number {
+  if (!itemCode) return 0;
+  const res = calculateItemBonus(
+    itemCode,
+    hasDeposit ? itemCode : null,
+    hasDeposit ? 1 : 0,
+    0,
+    industrialism,
+    specializedItem
+  );
+  return res.ethicsBonus;
+}
+
+/**
+ * Calculates total bonus from deposit, strategic, and ethics components
  */
 export function calcBonus(
   depositBonus: number,
   stratBonus: number,
   ethicsBonus: number,
-  industrialism: number
+  _industrialism?: number
 ): number {
-  return stratBonus + Math.max(depositBonus, ethicsBonus);
+  return depositBonus + stratBonus + ethicsBonus;
 }
 
 export interface BestLocation {
   bonus: number;
+  regionId?: string;
   regionName: string;
   countryName: string;
+  countryId?: string;
   depositBonus: number;
+  ethicDepositBonus: number;
   stratBonus: number;
+  ethicSpecializationBonus: number;
   ethicsBonus: number;
+  incomeTax?: number;
 }
 
 export interface RegionInfo {
@@ -77,17 +181,16 @@ export interface RegionInfo {
   depositType: string | null;
   /** Raw deposit % bonus — only applies to companies whose itemCode matches depositType */
   depositBonus: number;
-  /** Country strategic resource bonus — applies to all companies */
+  /** Country strategic resource bonus */
   stratBonus: number;
-  /** depositBonus + stratBonus (no ethics — ethics is item-specific, computed by the consumer) */
   bonus: number;
   incomeTax: number;
 }
 
 export interface LocationBonus {
-  /** deposit type (raw material) → best total bonus percent */
+  /** deposit type (raw material) / item code → best total bonus percent */
   bonusByType: Record<string, number>;
-  /** deposit type → best region/country info */
+  /** deposit type / item code → best region/country info */
   bestByType: Record<string, BestLocation>;
   /** region ID → region info (for looking up a company's current region) */
   regionById: Record<string, RegionInfo>;
@@ -205,7 +308,7 @@ export function useLocationBonus() {
           }
         }
 
-        // Build region lookup and find best per deposit type
+        // Build region lookup and find best per item type
         const bonusByType: Record<string, number> = {};
         const bestByType: Record<string, BestLocation> = {};
         const regionById: Record<string, RegionInfo> = {};
@@ -215,8 +318,8 @@ export function useLocationBonus() {
           const regionBonus = r.deposit?.bonusPercent ?? 0;
           const stratBonus = countryBonus[r.country] ?? 0;
           const industrialism = countryIndustrialism[r.country] ?? 0;
+          const specializedItem = countrySpecializedItem[r.country] ?? null;
 
-          // regionById: no ethics — ethics depends on the company's item, not the region's deposit
           regionById[r._id] = {
             name: r.name,
             countryName: countryName[r.country] ?? "Unknown",
@@ -228,24 +331,41 @@ export function useLocationBonus() {
             incomeTax: country?.taxes.income ?? 0,
           };
 
-          // bestByType: check this region for every possible item type.
-          // A region contributes deposit bonus only when its deposit matches the item;
-          // ethics bonus applies based on the item's category regardless of the deposit.
-          for (const itemCode of Object.keys(DEPOSIT_CATEGORY)) {
-            const deposit = depositType === itemCode ? regionBonus : 0;
-            const specializedItem = countrySpecializedItem[r.country] ?? null;
-            const itemStratBonus = itemCode === specializedItem ? stratBonus : 0;
-            const ethicsBonus = getEthicsBonus(itemCode, industrialism, specializedItem);
-            const total = calcBonus(deposit, itemStratBonus, ethicsBonus, industrialism);
-            if (total > 0 && total > (bonusByType[itemCode] ?? 0)) {
+          // check this region for every producible item
+          for (const itemCode of ALL_PRODUCIBLE_ITEMS) {
+            const breakdown = calculateItemBonus(
+              itemCode,
+              depositType,
+              regionBonus,
+              stratBonus,
+              industrialism,
+              specializedItem
+            );
+            const total = breakdown.bonus;
+            const existingBest = bestByType[itemCode];
+            const tax = country?.taxes.income ?? 0;
+
+            const isBetter =
+              total > (bonusByType[itemCode] ?? 0) ||
+              (total > 0 &&
+                total === (bonusByType[itemCode] ?? 0) &&
+                existingBest &&
+                (existingBest.incomeTax ?? 100) > tax);
+
+            if (isBetter || (!existingBest && total > 0)) {
               bonusByType[itemCode] = total;
               bestByType[itemCode] = {
                 bonus: total,
+                regionId: r._id,
                 regionName: r.name,
                 countryName: countryName[r.country] ?? "Unknown",
-                depositBonus: deposit,
-                stratBonus: itemStratBonus,
-                ethicsBonus,
+                countryId: r.country,
+                depositBonus: breakdown.depositBonus,
+                ethicDepositBonus: breakdown.ethicDepositBonus,
+                stratBonus: breakdown.strategicBonus,
+                ethicSpecializationBonus: breakdown.ethicSpecializationBonus,
+                ethicsBonus: breakdown.ethicsBonus,
+                incomeTax: tax,
               };
             }
           }
@@ -269,3 +389,4 @@ export function useLocationBonus() {
 
   return { data, loading };
 }
+

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ArrowRight, ChevronDown, ChevronRight, Lightbulb, Plus, MoveRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProfile } from "@/lib/ProfileContext";
-import { type LocationBonus, getEthicsBonus, calcBonus } from "@/lib/hooks/useLocationBonus";
+import { type LocationBonus, calculateItemBonus } from "@/lib/hooks/useLocationBonus";
 import { itemName } from "@/lib/items";
 import { itemImageUrl } from "@/lib/images";
 import ProfileSearchBar from "@/components/ProfileSearchBar";
@@ -64,15 +64,16 @@ function buildActions(
 
       const current = locationBonus.regionById[company.region];
       const industrialism = locationBonus.countryIndustrialism[current?.countryId ?? ""] ?? 0;
-      const depositMatch = current?.depositType === code ? (current?.depositBonus ?? 0) : 0;
       const specializedItem = locationBonus.countrySpecializedItem[current?.countryId ?? ""] ?? null;
-      const itemStratBonus = code === specializedItem ? (current?.stratBonus ?? 0) : 0;
-      const ethics = getEthicsBonus(
+      const currentBreakdown = calculateItemBonus(
         code,
+        current?.depositType ?? null,
+        current?.depositBonus ?? 0,
+        current?.stratBonus ?? 0,
         industrialism,
         specializedItem
       );
-      const currentBonus = calcBonus(depositMatch, itemStratBonus, ethics, industrialism);
+      const currentBonus = currentBreakdown.bonus;
 
       // Only recommend if the best region is actually better
       if (best.bonus <= currentBonus) continue;
@@ -101,7 +102,7 @@ function buildActions(
         newProfitPer100PP: newProfitPer100,
         concreteQty: 5,
         concreteCost: 5 * concretePrice,
-        fromBreakdown: { deposit: depositMatch, strat: current?.stratBonus ?? 0, ethics },
+        fromBreakdown: { deposit: currentBreakdown.depositBonus, strat: currentBreakdown.strategicBonus, ethics: currentBreakdown.ethicsBonus },
         toBreakdown: { deposit: best.depositBonus, strat: best.stratBonus, ethics: best.ethicsBonus },
       });
     }
