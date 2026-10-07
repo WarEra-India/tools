@@ -8,7 +8,7 @@ export interface MilitaryRank {
   bonus: number;
 }
 
-const formatUrl = (rank: number) => `https://app.warera.io/images/ranks/rank${rank}.svg`;
+const formatUrl = (rank: number) => `https://media.warera.io/images/ranks/rank${rank}.svg`;
 const BASE_IMAGES_URL = `${import.meta.env.BASE_URL}images/`;
 
 

@@ -12,6 +12,8 @@ import {
   MISS_DAMAGE_MULTIPLIER,
   CASE1_CHANCE_PER_LOOT_PERCENT,
   CASE2_CHANCE_PER_LOOT_PERCENT,
+  PRECISION_CAP,
+  PRECISION_OVERFLOW_DAMAGE_PER_PERCENT,
 } from "./constants";
 
 /** Total skill points available for a given player level (4 per level). */
@@ -77,8 +79,9 @@ export const effectiveTotalDamage = (
   militaryBonusPercentage: number = 0,
   ordersBonusPercentage: number = 0,
   buffPercentage: number | 0 | 60 | -60 = 0,
+  overflowDamage: number = 0,
 ): number => {
-  const base = skillValue + weaponValue;
+  const base = skillValue + weaponValue + overflowDamage;
   return Math.round(
     base
     * (1 + ammoBonusPercentage / 100)
@@ -89,13 +92,20 @@ export const effectiveTotalDamage = (
 }
 
 export const getAttackTotalAndBreakDown = (profile: FullProfile, sim?: any): {
-  breakdown: { skill: number; weapon: number; ammo: number; military: number; orders: number; buff: number; debuff: number; }; total: number;
+  breakdown: { skill: number; weapon: number; overflow: number; ammo: number; military: number; orders: number; buff: number; debuff: number; }; total: number;
 } => {
   const getStatAvg = (val: any) => val ? Math.ceil(Array.isArray(val) ? (val[0] + val[1]) / 2 : val) : 0;
+
+  const precisionSkill = getSimSkillValue(profile, sim, 'precision');
+  const precisionEquipment = getStatAvg(sim?.glovesStats?.precision || profile.equipment?.gloves?.skills?.precision);
+  const precisionRaw = precisionSkill + precisionEquipment;
+  const precisionOverflow = Math.max(0, precisionRaw - PRECISION_CAP);
+  const overflow = precisionOverflow * PRECISION_OVERFLOW_DAMAGE_PER_PERCENT;
 
   const breakdown = {
     skill: getSimSkillValue(profile, sim, 'attack'),
     weapon: getStatAvg(sim?.weaponStats?.attack || profile.equipment?.weapon?.skills?.attack),
+    overflow,
     ammo: (sim?.ammoPercent ?? profile.user.skills?.attack?.ammoPercent) || 0,
     military: sim?.militaryRank !== undefined ? calcMilBonus(sim.militaryRank) : (profile.user.skills.attack?.militaryRankPercent || 0),
     orders: sim?.orders !== undefined ? sim.orders : 0,
@@ -111,6 +121,7 @@ export const getAttackTotalAndBreakDown = (profile: FullProfile, sim?: any): {
       breakdown.military,
       breakdown.orders,
       breakdown.buff ? breakdown.buff : breakdown.debuff * -1,
+      breakdown.overflow,
     )
   }
 }
@@ -127,11 +138,21 @@ export const getEffectiveStats = (profile: FullProfile, sim?: any) => {
   const dodgeTotal = getSimSkillValue(profile, sim, 'dodge') +
     getStatAvg(sim?.bootsStats?.dodge || equipment?.boots?.skills?.dodge);
 
+  const precisionSkill = getSimSkillValue(profile, sim, 'precision');
+  const precisionEquipment = getStatAvg(sim?.glovesStats?.precision || equipment?.gloves?.skills?.precision);
+  const precisionRaw = precisionSkill + precisionEquipment;
+  const precisionLimited = Math.max(0, precisionRaw - PRECISION_CAP);
+  const precisionOverflowDamage = precisionLimited * PRECISION_OVERFLOW_DAMAGE_PER_PERCENT;
+  const precisionTotal = Math.min(PRECISION_CAP, precisionRaw);
+
   return {
     precision: {
-      skill: getSimSkillValue(profile, sim, 'precision'),
-      equipment: getStatAvg(sim?.glovesStats?.precision || equipment?.gloves?.skills?.precision),
-      total: getSimSkillValue(profile, sim, 'precision') + getStatAvg(sim?.glovesStats?.precision || equipment?.gloves?.skills?.precision),
+      skill: precisionSkill,
+      equipment: precisionEquipment,
+      raw: precisionRaw,
+      limited: precisionLimited,
+      overflowDamage: precisionOverflowDamage,
+      total: precisionTotal,
     },
     criticalChance: {
       skill: getSimSkillValue(profile, sim, 'criticalChance'),

@@ -4,6 +4,7 @@ interface AttackData {
   breakdown: {
     skill: number;
     weapon: number;
+    overflow?: number;
     ammo: number;
     military: number;
     orders: number;
@@ -14,7 +15,14 @@ interface AttackData {
 }
 
 interface EffectiveStats {
-  precision: { skill: number; equipment: number; total: number };
+  precision: {
+    skill: number;
+    equipment: number;
+    raw?: number;
+    limited?: number;
+    overflowDamage?: number;
+    total: number;
+  };
   criticalChance: { skill: number; equipment: number; total: number };
   criticalDamages: { skill: number; equipment: number; total: number };
   armor: { skill: number; chest: number; pants: number; raw: number; effective: number };
@@ -53,6 +61,7 @@ export default function StatsDashboard({
         breakdown={{
           skill: r(bd.skill, roundValues),
           weapon: r(bd.weapon, roundValues),
+          ...((bd.overflow ?? 0) > 0 ? { overflow: r(bd.overflow!, roundValues) } : {}),
           ...(bd.ammo > 0 ? { ammo: r(bd.ammo, roundValues) } : {}),
           ...(bd.military > 0 ? { military: r(bd.military, roundValues) } : {}),
           ...(bd.orders != 0 ? { orders: bd.orders } : {}),
@@ -69,6 +78,9 @@ export default function StatsDashboard({
         breakdown={{
           skill: r(effectiveStats.precision.skill, roundValues),
           gloves: r(effectiveStats.precision.equipment, roundValues),
+          ...((effectiveStats.precision.limited ?? 0) > 0
+            ? { limited: -r(effectiveStats.precision.limited!, roundValues) }
+            : {}),
         }}
         total={r(effectiveStats.precision.total, roundValues)}
       />

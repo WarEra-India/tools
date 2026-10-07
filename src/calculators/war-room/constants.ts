@@ -6,6 +6,9 @@ export const MIL_HIGH_BONUS_MULTIPLIER = 0.5;
 
 export const EFFECTIVE_STAT_DIVISOR = 40;
 
+export const PRECISION_CAP = 100;
+export const PRECISION_OVERFLOW_DAMAGE_PER_PERCENT = 4;
+
 export const MODIFIER_PERCENTAGE = 60;
 
 export const AMMO_PERCENTAGES = {

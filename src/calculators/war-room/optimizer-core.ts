@@ -7,6 +7,8 @@ import {
   HIT_BASE_HEALTH_COST,
   MISS_DAMAGE_MULTIPLIER,
   EFFECTIVE_STAT_DIVISOR,
+  PRECISION_CAP,
+  PRECISION_OVERFLOW_DAMAGE_PER_PERCENT,
 } from "./constants";
 import { runFullSimulation } from "./utils";
 
@@ -35,9 +37,10 @@ export const effectiveTotalDamage = (
   weaponValue: number,
   ammoBonusPercentage: number,
   buffPercentage: number,
+  overflowDamage: number = 0,
 ): number =>
   Math.round(
-    (skillValue + weaponValue)
+    (skillValue + weaponValue + overflowDamage)
     * (1 + ammoBonusPercentage / 100)
     * (1 + buffPercentage / 100)
   );
@@ -139,8 +142,11 @@ export function exhaustiveSkillSearch(
           const armorSkill = SKILL_PROGRESSION.armor.base + levels[6] * SKILL_PROGRESSION.armor.inc;
           const dodgeSkill = SKILL_PROGRESSION.dodge.base + levels[7] * SKILL_PROGRESSION.dodge.inc;
 
-          const totalAttack = effectiveTotalDamage(attackSkill, weapon.stats.weaponAttack, 0, 0);
-          const precision = precSkill + equipStats.glovesPrecision;
+          const precRaw = precSkill + equipStats.glovesPrecision;
+          const overflowDamage = Math.max(0, precRaw - PRECISION_CAP) * PRECISION_OVERFLOW_DAMAGE_PER_PERCENT;
+          const precision = Math.min(PRECISION_CAP, precRaw);
+
+          const totalAttack = effectiveTotalDamage(attackSkill, weapon.stats.weaponAttack, 0, 0, overflowDamage);
           const critChance = critCSkill + weapon.stats.weaponCritChance;
           const critDmg = critDSkill + equipStats.helmetCritDmg;
           const armorRaw = armorSkill + equipStats.chestArmor + equipStats.pantsArmor;
@@ -453,7 +459,6 @@ export function runFullOptimization(
           const foodMult = food ? (FOOD_MULTIPLIERS[food] ?? 0) : 0;
           for (const pill of PILL_STATES) {
             const hasBuff = pill === "buff";
-            const totalAttack = effectiveTotalDamage(attackSkill, wc.attack, ammoPercent, hasBuff ? 60 : 0);
             const healthSkill = hasBuff ? Math.floor(baseHealthSkill * 1.8) : baseHealthSkill;
             const hungerSkill = hasBuff ? Math.floor(baseHungerSkill * 1.8) : baseHungerSkill;
             const healthRestored = foodMult > 0 ? Math.floor(baseHealthSkill * foodMult * hungerSkill) : 0;
@@ -465,7 +470,10 @@ export function runFullOptimization(
               for (let ci = 0; ci < 4; ci++) {
                 const ca1 = chestArmor[ci];
                 for (let gi = 0; gi < 4; gi++) {
-                  const prec = precSkill + glovesPrecision[gi];
+                  const precRaw = precSkill + glovesPrecision[gi];
+                  const overflowDamage = Math.max(0, precRaw - PRECISION_CAP) * PRECISION_OVERFLOW_DAMAGE_PER_PERCENT;
+                  const prec = Math.min(PRECISION_CAP, precRaw);
+                  const totalAttack = effectiveTotalDamage(attackSkill, wc.attack, ammoPercent, hasBuff ? 60 : 0, overflowDamage);
                   for (let pi = 0; pi < 4; pi++) {
                     const ar = armorSkill + ca1 + pantsArmor[pi];
                     const armorEff = effectivePercentageValue(ar);
@@ -556,9 +564,13 @@ export function runFullOptimization(
     const ammoPercent = build.ammo ? AMMO_PERCENTAGES[build.ammo as keyof typeof AMMO_PERCENTAGES] || 0 : 0;
     const attackSkill = SKILL_PROGRESSION.attack.base + build.skills.attack * SKILL_PROGRESSION.attack.inc;
     const hasBuff = build.pill === "buff";
-    const totalAttack = effectiveTotalDamage(attackSkill, wStats.attack ?? 0, ammoPercent, hasBuff ? 60 : 0);
 
-    const precisionTotal = SKILL_PROGRESSION.precision.base + build.skills.precision * SKILL_PROGRESSION.precision.inc + (gStats.precision ?? 0);
+    const precRaw = SKILL_PROGRESSION.precision.base + build.skills.precision * SKILL_PROGRESSION.precision.inc + (gStats.precision ?? 0);
+    const overflowDamage = Math.max(0, precRaw - PRECISION_CAP) * PRECISION_OVERFLOW_DAMAGE_PER_PERCENT;
+    const precisionTotal = Math.min(PRECISION_CAP, precRaw);
+
+    const totalAttack = effectiveTotalDamage(attackSkill, wStats.attack ?? 0, ammoPercent, hasBuff ? 60 : 0, overflowDamage);
+
     const critChanceTotal = SKILL_PROGRESSION.criticalChance.base + build.skills.criticalChance * SKILL_PROGRESSION.criticalChance.inc + (wStats.criticalChance ?? 0);
     const critDmgTotal = SKILL_PROGRESSION.criticalDamages.base + build.skills.criticalDamages * SKILL_PROGRESSION.criticalDamages.inc + (hStats.criticalDamages ?? 0);
     const armorTotal = SKILL_PROGRESSION.armor.base + build.skills.armor * SKILL_PROGRESSION.armor.inc + (cStats.armor ?? 0) + (pStats.armor ?? 0);
