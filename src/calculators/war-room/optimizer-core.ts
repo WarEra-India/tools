@@ -2,19 +2,17 @@ import {
   SKILL_PROGRESSION,
   AMMO_PERCENTAGES,
   FOOD_MULTIPLIERS,
-  EQUIPEMENTS,
   RARITY_COSTS,
   HIT_BASE_HEALTH_COST,
   MISS_DAMAGE_MULTIPLIER,
-  EFFECTIVE_STAT_DIVISOR,
   PRECISION_CAP,
   PRECISION_OVERFLOW_DAMAGE_PER_PERCENT,
 } from "./constants";
-import { runFullSimulation } from "./utils";
+import { runFullSimulation, effectivePercentageValue, skillLevelToCumulativeCost } from "./utils";
 
 // ─── Re-exports for worker ─────────────────────────────────────────
 
-export { SKILL_PROGRESSION, AMMO_PERCENTAGES, FOOD_MULTIPLIERS };
+export { SKILL_PROGRESSION, AMMO_PERCENTAGES, FOOD_MULTIPLIERS, effectivePercentageValue, skillLevelToCumulativeCost };
 
 export const WAR_SKILLS = [
   "attack", "health", "hunger", "precision",
@@ -25,12 +23,6 @@ export type WarSkill = (typeof WAR_SKILLS)[number];
 export type SkillAllocation = Record<WarSkill, number>;
 
 // ─── Pure computation functions ────────────────────────────────────
-
-export const skillLevelToCumulativeCost = (level: number): number =>
-  (level * (level + 1)) / 2;
-
-export const effectivePercentageValue = (totalValue: number): number =>
-  Math.round((totalValue / (totalValue + EFFECTIVE_STAT_DIVISOR)) * 100);
 
 export const effectiveTotalDamage = (
   skillValue: number,

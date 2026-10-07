@@ -4,8 +4,6 @@ export const MIL_RANK_JUMP_THRESHOLD = 111;
 export const MIL_BASE_BONUS_MULTIPLIER = 0.25;
 export const MIL_HIGH_BONUS_MULTIPLIER = 0.5;
 
-export const EFFECTIVE_STAT_DIVISOR = 40;
-
 export const PRECISION_CAP = 100;
 export const PRECISION_OVERFLOW_DAMAGE_PER_PERCENT = 4;
 

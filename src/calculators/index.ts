@@ -55,6 +55,14 @@ export const calculators: CalculatorMeta[] = [
     component: lazy(() => import("./craft-theory/index")),
   },
   {
+    id: "defense-curves",
+    name: "Defense Curves",
+    description: "Visualize effective Armor & Dodge scaling curves, diminishing returns, and survival multipliers.",
+    path: "/defense-curves",
+    icon: "defence",
+    component: lazy(() => import("./defense-curves/index")),
+  },
+  {
     id: "journal",
     name: "Journal",
     description: "Explore the articles",

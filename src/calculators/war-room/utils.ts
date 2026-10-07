@@ -5,7 +5,6 @@ import {
   MIL_RANK_JUMP_THRESHOLD,
   MIL_BASE_BONUS_MULTIPLIER,
   MIL_HIGH_BONUS_MULTIPLIER,
-  EFFECTIVE_STAT_DIVISOR,
   MODIFIER_PERCENTAGE,
   SKILL_PROGRESSION,
   HIT_BASE_HEALTH_COST,
@@ -68,9 +67,77 @@ export const calcMilBonus = (rank: number): number => {
 };
 
 
+/**
+ * Calculates the non-linear effective percentage for stats like Armor and Dodge.
+ * Formula: round((totalValue / (totalValue + 40)) * 100)
+ */
 export const effectivePercentageValue = (totalValue: number): number => {
+  const EFFECTIVE_STAT_DIVISOR = 40;
+  if (totalValue <= 0) return 0;
   return Math.round((totalValue / (totalValue + EFFECTIVE_STAT_DIVISOR)) * 100);
+};
+
+export interface EffectiveThresholdInfo {
+  currentEff: number;
+  minRawToPreserve: number;
+  excessPoints: number;
+  nextRawToUpgrade: number;
+  pointsNeededForNext: number;
+  nextEff: number;
 }
+
+/**
+ * Calculates breakpoint thresholds for rounded effective percentage:
+ * - How many excess raw points can be reduced without dropping the current effective %.
+ * - How many additional raw points are needed to jump to the next effective %.
+ */
+export const getEffectiveStatThresholds = (currentRaw: number): EffectiveThresholdInfo => {
+  const currentEff = effectivePercentageValue(currentRaw);
+  if (currentRaw <= 0) {
+    let nextRaw = 1;
+    while (effectivePercentageValue(nextRaw) <= currentEff && nextRaw <= 300) {
+      nextRaw++;
+    }
+    return {
+      currentEff,
+      minRawToPreserve: 0,
+      excessPoints: 0,
+      nextRawToUpgrade: nextRaw,
+      pointsNeededForNext: nextRaw,
+      nextEff: effectivePercentageValue(nextRaw),
+    };
+  }
+
+  let minRaw = currentRaw;
+  while (minRaw > 0 && effectivePercentageValue(minRaw - 1) === currentEff) {
+    minRaw--;
+  }
+
+  let nextRaw = currentRaw + 1;
+  while (effectivePercentageValue(nextRaw) === currentEff && nextRaw <= currentRaw + 100) {
+    nextRaw++;
+  }
+
+  return {
+    currentEff,
+    minRawToPreserve: minRaw,
+    excessPoints: currentRaw - minRaw,
+    nextRawToUpgrade: nextRaw,
+    pointsNeededForNext: nextRaw - currentRaw,
+    nextEff: effectivePercentageValue(nextRaw),
+  };
+};
+
+/**
+ * Calculates the minimum raw stat points needed to achieve a target rounded effective percentage.
+ * Inverse formula: ceil((40 * (targetEffective - 0.5)) / (100 - (targetEffective - 0.5)))
+ */
+export const rawPointsForEffectiveValue = (targetEffective: number): number => {
+  if (targetEffective <= 0) return 0;
+  if (targetEffective >= 100) return Infinity;
+  const threshold = (targetEffective - 0.5) / 100;
+  return Math.ceil((40 * threshold) / (1 - threshold));
+};
 
 export const effectiveTotalDamage = (
   skillValue: number = 0,
