@@ -44,8 +44,57 @@ const STEEL_ICON = itemImageUrl("steel")
 
 // Rarity costs imported from constants
 
-const CASE_CHANCES: Record<string, { types: Record<string, number>, rarity: Record<string, number> }> = {
+export interface ResourceCaseDrop {
+  itemCode: string;
+  minQty: number;
+  maxQty: number;
+  avgQty: number;
+}
+
+export const WOODEN_CASE_CONFIG = {
+  code: "woodenCase",
+  name: "Wooden Case",
+  rarityChance: {
+    common: 65,
+    uncommon: 20,
+    rare: 13,
+    epic: 2,
+  } as Record<string, number>,
+  pool: {
+    epic: [
+      { itemCode: "cookedFish", minQty: 1, maxQty: 2, avgQty: 1.5 },
+      { itemCode: "heavyAmmo", minQty: 1, maxQty: 5, avgQty: 3 },
+      { itemCode: "cocain", minQty: 1, maxQty: 1, avgQty: 1 },
+    ],
+    rare: [
+      { itemCode: "ammo", minQty: 5, maxQty: 20, avgQty: 12.5 },
+      { itemCode: "steak", minQty: 1, maxQty: 4, avgQty: 2.5 },
+    ],
+    uncommon: [
+      { itemCode: "concrete", minQty: 2, maxQty: 8, avgQty: 5 },
+      { itemCode: "steel", minQty: 2, maxQty: 8, avgQty: 5 },
+      { itemCode: "bread", minQty: 2, maxQty: 8, avgQty: 5 },
+      { itemCode: "oil", minQty: 20, maxQty: 80, avgQty: 50 },
+      { itemCode: "paper", minQty: 20, maxQty: 80, avgQty: 50 },
+      { itemCode: "lightAmmo", minQty: 20, maxQty: 80, avgQty: 50 },
+    ],
+    common: [
+      { itemCode: "grain", minQty: 20, maxQty: 80, avgQty: 50 },
+      { itemCode: "iron", minQty: 20, maxQty: 80, avgQty: 50 },
+      { itemCode: "wood", minQty: 20, maxQty: 80, avgQty: 50 },
+      { itemCode: "lead", minQty: 20, maxQty: 80, avgQty: 50 },
+      { itemCode: "limestone", minQty: 20, maxQty: 80, avgQty: 50 },
+      { itemCode: "coca", minQty: 20, maxQty: 80, avgQty: 50 },
+      { itemCode: "petroleum", minQty: 20, maxQty: 80, avgQty: 50 },
+      { itemCode: "livestock", minQty: 1, maxQty: 4, avgQty: 2.5 },
+      { itemCode: "fish", minQty: 1, maxQty: 2, avgQty: 1.5 },
+    ],
+  } as Record<string, ResourceCaseDrop[]>,
+};
+
+const CASE_CHANCES: Record<string, { name: string; types: Record<string, number>; rarity: Record<string, number> }> = {
   case1: {
+    name: "Standard Case",
     types: {
       weapon: 30,
       equipment: 70,
@@ -60,6 +109,7 @@ const CASE_CHANCES: Record<string, { types: Record<string, number>, rarity: Reco
     }
   },
   case2: {
+    name: "Elite Case",
     types: {
       weapon: 30,
       equipment: 70,
@@ -162,7 +212,8 @@ export default function CraftTheory() {
   const caseAnalysis = useMemo(() => {
     if (!gameConfig || !equipPrices || !livePrices) return []
 
-    return Object.entries(CASE_CHANCES).map(([caseCode, config]) => {
+    // 1. Equipment cases (case1, case2)
+    const equipCases = Object.entries(CASE_CHANCES).map(([caseCode, config]) => {
       const casePrice = livePrices.prices[caseCode] ?? 0
       let expectedValue = 0
 
@@ -186,14 +237,61 @@ export default function CraftTheory() {
 
       return {
         code: caseCode,
+        name: config.name,
+        category: "equipment" as const,
         price: casePrice,
         ev: expectedValue,
         profit,
         recommendation,
         rarityChances: config.rarity,
-        typeChances: config.types
+        typeChances: config.types,
       }
     })
+
+    // 2. Resource case (woodenCase)
+    const woodenPrice = livePrices.prices["woodenCase"] ?? 0
+    let woodenEV = 0
+    const woodenRarityDetails: Record<string, { avgValue: number; items: (ResourceCaseDrop & { price: number; ev: number })[] }> = {}
+
+    Object.entries(WOODEN_CASE_CONFIG.rarityChance).forEach(([rarity, prob]) => {
+      const drops = WOODEN_CASE_CONFIG.pool[rarity] || []
+      if (drops.length === 0) return
+
+      const itemsWithPrices = drops.map(d => {
+        const p = livePrices.prices[d.itemCode] ?? 0
+        return {
+          ...d,
+          price: p,
+          ev: d.avgQty * p,
+        }
+      })
+
+      const avgRarityValue = itemsWithPrices.reduce((sum, item) => sum + item.ev, 0) / itemsWithPrices.length
+      woodenEV += (prob / 100) * avgRarityValue
+
+      woodenRarityDetails[rarity] = {
+        avgValue: avgRarityValue,
+        items: itemsWithPrices,
+      }
+    })
+
+    const woodenProfit = woodenEV - woodenPrice
+    const woodenRecommendation = woodenProfit > 0 ? "OPEN" : "SELL"
+
+    const woodenCaseEntry = {
+      code: "woodenCase",
+      name: "Wooden Case",
+      category: "resource" as const,
+      price: woodenPrice,
+      ev: woodenEV,
+      profit: woodenProfit,
+      recommendation: woodenRecommendation,
+      rarityChances: WOODEN_CASE_CONFIG.rarityChance,
+      typeChances: { resource: 100 },
+      poolDetails: woodenRarityDetails,
+    }
+
+    return [...equipCases, woodenCaseEntry]
   }, [gameConfig, equipPrices, livePrices])
 
   if (isLoading) {
@@ -209,7 +307,7 @@ export default function CraftTheory() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <div className="container mx-auto max-w-6xl px-4 py-8">
+      <div className="container mx-auto max-w-7xl px-4 py-8">
         <div className="mb-8">
           <Link
             to="/"
@@ -223,148 +321,181 @@ export default function CraftTheory() {
             Craft Theory
           </h1>
           <p className="mt-1 text-zinc-400">
-            Compare material costs with average equipment market prices to find the most profitable items to craft.
+            Compare material costs with average market prices and analyze expected returns from opening cases.
           </p>
         </div>
 
         <div className="my-6 flex flex-wrap gap-4 justify-center">
           <div className="rounded-md bg-zinc-900 px-3 py-2 border border-zinc-800 backdrop-blur-sm">
-            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold block mb-1">Expected Value Formula</span>
+            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold block mb-1">Equipment Case EV Formula</span>
             <code className="text-xs font-mono">
               EV = Σ [ P(rarity) × Σ ( P(type) × AvgPrice(rarity, type) ) ]
             </code>
           </div>
-          {/* <div className="rounded-md bg-zinc-900 px-3 py-2 border border-zinc-800 backdrop-blur-sm">
-              <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold block mb-1">Profit Formula</span>
-              <code className="text-xs font-mono text-emerald-400">
-                Profit = EV - CaseMarketPrice
-              </code>
-            </div> */}
+          <div className="rounded-md bg-zinc-900 px-3 py-2 border border-zinc-800 backdrop-blur-sm">
+            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold block mb-1">Wooden Case EV Formula</span>
+            <code className="text-xs font-mono">
+              EV = Σ [ P(rarity) × (1/N) Σ ( AvgUnits × UnitPrice ) ]
+            </code>
+          </div>
         </div>
 
-        <div className="mb-6 grid gap-6 lg:grid-cols-2">
+        <div className="mb-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {caseAnalysis.map((ca) => (
-            <Card key={ca.code} className="relative overflow-hidden border-zinc-800 bg-zinc-900/40">
+            <Card key={ca.code} className="relative flex flex-col justify-between overflow-hidden border-zinc-800 bg-zinc-900/40">
               <div className={`absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-bold tracking-wider ${ca.recommendation === "OPEN" ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
                 {ca.recommendation}
               </div>
-              <CardHeader className="pb-3 px-6 pt-6">
-                <div className="flex items-center gap-4">
-                  <GameItemIcon
-                    itemCode={ca.code}
-                    rarity={ca.code === "case1" ? "legendary" : "mythic"}
-                    className="h-14 w-14 rounded-lg shadow-2xl"
-                  />
-                  <div>
-                    <CardTitle className="text-xl">{ca.code === "case1" ? "Standard Case" : "Elite Case"}</CardTitle>
-                    <CardDescription className="flex items-center gap-2 mt-1">
-                      Market Price:
-                      <span className="flex items-center gap-1 font-semibold text-zinc-100">
-                        {ca.price.toFixed(2)}
-                        <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
-                      </span>
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="px-6 pb-6 pt-0">
-                <div className="grid grid-cols-2 gap-4 mt-2">
-                  <div className="rounded-lg border border-zinc-800 bg-black/20 p-3">
-                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Expected Value</span>
-                    <div className="flex items-center gap-1 text-xl font-bold text-emerald-400 mt-1">
-                      {ca.ev.toFixed(2)}
-                      <img src={COIN_ICON} alt="coins" className="h-5 w-5" />
+              <div>
+                <CardHeader className="pb-3 px-6 pt-6">
+                  <div className="flex items-center gap-4">
+                    <GameItemIcon
+                      itemCode={ca.code}
+                      rarity={ca.code === "case2" ? "mythic" : "legendary"}
+                      className="h-14 w-14 rounded-lg shadow-2xl"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-xl">{ca.name}</CardTitle>
+                      </div>
+                      <CardDescription className="flex items-center gap-2 mt-1">
+                        Market Price:
+                        <span className="flex items-center gap-1 font-semibold text-zinc-100">
+                          {ca.price.toFixed(2)}
+                          <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
+                        </span>
+                      </CardDescription>
                     </div>
                   </div>
-                  <div className="rounded-lg border border-zinc-800 bg-black/20 p-3">
-                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Estimated {ca.profit > 0 ? "Profit" : "Loss"}</span>
-                    <div className={`flex items-center gap-1 text-xl font-bold mt-1 ${ca.profit > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                      {ca.profit.toFixed(2)}
-                      <img src={COIN_ICON} alt="coins" className="h-5 w-5" />
+                </CardHeader>
+                <CardContent className="px-6 pb-6 pt-0">
+                  <div className="grid grid-cols-2 gap-4 mt-2">
+                    <div className="rounded-lg border border-zinc-800 bg-black/20 p-3">
+                      <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Expected Value</span>
+                      <div className="flex items-center gap-1 text-xl font-bold text-emerald-400 mt-1">
+                        {ca.ev.toFixed(2)}
+                        <img src={COIN_ICON} alt="coins" className="h-5 w-5" />
+                      </div>
                     </div>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <div className="flex justify-between items-end mb-2">
-                    <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Rarity Probabilities</span>
-                    <div className="flex gap-3 text-[10px] text-zinc-500 uppercase tracking-tighter font-bold">
-                      {Object.entries(ca.typeChances).map(([type, prob]) => (
-                        <span key={type}>{prob}% {type}</span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    {Object.entries(ca.rarityChances)
-                      .reverse()
-                      .map(([rarity, prob]) => (
-                        <div key={rarity} className="flex items-center gap-3">
-                          <div className={`w-20 text-[10px] font-bold uppercase tracking-tight truncate ${prob === 0 ? "text-zinc-700" : "text-zinc-500"}`}>
-                            {rarity}
-                          </div>
-                          <div className="relative h-1.5 flex-1 rounded-full bg-zinc-800 overflow-hidden">
-                            {prob > 0 && (
-                              <div
-                                className="absolute h-full rounded-full transition-all duration-500"
-                                style={{
-                                  width: `${Math.min(100, prob)}%`,
-                                  background: RARITY_COLORS[rarity]?.color
-                                }}
-                              />
-                            )}
-                          </div>
-                          <div className={`w-10 text-right text-[10px] font-mono ${prob === 0 ? "text-zinc-700 font-normal" : "text-zinc-400"}`}>
-                            {prob}%
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                <div className="mt-8 rounded-lg border border-zinc-800/50 bg-black/40 p-4 relative overflow-hidden group">
-                  <div className="absolute right-[-20px] bottom-[-20px] text-zinc-800/10 text-8xl font-black italic pointer-events-none transition-transform group-hover:scale-110">{BULK_TEST_VALUE}X</div>
-                  <h4 className="text-[10px] uppercase tracking-widest text-zinc-500 font-black mb-4 flex items-center gap-2">
-                    <span className={`h-2 w-2 rounded-full ${ca.profit > 0 ? "bg-emerald-500" : "bg-red-500"} animate-pulse mb-1`} />
-                    Bulk Analysis ({BULK_TEST_VALUE.toLocaleString()} Crates)
-                  </h4>
-
-                  <div className="space-y-3 relative z-10">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-zinc-500">Revenue from Selling</span>
-                      <span className="flex items-center gap-1 font-mono font-semibold">
-                        {Math.round(ca.price * BULK_TEST_VALUE).toLocaleString()}
-                        <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-zinc-500">Revenue from Opening</span>
-                      <span className="flex items-center gap-1 font-mono font-semibold text-emerald-400">
-                        {Math.round(ca.ev * BULK_TEST_VALUE).toLocaleString()}
-                        <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
-                      </span>
-                    </div>
-                    <div className="pt-2 border-t border-zinc-800/50 flex justify-between items-center">
-                      <span className="text-xs font-bold uppercase tracking-tight text-zinc-400">Net {ca.profit > 0 ? "Profit" : "Loss"}</span>
-                      <div className={`flex items-center gap-1 text-lg font-black ${ca.profit > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                        {Math.round(ca.profit * BULK_TEST_VALUE).toLocaleString()}
+                    <div className="rounded-lg border border-zinc-800 bg-black/20 p-3">
+                      <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Estimated {ca.profit > 0 ? "Profit" : "Loss"}</span>
+                      <div className={`flex items-center gap-1 text-xl font-bold mt-1 ${ca.profit > 0 ? "text-emerald-400" : "text-red-400"}`}>
+                        {ca.profit.toFixed(2)}
                         <img src={COIN_ICON} alt="coins" className="h-5 w-5" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-3 gap-2">
-                    {Object.entries(ca.rarityChances)
-                      .reverse()
-                      .slice(0, 3)
-                      .map(([rarity, prob]) => (
-                        <div key={rarity} className={`flex flex-col items-center p-2 rounded border ${prob === 0 ? "bg-transparent border-zinc-900 opacity-30" : "bg-white/5 border-white/5"}`}>
-                          <span className="text-[8px] uppercase text-zinc-500 font-bold">{rarity}</span>
-                          <span className="text-xs font-bold text-zinc-200">~{Math.round(prob * 100).toLocaleString()} drops</span>
-                        </div>
-                      ))}
+                  <div className="mt-6">
+                    <div className="flex justify-between items-end mb-2">
+                      <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        {ca.category === "resource" ? "Resource Rarity Rolls" : "Rarity Probabilities"}
+                      </span>
+                      <div className="flex gap-3 text-[10px] text-zinc-500 uppercase tracking-tighter font-bold">
+                        {Object.entries(ca.typeChances).map(([type, prob]) => (
+                          <span key={type}>{prob}% {type}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {Object.entries(ca.rarityChances)
+                        .reverse()
+                        .map(([rarity, prob]) => (
+                          <div key={rarity} className="flex items-center gap-3">
+                            <div className={`w-20 text-[10px] font-bold uppercase tracking-tight truncate ${prob === 0 ? "text-zinc-700" : "text-zinc-500"}`}>
+                              {rarity}
+                            </div>
+                            <div className="relative h-1.5 flex-1 rounded-full bg-zinc-800 overflow-hidden">
+                              {prob > 0 && (
+                                <div
+                                  className="absolute h-full rounded-full transition-all duration-500"
+                                  style={{
+                                    width: `${Math.min(100, prob)}%`,
+                                    background: RARITY_COLORS[rarity]?.color
+                                  }}
+                                />
+                              )}
+                            </div>
+                            <div className={`w-10 text-right text-[10px] font-mono ${prob === 0 ? "text-zinc-700 font-normal" : "text-zinc-400"}`}>
+                              {prob}%
+                            </div>
+                          </div>
+                        ))}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
+
+                  {ca.category === "resource" && (
+                    <div className="mt-5 rounded-lg border border-zinc-800/60 bg-zinc-950/40 p-3">
+                      <div className="text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-2 flex items-center justify-between">
+                        <span>Work Budget: 20–80 pts</span>
+                        <span className="text-zinc-500 font-normal">Amount = Budget / Cost</span>
+                      </div>
+                      <div className="space-y-1.5 text-[11px]">
+                        <div className="flex justify-between items-center text-zinc-300 flex-col">
+                            <span className="text-purple-400 font-semibold">Epic (2%)</span>
+                          <span className="font-mono text-zinc-400 text-[10px]">Cooked Fish (1-2), Heavy Ammo (1-5), Pill (1)</span>
+                        </div>
+                        <div className="flex justify-between items-center text-zinc-300 flex-col">
+                          <span className="text-blue-400 font-semibold">Rare (13%)</span>
+                          <span className="font-mono text-zinc-400 text-[10px]">Ammo (5-20), Steak (1-4)</span>
+                        </div>
+                        <div className="flex justify-between items-center text-zinc-300 flex-col">
+                          <span className="text-emerald-400 font-semibold">Uncommon (20%)</span>
+                          <span className="font-mono text-zinc-400 text-[10px]">Conc/Steel/Bread (2-8), Oil/Paper/Light (20-80)</span>
+                        </div>
+                        <div className="flex justify-between items-center text-zinc-300 flex-col">
+                          <span className="text-zinc-400 font-semibold">Common (65%)</span>
+                          <span className="font-mono text-zinc-400 text-[10px]">Raw (20-80), Livestock (1-4), Fish (1-2)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-6 rounded-lg border border-zinc-800/50 bg-black/40 p-4 relative overflow-hidden group">
+                    <div className="absolute right-[-20px] bottom-[-20px] text-zinc-800/10 text-8xl font-black italic pointer-events-none transition-transform group-hover:scale-110">{BULK_TEST_VALUE}X</div>
+                    <h4 className="text-[10px] uppercase tracking-widest text-zinc-500 font-black mb-4 flex items-center gap-2">
+                      <span className={`h-2 w-2 rounded-full ${ca.profit > 0 ? "bg-emerald-500" : "bg-red-500"} animate-pulse mb-1`} />
+                      Bulk Analysis ({BULK_TEST_VALUE.toLocaleString()} Crates)
+                    </h4>
+
+                    <div className="space-y-3 relative z-10">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-zinc-500">Revenue from Selling</span>
+                        <span className="flex items-center gap-1 font-mono font-semibold">
+                          {Math.round(ca.price * BULK_TEST_VALUE).toLocaleString()}
+                          <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-zinc-500">Revenue from Opening</span>
+                        <span className="flex items-center gap-1 font-mono font-semibold text-emerald-400">
+                          {Math.round(ca.ev * BULK_TEST_VALUE).toLocaleString()}
+                          <img src={COIN_ICON} alt="coins" className="h-4 w-4" />
+                        </span>
+                      </div>
+                      <div className="pt-2 border-t border-zinc-800/50 flex justify-between items-center">
+                        <span className="text-xs font-bold uppercase tracking-tight text-zinc-400">Net {ca.profit > 0 ? "Profit" : "Loss"}</span>
+                        <div className={`flex items-center gap-1 text-lg font-black ${ca.profit > 0 ? "text-emerald-400" : "text-red-400"}`}>
+                          {Math.round(ca.profit * BULK_TEST_VALUE).toLocaleString()}
+                          <img src={COIN_ICON} alt="coins" className="h-5 w-5" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-2">
+                      {Object.entries(ca.rarityChances)
+                        .reverse()
+                        .slice(0, 3)
+                        .map(([rarity, prob]) => (
+                          <div key={rarity} className={`flex flex-col items-center p-2 rounded border ${prob === 0 ? "bg-transparent border-zinc-900 opacity-30" : "bg-white/5 border-white/5"}`}>
+                            <span className="text-[8px] uppercase text-zinc-500 font-bold">{rarity}</span>
+                            <span className="text-xs font-bold text-zinc-200">~{Math.round(prob * 100).toLocaleString()} drops</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </div>
             </Card>
           ))}
         </div>

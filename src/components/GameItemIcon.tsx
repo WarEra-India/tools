@@ -55,6 +55,7 @@ const WEAPON_ORDER = ["knife", "gun", "rifle", "sniper", "tank", "jet"];
 const CASE_MAPPING: Record<string, string> = {
   case1: "legendary",
   case2: "mythic",
+  woodenCase: "legendary",
 };
 
 export function GameItemIcon({ itemCode, rarity: rarityOverride, className = "h-5 w-5 rounded-sm", health, children }: GameItemIconProps) {
@@ -63,10 +64,12 @@ export function GameItemIcon({ itemCode, rarity: rarityOverride, className = "h-
 
   if (itemCode) {
     if (ITEM_NAMES[itemCode]) {
-      rarity = ITEM_NAMES[itemCode].rarity;
-      baseCode = itemCode;
+      rarity = rarityOverride || ITEM_NAMES[itemCode].rarity;
+      baseCode = ITEM_NAMES[itemCode].type === "equipment"
+        ? itemCode.replace(/\d+$/, "")
+        : itemCode;
     } else if (CASE_MAPPING[itemCode]) {
-      rarity = CASE_MAPPING[itemCode];
+      rarity = rarityOverride || CASE_MAPPING[itemCode];
       baseCode = itemCode;
     } else if (WEAPON_ORDER.includes(itemCode)) {
       const idx = WEAPON_ORDER.indexOf(itemCode);
